@@ -10,7 +10,7 @@ pyglet is a powerful game programming library. It is wonderfully easy to use for
 
 By marrying Jupyter and pyglet, you get the best of both worlds. Learn to program by creating games interactively. Watch the game change as you type new code. Change a variable or a function and the game will be affected immediately. 
 
-_jupylet_ is also intended as a tool for reinforcement learning research and development. It will be easy to use to create novel environments in which to experiment with reinforcement learning algorithms; and thanks to pyglet and OpenGL it should be possible to render thousands of frames per second. Most of the parts are already there. stay tuned...
+_jupylet_ is also intended as a tool for reinforcement learning research and development. It will be easy to use to create novel environments in which to experiment with reinforcement learning algorithms; and thanks to pyglet and OpenGL it should be possible to render thousands of frames per second. Most of the parts are already there. Stay tuned...
 
 # Requirements
 
