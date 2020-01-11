@@ -29,6 +29,7 @@ VERSION = '0.5.0.dev'
 
 
 import functools
+import ipycanvas
 import ipyevents
 import traceback
 import webcolors
@@ -41,8 +42,6 @@ import re
 import concurrent.futures
 
 import numpy as np
-
-from ipycanvas import Canvas
 
 
 _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
@@ -436,7 +435,7 @@ class _Event(object):
 
 class App(_Clock, _Event):
     
-    def __init__(self, width=512, height=512, mode='window', buffer=False, resource_path=['.', 'images/']):
+    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/']):
         
         super(App, self).__init__()
         
@@ -463,7 +462,7 @@ class App(_Clock, _Event):
         
         self.array0 = None
         
-        self.canvas = Canvas(size=(width, height)) if canvas_ else None
+        self.canvas = ipycanvas.Canvas(size=(width, height)) if canvas_ else None
         self.canvas_interval = 1 / 15
         self.canvas_last_update = 0
         
