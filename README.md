@@ -24,4 +24,4 @@ Then enter the _./jupylet/examples/_ folder and start a jupyter notebook with:
 
 Run the notebook and a game canvas should appear with the spaceship example:
 
-![The spaceship game canvas](docs/images/spaceship.jpg)
+<img src="https://raw.githubusercontent.com/nir/jupylet/master/docs/images/spaceship.jpg" width="256" height="256" />
