@@ -25,3 +25,12 @@ Then enter the _./jupylet/examples/_ folder and start a jupyter notebook with:
 Run the notebook and a game canvas should appear with the spaceship example:
 
 <img src="https://raw.githubusercontent.com/nir/jupylet/master/docs/images/spaceship.jpg" width="256" height="256" />
+
+You can run essentially the same code from the console with:
+
+    python spaceship.py
+
+The only difference in the code is that the application object is instantiated with:
+
+    app = App(mode='window')
+
