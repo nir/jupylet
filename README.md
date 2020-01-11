@@ -1,6 +1,16 @@
 # jupylet
 
-_jupylet_ is the marriage of Jupyter and the pyglet game programming library.
+_jupylet_ is the marriage of Jupyter and the pyglet game programming library. It is intended for two types of audiences:
+* Kids and their parents interested in learning to program, 
+* People doing reinforcement learning research and development.
+
+A Jupyter notebook is in essence a laboratory for programming. It is the ideal environment for playing around with code, experimenting, and exploring ideas. It is used by professional machine learning scientists who come every day to play at work, so why not by kids?
+
+pyglet is a powerful game programming library. It is wonderfully easy to use for creating simple 2D games, and since it is built on top of OpenGL it is powerfull enough for creating 3D engines if you really want to. The sky is the limit really.
+
+By marrying Jupyter and pyglet, you get the best of both worlds. Learn to program by creating games interactively. Watch the game change as you type new code. Change a variable or a function and the game will be affected immediately. 
+
+_jupylet_ is also intended as a tool for reinforcement learning research and development. It will be easy to use to create novel environments in which to experiment with reinforcement learning algorithms; and thanks to pyglet and OpenGL it should be possible to render thousands of frames per second. Most of the parts are already there. stay tuned...
 
 # Requirements
 
