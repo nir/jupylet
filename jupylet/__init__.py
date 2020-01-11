@@ -70,7 +70,11 @@ class EventLoop(pyglet.app.EventLoop):
         self.dispatch_event('on_enter')
         self.is_running = True
 
-        asyncio.get_event_loop().create_task(self._run())
+        loop = asyncio.get_event_loop()
+        task = loop.create_task(self._run())
+
+        if not loop.is_running():
+            loop.run_until_complete(task)
         
     async def _run(self):
         
