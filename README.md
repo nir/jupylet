@@ -18,13 +18,17 @@ _jupylet_ should run on Python 3.4+ on Windows, Mac, and Linux.
 
 # Installation
 
+If you are new to Python, I strongly recommend that you install and use the [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html) distribution. Download and run the 64-bit installer and stick to the default install options.
+
+Once Miniconda is installed start a Miniconda Prompt. On Windows you can do this by clicking the Windows key and searching for "Miniconda Prompt". This should open a small dark window called _console_ or _shell_ in which you can enter commands and run programs.
+
 To run _jupylet_ first install its dependencies with:
 
     pip install pyglet webcolors numpy
 
     pip install jupyter ipyevents ipycanvas
 
-Download the _jupylet_ archive or clone this repository with:
+Download the _jupylet_ archive or use [git](https://git-scm.com/) to clone this repository with:
 
     git clone https://github.com/nir/jupylet.git
 
