@@ -20,7 +20,7 @@ _jupylet_ should run on Python 3.4+ on Windows, Mac, and Linux.
 
 If you are new to Python, I strongly recommend that you install and use the [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html) distribution. Download and run the 64-bit installer and stick to the default install options.
 
-Once Miniconda is installed start a Miniconda Prompt. On Windows you can do this by clicking the Windows key and searching for "Miniconda Prompt". This should open a small dark window called _console_ or _shell_ in which you can enter commands and run programs.
+Once Miniconda is installed start a Miniconda Prompt. To do this on Windows click the Windows key, search for "Miniconda Prompt", and click it. This should open a small dark window that programmers call _console_ or _shell_ in which you can enter commands and run programs.
 
 To run _jupylet_ first install its dependencies with:
 
