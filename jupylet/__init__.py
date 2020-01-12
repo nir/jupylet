@@ -59,9 +59,10 @@ class EventLoop(pyglet.app.EventLoop):
         super(EventLoop, self).__init__()
         
         self.clock = clock
-        
-    def run(self):
-                
+        self.ndraw = 0
+
+    def start(self):
+
         self.has_exit = False        
         self._legacy_setup()
 
@@ -70,22 +71,26 @@ class EventLoop(pyglet.app.EventLoop):
         self.dispatch_event('on_enter')
         self.is_running = True
 
+    def run(self):
+                
         loop = asyncio.get_event_loop()
         task = loop.create_task(self._run())
 
         if not loop.is_running():
             loop.run_until_complete(task)
+
+        return task
         
     async def _run(self):
         
         while not self.has_exit:
             
             dt = self.idle()
-            t1 = time.time() + (dt if dt is not None else 1.)
+            t1 = self.clock.time() + (dt if dt is not None else 1.)
              
             pyglet.app.platform_event_loop.step(0)
             
-            t2 = time.time()
+            t2 = self.clock.time()
             st = max(0, t1 - t2)
             
             await asyncio.sleep(st - 0.0005)
@@ -93,6 +98,21 @@ class EventLoop(pyglet.app.EventLoop):
         self.is_running = False
         self.dispatch_event('on_exit')
         pyglet.app.platform_event_loop.stop()
+
+    def step(self, fake_time):
+        
+        ndraw = self.ndraw
+
+        while self.is_running and not self.has_exit and ndraw == self.ndraw:
+            
+            dt = self.idle() or 1.
+            #pyglet.app.platform_event_loop.step(0)
+            fake_time.sleep(dt)
+            
+        if self.has_exit:
+            self.is_running = False
+            self.dispatch_event('on_exit')
+            pyglet.app.platform_event_loop.stop()
 
     def idle(self):
         """Called during each iteration of the event loop.
@@ -126,14 +146,32 @@ class EventLoop(pyglet.app.EventLoop):
         return self.clock.get_sleep_time(True)
 
 
-class _Clock(object):
-
+class FakeTime(object):
+    
     def __init__(self):
+        self._time = 0
         
-        super(_Clock, self).__init__()
+    def time(self):
+        return self._time        
+
+    def sleep(self, dt):
+        self._time += dt
+
+
+class _ClockLeg(object):
+
+    def __init__(self, fake_time=False, **kwargs):
         
-        self.clock = pyglet.clock.Clock()#time_function=lambda: time.time() * 10.)
+        super(_ClockLeg, self).__init__()
+        
         self.schedules = {}
+
+        self.fake_time = FakeTime()
+
+        if fake_time:
+            self.clock = pyglet.clock.Clock(self.fake_time.time)
+        else:
+            self.clock = pyglet.clock.Clock()
         
     def run_me_now(self, *args, **kwargs):
         return self.schedule_once(0, *args, **kwargs)
@@ -266,11 +304,11 @@ class _Clock(object):
             d['task'].cancel()
         
 
-class _Event(object):
+class _EventLeg(object):
  
-    def __init__(self):
+    def __init__(self, **kwargs):
         
-        super(_Event, self).__init__()
+        super(_EventLeg, self).__init__()
         
         self._dispatcher = None
         self._event = None
@@ -437,11 +475,11 @@ class _Event(object):
             return decorator        
 
 
-class App(_Clock, _Event):
+class App(_ClockLeg, _EventLeg):
     
-    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/']):
+    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, fake_time=False, resource_path=['.', 'images/']):
         
-        super(App, self).__init__()
+        super(App, self).__init__(fake_time=fake_time)
         
         assert mode in ['window', 'jupyter', 'both', 'hidden']
         
@@ -477,10 +515,23 @@ class App(_Clock, _Event):
         self.set_redraw_interval(interval)
         
         if not self.event_loop.is_running:
+            self.event_loop.start()
             self.event_loop.run()
             
         return self.canvas
         
+    def start(self, interval=1/60):
+        
+        self.set_redraw_interval(interval)
+        if not self.event_loop.is_running:
+            self.event_loop.start()
+            
+        return self.canvas
+       
+    def step(self):
+        self.event_loop.step(self.fake_time)
+        return self.array0
+
     def stop(self):
         if self.event_loop.is_running:
             self.event_loop.exit()
@@ -492,26 +543,30 @@ class App(_Clock, _Event):
 
     def _redraw_windows(self, dt):
         
-        if not self.window.invalid:
-            return
-        
-        self.window.switch_to()
-        self.window.dispatch_event('on_draw')
-        self.window.flip()
+        if self.window.invalid:
 
-        t0 = time.time()
-        nc = self.canvas_last_update + self.canvas_interval
-        
-        if self.canvas is not None and t0 >= nc:
-            self.array0 = self._get_buffer()
-            self.canvas.put_image_data(self.array0) 
-            self.canvas_last_update = t0
+            self.window.switch_to()
+            self.window.dispatch_event('on_draw')
+            self.window.flip()
 
-        elif self.buffer:
-            self.array0 = self._get_buffer()
+            #
+            # This should be real time, not fake time, since it updates to jupyter canvas.
+            #
+            t0 = time.time()
+
+            nc = self.canvas_last_update + self.canvas_interval
+            
+            if self.canvas is not None and t0 >= nc:
+                self.array0 = self._get_buffer()
+                self.canvas.put_image_data(self.array0) 
+                self.canvas_last_update = t0
+
+            elif self.buffer:
+                self.array0 = self._get_buffer()
             
         if self.buffer:
             self.window.dispatch_event('on_buffer', self.array0)
+            self.event_loop.ndraw += 1
         
     def _get_buffer(self):
         bm = pyglet.image.get_buffer_manager()
