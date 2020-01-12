@@ -26,7 +26,7 @@ To run _jupylet_ first install its dependencies with:
 
 Download the _jupylet_ archive or clone this repository with:
 
-    git clone git@github.com:nir/jupylet.git
+    git clone https://github.com/nir/jupylet.git
 
 Then enter the _./jupylet/examples/_ folder and start a jupyter notebook with:
 
