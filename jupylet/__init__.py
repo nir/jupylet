@@ -52,6 +52,19 @@ def async_thread(foo, *args, **kwargs):
     return asyncio.wrap_future(future)
 
 
+def color2rgb(color, zero2one=False):
+    
+    try:
+        rgb = webcolors.name_to_rgb(color) + (255,)
+    except:
+        rgb = webcolors.hex_to_rgb(color) + (255,)
+        
+    if zero2one:
+        return tuple(v / 255 for v in rgb)
+    
+    return rgb
+
+
 class EventLoop(pyglet.app.EventLoop):
 
     def __init__(self, clock):
@@ -367,7 +380,7 @@ class _EventLeg(object):
     def on_keydown(self, code, key, repeat, ctrl_key, alt_key, shift_key, meta_key):
 
         if not repeat:        
-            self.on_key_('on_key_press', code, key, ctrl_key, alt_key, shift_key, meta_key)
+            self._on_key('on_key_press', code, key, ctrl_key, alt_key, shift_key, meta_key)
         
         if len(key) == 1:
             self._dispatcher.dispatch_event('on_text', key)
@@ -387,9 +400,9 @@ class _EventLeg(object):
             self._dispatcher.dispatch_event('on_text_motion', motions[key])
             
     def on_keyup(self, code, key, ctrl_key, alt_key, shift_key, meta_key):
-        self.on_key_('on_key_release', code, key, ctrl_key, alt_key, shift_key, meta_key)
+        self._on_key('on_key_release', code, key, ctrl_key, alt_key, shift_key, meta_key)
         
-    def on_key_(self, event_type, code, key, ctrl_key, alt_key, shift_key, meta_key):
+    def _on_key(self, event_type, code, key, ctrl_key, alt_key, shift_key, meta_key):
 
         modifiers = 0
         modifiers |= alt_key or 0 and pyglet.window.key.MOD_ALT
@@ -415,12 +428,12 @@ class _EventLeg(object):
         self._dispatcher.dispatch_event('on_mouse_scroll', x, y, delta_x, delta_y)
 
     def on_mousedown(self, x, y, buttons, ctrl_key, alt_key, shift_key):
-        self.on_mouse_('on_mouse_press', x, y, buttons, ctrl_key, alt_key, shift_key)
+        self._on_mouse('on_mouse_press', x, y, buttons, ctrl_key, alt_key, shift_key)
 
     def on_mouseup(self, x, y, buttons, ctrl_key, alt_key, shift_key):
-        self.on_mouse_('on_mouse_release', x, y, buttons, ctrl_key, alt_key, shift_key)
+        self._on_mouse('on_mouse_release', x, y, buttons, ctrl_key, alt_key, shift_key)
         
-    def on_mouse_(self, event_type, x, y, buttons, ctrl_key, alt_key, shift_key):
+    def _on_mouse(self, event_type, x, y, buttons, ctrl_key, alt_key, shift_key):
         
         buttons = (buttons & 1) + ((buttons & 2) << 1) + ((buttons & 4) >> 1)
         
@@ -477,11 +490,11 @@ class _EventLeg(object):
 
 class App(_ClockLeg, _EventLeg):
     
-    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, fake_time=False, resource_path=['.', 'images/']):
-        
-        super(App, self).__init__(fake_time=fake_time)
+    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/']):
         
         assert mode in ['window', 'jupyter', 'both', 'hidden']
+        
+        super(App, self).__init__(fake_time=(mode=='hidden'))
         
         if resource_path:
             pyglet.resource.path = resource_path
@@ -489,7 +502,7 @@ class App(_ClockLeg, _EventLeg):
             
         self.width = width
         self.height = height
-        self.buffer = buffer
+        self.buffer = buffer or mode == 'hidden'
         self.mode = mode
         
         visible = mode in ['window', 'both']
@@ -522,6 +535,8 @@ class App(_ClockLeg, _EventLeg):
         
     def start(self, interval=1/60):
         
+        assert self.mode == 'hidden', 'start() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
+        
         self.set_redraw_interval(interval)
         if not self.event_loop.is_running:
             self.event_loop.start()
@@ -529,6 +544,9 @@ class App(_ClockLeg, _EventLeg):
         return self.canvas
        
     def step(self):
+
+        assert self.mode == 'hidden', 'step() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
+        
         self.event_loop.step(self.fake_time)
         return self.array0
 
@@ -576,6 +594,17 @@ class App(_ClockLeg, _EventLeg):
         a0 = np.array(d0, dtype='uint8').reshape(self.height, self.width, 4)[::-1,:,:3]
         return a0
 
+    def play_once(self, sound):
+        
+        player = pyglet.media.Player()
+        player.queue(sound)
+        player.play()
+        
+        self.clock.schedule_once(lambda dt: player.pause(), sound.duration)
+
+    def set_window_color(self, color):
+        pyglet.gl.glClearColor(*color2rgb(color, zero2one=True))
+
 
 def image_from(o):
     
@@ -603,6 +632,8 @@ def image_from_resource(name):
     
 def image_from_array(array):
     
+    array = array.astype('uint8')
+
     height, width = array.shape[:2]
     
     if len(array.shape) == 2:
@@ -621,6 +652,7 @@ def image_from_pil(image):
     channels = {'L': 1, 'RGB': 3, 'RGBA': 4}[image.mode]
         
     return pyglet.image.ImageData(width, height, image.mode, image.tobytes(), -width*channels)
+
 
 class Sprite(pyglet.sprite.Sprite):
     
@@ -689,9 +721,29 @@ class Sprite(pyglet.sprite.Sprite):
 
         return math.atan(dy / (dx or 1e-7)) / math.pi * 180 + qd[(dy >= 0, dx >= 0)]
 
+    @property
+    def top(self):
+        return self.y + self.height - self.image.anchor_y
+        
+    @property
+    def right(self):
+        return self.x + self.width - self.image.anchor_x
+        
+    @property
+    def bottom(self):
+        return self.y - self.height + self.image.anchor_y
+        
+    @property
+    def left(self):
+        return self.x - self.width + self.image.anchor_x
+        
     def wrap_position(self, width, height, margin=50):
         self.x = (self.x + margin) % (width + 2 * margin) - margin
         self.y = (self.y + margin) % (height + 2 * margin) - margin
+
+    def clip_position(self, width, height, margin=0):
+        self.x = max(-margin, min(margin + width, self.x))
+        self.y = max(-margin, min(margin + height, self.y))
 
 
 def canvas2sprite(c):
@@ -716,7 +768,7 @@ class Label(pyglet.text.Label):
                  multiline=False, dpi=None, batch=None, group=None):
                 
         if type(color) == str:
-            color = webcolors.name_to_rgb(color) + (255,)
+            color = color2rgb(color)
                     
         super(Label, self).__init__(text,
                  font_name, font_size, bold, italic,
@@ -753,4 +805,5 @@ class Label(pyglet.text.Label):
             color = webcolors.name_to_rgb(color) + (255,)
             
         self.document.set_style(0, len(self.document.text), {'color': color})
+
 
