@@ -596,6 +596,9 @@ class App(_ClockLeg, _EventLeg):
 
     def play_once(self, sound):
         
+        if self.mode == 'hidden':
+            return
+            
         player = pyglet.media.Player()
         player.queue(sound)
         player.play()
