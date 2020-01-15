@@ -39,6 +39,7 @@ import pyglet
 import time
 import re
 
+import PIL.Image
 import concurrent.futures
 
 import numpy as np
@@ -499,22 +500,25 @@ class App(_ClockLeg, _EventLeg):
         if resource_path:
             pyglet.resource.path = resource_path
             pyglet.resource.reindex()
-            
-        self.width = width
-        self.height = height
+
+        self.width0 = width
+        self.height0 = height
+
         self.buffer = buffer or mode == 'hidden'
         self.mode = mode
         
         visible = mode in ['window', 'both']
         canvas_ = mode in ['jupyter', 'both']
         
-        self.window = pyglet.window.Window(visible=visible)
+        self.window = pyglet.window.Window(width, height, visible=visible)
         self.window.register_event_type('on_buffer')
-        self.window.set_size(width, height)
         self.window.set_vsync(False)        
 
         self.event_loop = EventLoop(self.clock)
         
+        # temporary hack.
+        pyglet.app.event_loop = self.event_loop
+
         self.array0 = None
         
         self.canvas = ipycanvas.Canvas(size=(width, height)) if canvas_ else None
@@ -591,8 +595,23 @@ class App(_ClockLeg, _EventLeg):
         cb = bm.get_color_buffer()
         di = cb.get_image_data()
         d0 = di.get_data('RGBA', di.width * 4)
-        a0 = np.array(d0, dtype='uint8').reshape(self.height, self.width, 4)[::-1,:,:3]
+        a0 = np.array(d0, dtype='uint8').reshape(self.window.height, self.window.width, 4)[::-1,:,:3]
         return a0
+
+    def scale_window(self, scale):
+
+        assert self.mode not in ['jupyter', 'both'], 'Cannot rescale window when using jupyter canvas.'
+
+        width0 = self.window.width
+        height0 = self.window.height
+
+        self.window.width = round(scale * self.width0)
+        self.window.height = round(scale * self.height0)
+
+        sx = self.window.width / width0
+        sy = self.window.height / height0
+
+        pyglet.gl.glScalef(sx, sy, scale)
 
     def play_once(self, sound):
         
@@ -609,13 +628,14 @@ class App(_ClockLeg, _EventLeg):
         pyglet.gl.glClearColor(*color2rgb(color, zero2one=True))
 
 
-def image_from(o):
+def image_from(o, width=None, height=None, crop=True):
     
     if type(o) is str:
         return image_from_resource(o)
     
     if isinstance(o, np.ndarray):
-        return image_from_array(o)
+        #return image_from_array(o)
+        o = PIL.Image.fromarray(o.astype('uint8'))
     
     if isinstance(o, PIL.Image.Image):
         return image_from_pil(o)
@@ -651,7 +671,7 @@ def image_from_array(array):
 
 def image_from_pil(image):
     
-    height, width = image.size 
+    width, height = image.size 
     channels = {'L': 1, 'RGB': 3, 'RGBA': 4}[image.mode]
         
     return pyglet.image.ImageData(width, height, image.mode, image.tobytes(), -width*channels)
