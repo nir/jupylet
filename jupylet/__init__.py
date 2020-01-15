@@ -497,12 +497,17 @@ class App(_ClockLeg, _EventLeg):
         
         super(App, self).__init__(fake_time=(mode=='hidden'))
         
+        self.event_loop = EventLoop(self.clock)
+        
+        # temporary hack.
+        pyglet.app.event_loop = self.event_loop
+
         if resource_path:
             pyglet.resource.path = resource_path
             pyglet.resource.reindex()
 
-        self.width0 = width
-        self.height0 = height
+        self._width = width
+        self._height = height
 
         self.buffer = buffer or mode == 'hidden'
         self.mode = mode
@@ -510,15 +515,11 @@ class App(_ClockLeg, _EventLeg):
         visible = mode in ['window', 'both']
         canvas_ = mode in ['jupyter', 'both']
         
-        self.window = pyglet.window.Window(width, height, visible=visible)
+        self.window = pyglet.window.Window(visible=visible)
         self.window.register_event_type('on_buffer')
-        self.window.set_vsync(False)        
-
-        self.event_loop = EventLoop(self.clock)
-        
-        # temporary hack.
-        pyglet.app.event_loop = self.event_loop
-
+        self.window.set_size(width, height)	
+        self.window.set_vsync(False)  
+      
         self.array0 = None
         
         self.canvas = ipycanvas.Canvas(size=(width, height)) if canvas_ else None
@@ -527,6 +528,14 @@ class App(_ClockLeg, _EventLeg):
         
         self._watch(self.window, self.canvas)
 
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
+    
     def run(self, interval=1/60):
         
         self.set_redraw_interval(interval)
@@ -600,13 +609,13 @@ class App(_ClockLeg, _EventLeg):
 
     def scale_window(self, scale):
 
-        assert self.mode not in ['jupyter', 'both'], 'Cannot rescale window when using jupyter canvas.'
+        assert scale == 1 or self.mode not in ['jupyter', 'both'], 'Cannot rescale window when using jupyter canvas.'
 
         width0 = self.window.width
         height0 = self.window.height
 
-        self.window.width = round(scale * self.width0)
-        self.window.height = round(scale * self.height0)
+        self.window.width = round(scale * self.width)
+        self.window.height = round(scale * self.height)
 
         sx = self.window.width / width0
         sy = self.window.height / height0
