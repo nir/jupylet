@@ -24,7 +24,7 @@ Once Miniconda is installed start a Miniconda Prompt. To do this on Windows clic
 
 To run _jupylet_ first install its dependencies with:
 
-    pip install pyglet webcolors numpy
+    pip install pyglet webcolors numpy pillow
 
     pip install jupyter ipyevents ipycanvas
 
