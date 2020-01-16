@@ -37,6 +37,7 @@ import asyncio
 import inspect
 import pyglet
 import time
+import sys
 import re
 
 import PIL.Image
@@ -528,6 +529,8 @@ class App(_ClockLeg, _EventLeg):
         
         self._watch(self.window, self.canvas)
 
+        self._run_timestamp = None
+
     @property
     def width(self):
         return self._width
@@ -538,6 +541,10 @@ class App(_ClockLeg, _EventLeg):
     
     def run(self, interval=1/60):
         
+        assert self.window._context, 'Window has closed. Create a new app object to run.'
+
+        self._run_timestamp = time.time()
+
         self.set_redraw_interval(interval)
         
         if not self.event_loop.is_running:
@@ -556,14 +563,21 @@ class App(_ClockLeg, _EventLeg):
             
         return self.canvas
        
-    def step(self):
+    def step(self, n=1):
 
         assert self.mode == 'hidden', 'step() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
         
-        self.event_loop.step(self.fake_time)
+        for i in range(n):
+            self.event_loop.step(self.fake_time)
+        
         return self.array0
 
     def stop(self):
+
+        if self._run_timestamp and time.time() - self._run_timestamp < 0.5:
+            sys.stderr.write('Ignoring call to stop() since it appears to have been done accidentally.')
+            return
+
         if self.event_loop.is_running:
             self.event_loop.exit()
             self.clock.unschedule(self._redraw_windows)
@@ -607,15 +621,18 @@ class App(_ClockLeg, _EventLeg):
         a0 = np.array(d0, dtype='uint8').reshape(self.window.height, self.window.width, 4)[::-1,:,:3]
         return a0
 
-    def scale_window(self, scale):
+    def scale_window_to(self, px):
 
-        assert scale == 1 or self.mode not in ['jupyter', 'both'], 'Cannot rescale window when using jupyter canvas.'
+        assert self.mode not in ['jupyter', 'both'], 'Cannot rescale window in Jupyter mode.'
+        assert self.event_loop.is_running, 'Window can only be scaled once app has been started.'
 
         width0 = self.window.width
         height0 = self.window.height
+        
+        scale = px / max(width0, height0)
 
-        self.window.width = round(scale * self.width)
-        self.window.height = round(scale * self.height)
+        self.window.width = round(scale * width0)
+        self.window.height = round(scale * height0)
 
         sx = self.window.width / width0
         sy = self.window.height / height0
@@ -834,8 +851,10 @@ class Label(pyglet.text.Label):
     def color(self, color):
         
         if type(color) == str:
-            color = webcolors.name_to_rgb(color) + (255,)
-            
+            color = color2rgb(color)
+        else:
+            color = tuple(int(v) for v in color)
+
         self.document.set_style(0, len(self.document.text), {'color': color})
 
 
