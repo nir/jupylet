@@ -103,11 +103,11 @@ class Sprite(pyglet.sprite.Sprite):
                  usage,
                  subpixel)
 
-        self.image.anchor_x = self.image.width / 2
-        self.image.anchor_y = self.image.height / 2
+        self.anchor_x = 'center'
+        self.anchor_y = 'center'
         
         self.scale = scale
-        self.rotation = 0
+        self._update_position()
 
     @property
     def image(self):
@@ -116,12 +116,23 @@ class Sprite(pyglet.sprite.Sprite):
     @image.setter
     def image(self, img):
         
+        width = self.width
+        height = self.height
+
+        anchor_x = self.anchor_x / self.width
+        anchor_y = self.anchor_y / self.height
+
         img = image_from(img)
             
         pyglet.sprite.Sprite.image.fset(self, img)
-        self.image.anchor_x = self.image.width / 2
-        self.image.anchor_y = self.image.height / 2
-        self.rotation = self.rotation
+
+        if width != self.width and height != self.height:
+            self.width = width 
+
+        self.anchor_x = anchor_x
+        self.anchor_y = anchor_y
+
+        self._update_position()
         
     def distance_to(self, o, pos=None):
 
@@ -149,20 +160,74 @@ class Sprite(pyglet.sprite.Sprite):
         return math.atan(dy / (dx or 1e-7)) / math.pi * 180 + qd[(dy >= 0, dx >= 0)]
 
     @property
+    def anchor_x(self):
+        """Scaled anchor_x of the sprite."""
+        return self._texture.anchor_x / self._texture.width * self.width
+
+    @anchor_x.setter
+    def anchor_x(self, anchor):
+
+        if anchor == 'left':
+            anchor = 0
+        elif anchor == 'center':
+            anchor = 0.5
+        elif anchor == 'right':
+            anchor = 1.
+        elif type(anchor) in (int, float) and not -1 <= anchor <= 1:
+            anchor = anchor / self.width
+
+        self._texture.anchor_x = anchor * self._texture.width
+
+    @property
+    def anchor_y(self):
+        """Scaled anchor_y of the sprite."""
+        return self._texture.anchor_y / self._texture.height * self.height
+        
+    @anchor_y.setter
+    def anchor_y(self, anchor):
+
+        if anchor == 'bottom':
+            anchor = 0
+        elif anchor == 'center':
+            anchor = 0.5
+        elif anchor == 'top':
+            anchor = 1.
+        elif type(anchor) in (int, float) and not -1 <= anchor <= 1:
+            anchor = anchor / self.height
+
+        self._texture.anchor_y = anchor * self._texture.height
+
+    @property
+    def width(self):
+        return pyglet.sprite.Sprite.width.fget(self)
+
+    @width.setter
+    def width(self, width):
+        self.scale = self.scale * width / self.width
+
+    @property
+    def height(self):
+        return pyglet.sprite.Sprite.height.fget(self)
+
+    @height.setter
+    def height(self, height):
+        self.scale = self.scale * height / self.height
+
+    @property
     def top(self):
-        return self.y + self.height - self.image.anchor_y
+        return self.y + self.height - self.anchor_y
         
     @property
     def right(self):
-        return self.x + self.width - self.image.anchor_x
+        return self.x + self.width - self.anchor_x
         
     @property
     def bottom(self):
-        return self.y - self.height + self.image.anchor_y
+        return self.y - self.height + self.anchor_y
         
     @property
     def left(self):
-        return self.x - self.width + self.image.anchor_x
+        return self.x - self.width + self.anchor_x
         
     def wrap_position(self, width, height, margin=50):
         self.x = (self.x + margin) % (width + 2 * margin) - margin
