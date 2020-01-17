@@ -1,5 +1,5 @@
 """
-    jupylet.py
+    jupylet/color.py
     
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
@@ -25,12 +25,18 @@
 """
 
 
-VERSION = '0.5.1.dev'
+import webcolors
 
 
-import traceback
-
-from .sprite import *
-from .label import *
-from .app import *
+def color2rgb(color, zero2one=False):
+    
+    try:
+        rgb = webcolors.name_to_rgb(color) + (255,)
+    except:
+        rgb = webcolors.hex_to_rgb(color) + (255,)
+        
+    if zero2one:
+        return tuple(v / 255 for v in rgb)
+    
+    return rgb
 
