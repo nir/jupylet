@@ -29,6 +29,7 @@ import pyglet
 
 import PIL.Image
 
+from .collision import trbl
 from .resource import image_from
 
 
@@ -179,19 +180,59 @@ class Sprite(pyglet.sprite.Sprite):
 
     @property
     def top(self):
-        return self.y + self.height - self.anchor_y
+
+        tx = self._texture
+        t, r, b, l = trbl(
+            tx.width, 
+            tx.height, 
+            tx.anchor_x, 
+            tx.anchor_y, 
+            self._rotation,
+            self._scale
+        )
+        return self._y + t
         
     @property
     def right(self):
-        return self.x + self.width - self.anchor_x
+
+        tx = self._texture
+        t, r, b, l = trbl(
+            tx.width, 
+            tx.height, 
+            tx.anchor_x, 
+            tx.anchor_y, 
+            self._rotation,
+            self._scale
+        )
+        return self._x + r
         
     @property
     def bottom(self):
-        return self.y - self.height + self.anchor_y
+
+        tx = self._texture
+        t, r, b, l = trbl(
+            tx.width, 
+            tx.height, 
+            tx.anchor_x, 
+            tx.anchor_y, 
+            self._rotation,
+            self._scale
+        )
+        return self._y + b
         
     @property
     def left(self):
-        return self.x - self.width + self.anchor_x
+
+        tx = self._texture
+        t, r, b, l = trbl(
+            tx.width, 
+            tx.height, 
+            tx.anchor_x, 
+            tx.anchor_y, 
+            self._rotation,
+            self._scale
+        )
+        return self._x + l
         
     def wrap_position(self, width, height, margin=50):
         self.x = (self.x + margin) % (width + 2 * margin) - margin
