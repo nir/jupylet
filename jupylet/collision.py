@@ -36,6 +36,9 @@ import numpy as np
 from .resource import pil_resize_to
 
 
+MAP_SIZE = 128
+
+
 def affine(a=0, s=1, ax=0, ay=0, dx=0, dy=0):
     
     r = math.radians(a)
@@ -67,9 +70,9 @@ def trbl(width, height, anchor_x=0, anchor_y=0, angle=0, scale=1):
 def hitmap_and_outline_from_alpha(im):
 
     if isinstance(im, np.ndarray):
-        assert max(im.shape[:2]) == 128, 'Maximum size of array expected to be 128.'
+        assert max(im.shape[:2]) == MAP_SIZE, 'Maximum size of array expected to be %s.' % MAP_SIZE
     else:
-        im = pil_resize_to(im, 128)
+        im = pil_resize_to(im, MAP_SIZE)
 
     a0 = np.array(im)[...,3]
 
@@ -98,8 +101,8 @@ def collisions_from_hitmap_and_outline(a0, a1):
 
 def compute_collisions(o0, o1, debug=False):
 
-    s0 = max(o0.height, o0.width) / 128
-    s1 = max(o1.height, o1.width) / 128
+    s0 = max(o0.height, o0.width) / MAP_SIZE
+    s1 = max(o1.height, o1.width) / MAP_SIZE
 
     dr = o0.rotation - o1.rotation
     r0 = o1.rotation * math.pi / 180
