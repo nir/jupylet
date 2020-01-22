@@ -113,12 +113,12 @@ def compute_collisions(o0, o1, debug=False):
     dy2 = (dy1 + 1 + o1.anchor_y) / s1
     dx2 = (dx1 + 1 + o1.anchor_x) / s1
 
-    af = affine(dr, s0 / s1, o0.anchor_x, o0.anchor_y, dx2, dy2)
+    af = affine(dr, s0 / s1, o0.anchor_x / s0, o0.anchor_y / s0, dx2, dy2)
     oo = af.dot(o0.outline.T)[:2].T.astype('int64')
     cl = collisions_from_hitmap_and_outline(o1.hitmap, oo)
 
     if not debug:
-        return cl
+        return cl - (o1.anchor_x / s1, o1.anchor_y / s1)
 
     #
     # Use the following code to display debug output in a jupyter notebook:

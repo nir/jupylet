@@ -114,7 +114,7 @@ class Sprite(pyglet.sprite.Sprite):
 
         self._update_position()
 
-    def collisions_with(self, o):
+    def collisions_with(self, o, debug=False):
         
         #if self.distance_to(o) > self.radius + o.radius:
         #    return []
@@ -131,7 +131,7 @@ class Sprite(pyglet.sprite.Sprite):
         if r0 + x0 < l1 + x1 or r1 + x1 < l0 + x0:
             return []
         
-        return compute_collisions(self, o)
+        return compute_collisions(o, self, debug=debug)
 
     def distance_to(self, o, pos=None):
 
