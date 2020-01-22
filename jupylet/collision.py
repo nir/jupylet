@@ -33,6 +33,8 @@ import PIL.Image
 
 import numpy as np
 
+from .resource import pil_resize_to
+
 
 def affine(a=0, s=1, ax=0, ay=0, dx=0, dy=0):
     
@@ -62,14 +64,18 @@ def trbl(width, height, anchor_x=0, anchor_y=0, angle=0, scale=1):
     return t, r, b, l
 
 
-def hitmap_and_outline_from_alpha(a):
+def hitmap_and_outline_from_alpha(im):
 
-    if isinstance(a, PIL.Image.Image):
-        a = np.array(a)[...,3]
+    if isinstance(im, np.ndarray):
+        assert max(im.shape[:2]) == 128, 'Maximum size of array expected to be 128.'
+    else:
+        im = pil_resize_to(im, 128)
+
+    a0 = np.array(im)[...,3]
 
     k0 = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
     
-    a2 = (a > 128).astype('uint8')[::-1]
+    a2 = (a0 > 128).astype('uint8')[::-1]
     a3 = scipy.signal.convolve2d(a2, k0, 'same') != 4
     a4 = a2 * a3
     a5 = np.stack(a4.nonzero()[::-1], -1)
@@ -88,4 +94,41 @@ def collisions_from_hitmap_and_outline(a0, a1):
     a2 = a0[a1[:,1], a1[:,0]]
     a3 = a1[a2.nonzero()]
     return a3
+
+
+def compute_collisions(o0, o1, debug=False):
+
+    s0 = max(o0.height, o0.width) / 128
+    s1 = max(o1.height, o1.width) / 128
+
+    dr = o0.rotation - o1.rotation
+    r0 = o1.rotation * math.pi / 180
+
+    dy0 = o0.y - o1.y
+    dx0 = o0.x - o1.x
+
+    dx1 = math.cos(r0) * dx0 - math.sin(r0) * dy0
+    dy1 = math.cos(r0) * dy0 + math.sin(r0) * dx0
+
+    dy2 = (dy1 + 1 + o1.anchor_y) / s1
+    dx2 = (dx1 + 1 + o1.anchor_x) / s1
+
+    af = affine(dr, s0 / s1, o0.anchor_x, o0.anchor_y, dx2, dy2)
+    oo = af.dot(o0.outline.T)[:2].T.astype('int64')
+    cl = collisions_from_hitmap_and_outline(o1.hitmap, oo)
+
+    if not debug:
+        return cl
+
+    #
+    # Use the following code to display debug output in a jupyter notebook:
+    #
+    # fig = plt.figure(figsize=(8, 8))
+    # ax = fig.add_subplot(111)
+    # ax.set_aspect(1.)
+    # _ = ax.plot(hm[:,1], hm[:,0], 'y.', oo[:,0], oo[:,1], 'r.', cl[:,0], cl[:,1], 'bo')
+    #
+
+    hm = np.argwhere(o1.hitmap > 0)
+    return cl, oo, hm
 

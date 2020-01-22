@@ -34,7 +34,7 @@ import numpy as np
 from pyglet.image.codecs import ImageDecodeException
 
 
-__all__ = ['image_from', 'image']
+__all__ = ['image_from', 'image', 'pil_open', 'pil_autocrop', 'pil_resize_to']
 
 
 def image_from(o, autocrop=False):
@@ -113,10 +113,13 @@ def image(name, flip_x=False, flip_y=False, rotate=0, atlas=True, autocrop=False
         otherwise a :py:class:`~pyglet.image.TextureRegion` of a texture atlas.
     """
     _loader._require_index()
-    if name in _loader._cached_images:
-        identity = _loader._cached_images[name]
+
+    name0 = name + '-autocrop' if autocrop else name
+
+    if name0 in _loader._cached_images:
+        identity = _loader._cached_images[name0]
     else:
-        identity = _loader._cached_images[name] = _alloc_image(name, atlas=atlas, autocrop=autocrop)
+        identity = _loader._cached_images[name0] = _alloc_image(name, atlas=atlas, autocrop=autocrop)
 
     if not rotate and not flip_x and not flip_y:
         return identity
@@ -141,10 +144,7 @@ def _alloc_image(name, atlas=True, autocrop=False):
 
 def _loader_pil_load(filename, autocrop=False):
 
-    image = _loader_pil_load0(filename)
-        
-    if autocrop:
-        image = image.crop(image.getbbox())
+    image = pil_open(filename, autocrop)
         
     try:
         image = image.transpose(PIL.Image.FLIP_TOP_BOTTOM)
@@ -166,11 +166,14 @@ def _loader_pil_load(filename, autocrop=False):
     return pyglet.image.ImageData(width, height, image.mode, image_data_fn())
 
 
-def _loader_pil_load0(filename):
+def pil_open(filename, autocrop=False):
 
     with _loader.file(filename) as file:
         try:
             image = PIL.Image.open(file)
+            if autocrop:
+                return pil_autocrop(image)
+
             image.load()
             return image
 
@@ -179,11 +182,11 @@ def _loader_pil_load0(filename):
                 'PIL cannot read %r: %s' % (filename or file, e))
 
 
-def _pil_autocrop(im):
+def pil_autocrop(im):
     return im.crop(im.getbbox())
 
-    
-def _pil_resize_to(im, size=128, resample=PIL.Image.BILINEAR):
+
+def pil_resize_to(im, size=128, resample=PIL.Image.BILINEAR):
 
     w0, h0 = im.size
     wh = max(w0, h0)
