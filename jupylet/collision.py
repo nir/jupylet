@@ -26,7 +26,10 @@
 
 
 import functools
+import scipy
 import math
+
+import PIL.Image
 
 import numpy as np
 
@@ -57,4 +60,32 @@ def trbl(width, height, anchor_x=0, anchor_y=0, angle=0, scale=1):
     t, r, b, l = max(y), max(x), min(y), min(x)
     
     return t, r, b, l
+
+
+def hitmap_and_outline_from_alpha(a):
+
+    if isinstance(a, PIL.Image.Image):
+        a = np.array(a)[...,3]
+
+    k0 = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    
+    a2 = (a > 128).astype('uint8')[::-1]
+    a3 = scipy.signal.convolve2d(a2, k0, 'same') != 4
+    a4 = a2 * a3
+    a5 = np.stack(a4.nonzero()[::-1], -1)
+    a6 = np.concatenate([a5, a5[:,:1] * 0 + 1], -1)
+    
+    h1, w1 = a2.shape
+    xx = max(a2.shape) + 2
+
+    a7 = np.pad(a2, ((1, xx - h1 - 1), (1, xx - w1 - 1)))
+
+    return a7, a6
+
+
+def collisions_from_hitmap_and_outline(a0, a1):
+    a1 = np.core.umath.clip(a1, 0, a0.shape[0]-1)
+    a2 = a0[a1[:,1], a1[:,0]]
+    a3 = a1[a2.nonzero()]
+    return a3
 

@@ -126,11 +126,7 @@ def image(name, flip_x=False, flip_y=False, rotate=0, atlas=True, autocrop=False
 
 def _alloc_image(name, atlas=True, autocrop=False):
 
-    file = _loader.file(name)
-    try:
-        img = _pil_load(name, file=file, autocrop=autocrop)
-    finally:
-        file.close()
+    img = _loader_pil_load(name, autocrop=autocrop)
 
     if not atlas:
         return img.get_texture(True)
@@ -143,14 +139,13 @@ def _alloc_image(name, atlas=True, autocrop=False):
     return bin.add(img)
 
 
-def _pil_load(filename, file, autocrop=False):
+def _loader_pil_load(filename, autocrop=False):
 
-    try:
-        image = PIL.Image.open(file)
-    except Exception as e:
-        raise ImageDecodeException(
-            'PIL cannot read %r: %s' % (filename or file, e))
-
+    image = _loader_pil_load0(filename)
+        
+    if autocrop:
+        image = image.crop(image.getbbox())
+        
     try:
         image = image.transpose(PIL.Image.FLIP_TOP_BOTTOM)
     except Exception as e:
@@ -163,15 +158,41 @@ def _pil_load(filename, file, autocrop=False):
     if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
         raise ImageDecodeException('Unsupported mode "%s"' % image.mode)
 
-    if autocrop:
-        image = image.crop(image.getbbox())
-        
     width, height = image.size
 
     # tostring is deprecated, replaced by tobytes in Pillow (PIL fork)
     # (1.1.7) PIL still uses it
     image_data_fn = getattr(image, "tobytes", getattr(image, "tostring"))
     return pyglet.image.ImageData(width, height, image.mode, image_data_fn())
+
+
+def _loader_pil_load0(filename):
+
+    with _loader.file(filename) as file:
+        try:
+            image = PIL.Image.open(file)
+            image.load()
+            return image
+
+        except Exception as e:
+            raise ImageDecodeException(
+                'PIL cannot read %r: %s' % (filename or file, e))
+
+
+def _pil_autocrop(im):
+    return im.crop(im.getbbox())
+
+    
+def _pil_resize_to(im, size=128, resample=PIL.Image.BILINEAR):
+
+    w0, h0 = im.size
+    wh = max(w0, h0)
+    sr = size / wh
+
+    w1 = round(sr * w0)
+    h1 = round(sr * h0)
+
+    return im.resize((w1, h1), resample=resample)
 
 
 _loader = pyglet.resource._default_loader

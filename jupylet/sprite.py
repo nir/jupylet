@@ -180,51 +180,32 @@ class Sprite(pyglet.sprite.Sprite):
 
     @property
     def top(self):
-
-        tx = self._texture
-        t, r, b, l = trbl(
-            tx.width, 
-            tx.height, 
-            tx.anchor_x, 
-            tx.anchor_y, 
-            self._rotation,
-            self._scale
-        )
+        t, r, b, l = self._trbl()
         return self._y + t
         
     @property
     def right(self):
-
-        tx = self._texture
-        t, r, b, l = trbl(
-            tx.width, 
-            tx.height, 
-            tx.anchor_x, 
-            tx.anchor_y, 
-            self._rotation,
-            self._scale
-        )
+        t, r, b, l = self._trbl()
         return self._x + r
         
     @property
     def bottom(self):
-
-        tx = self._texture
-        t, r, b, l = trbl(
-            tx.width, 
-            tx.height, 
-            tx.anchor_x, 
-            tx.anchor_y, 
-            self._rotation,
-            self._scale
-        )
+        t, r, b, l = self._trbl()
         return self._y + b
         
     @property
     def left(self):
-
+        t, r, b, l = self._trbl()
+        return self._x + l
+        
+    @property
+    def radius(self):
+        t, r, b, l = self._trbl()
+        return max(t, r, b, l)
+        
+    def _trbl(self):
         tx = self._texture
-        t, r, b, l = trbl(
+        return trbl(
             tx.width, 
             tx.height, 
             tx.anchor_x, 
@@ -232,8 +213,7 @@ class Sprite(pyglet.sprite.Sprite):
             self._rotation,
             self._scale
         )
-        return self._x + l
-        
+
     def wrap_position(self, width, height, margin=50):
         self.x = (self.x + margin) % (width + 2 * margin) - margin
         self.y = (self.y + margin) % (height + 2 * margin) - margin
@@ -241,6 +221,12 @@ class Sprite(pyglet.sprite.Sprite):
     def clip_position(self, width, height, margin=0):
         self.x = max(-margin, min(margin + width, self.x))
         self.y = max(-margin, min(margin + height, self.y))
+
+    def show(self):
+        id0 = self._texture.get_image_data()
+        id1 = id0.get_data('RGBA', pitch=-id0.width*4)
+        im0 = PIL.Image.frombytes('RGBA', (id0.width, id0.height), id1)
+        return im0
 
 
 def canvas2sprite(c):
