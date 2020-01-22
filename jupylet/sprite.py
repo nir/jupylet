@@ -54,7 +54,7 @@ class Sprite(pyglet.sprite.Sprite):
         self.autocrop = autocrop
         
         if type(img) is str:
-            im = pil_open(img, autocrop)
+            im = pil_open(img, self.autocrop)
             self.hitmap, self.outline = hitmap_and_outline_from_alpha(im)
         else:
             self.hitmap = None
@@ -96,7 +96,7 @@ class Sprite(pyglet.sprite.Sprite):
         anchor_y = self.anchor_y / self.height
 
         if type(img) is str:
-            im = pil_open(img, autocrop)
+            im = pil_open(img, self.autocrop)
             self.hitmap, self.outline = hitmap_and_outline_from_alpha(im)
         else:
             self.hitmap = None

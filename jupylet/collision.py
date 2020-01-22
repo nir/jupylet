@@ -26,10 +26,10 @@
 
 
 import functools
-import scipy
 import math
 
 import PIL.Image
+import scipy.signal
 
 import numpy as np
 
