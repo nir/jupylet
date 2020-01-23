@@ -26,10 +26,12 @@
 
 
 import pyglet
+import math
 
 import PIL.Image
 
-from .resource import image_from
+from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
+from .resource import image_from, pil_open
 
 
 class Sprite(pyglet.sprite.Sprite):
@@ -50,6 +52,13 @@ class Sprite(pyglet.sprite.Sprite):
                  scale=1.0):
 
         self.autocrop = autocrop
+        
+        if type(img) is str:
+            im = pil_open(img, self.autocrop)
+            self.hitmap, self.outline = hitmap_and_outline_from_alpha(im)
+        else:
+            self.hitmap = None
+            self.outline = None
 
         img = image_from(img, autocrop=self.autocrop)
             
@@ -86,6 +95,13 @@ class Sprite(pyglet.sprite.Sprite):
         anchor_x = self.anchor_x / self.width
         anchor_y = self.anchor_y / self.height
 
+        if type(img) is str:
+            im = pil_open(img, self.autocrop)
+            self.hitmap, self.outline = hitmap_and_outline_from_alpha(im)
+        else:
+            self.hitmap = None
+            self.outline = None
+
         img = image_from(img, autocrop=self.autocrop)
             
         pyglet.sprite.Sprite.image.fset(self, img)
@@ -97,7 +113,26 @@ class Sprite(pyglet.sprite.Sprite):
         self.anchor_y = anchor_y
 
         self._update_position()
+
+    def collision_with(self, o, debug=False):
         
+        #if self.distance_to(o) > self.radius + o.radius:
+        #    return []
+
+        x0, y0 = self.x, self.y
+        x1, y1 = o.x, o.y
+
+        t0, r0, b0, l0 = self._trbl()
+        t1, r1, b1, l1 = o._trbl()
+
+        if t0 + y0 < b1 + y1 or t1 + y1 < b0 + y0:
+            return []
+
+        if r0 + x0 < l1 + x1 or r1 + x1 < l0 + x0:
+            return []
+        
+        return compute_collisions(o, self, debug=debug)
+
     def distance_to(self, o, pos=None):
 
         x, y = pos or (o.x, o.y)
@@ -121,7 +156,9 @@ class Sprite(pyglet.sprite.Sprite):
         dx = x - self.x
         dy = y - self.y
 
-        return math.atan(dy / (dx or 1e-7)) / math.pi * 180 + qd[(dy >= 0, dx >= 0)]
+        a0 = math.atan(dy / (dx or 1e-7)) / math.pi * 180 + qd[(dy >= 0, dx >= 0)]
+
+        return -a0
 
     @property
     def anchor_x(self):
@@ -179,20 +216,41 @@ class Sprite(pyglet.sprite.Sprite):
 
     @property
     def top(self):
-        return self.y + self.height - self.anchor_y
+        t, r, b, l = self._trbl()
+        return self._y + t
         
     @property
     def right(self):
-        return self.x + self.width - self.anchor_x
+        t, r, b, l = self._trbl()
+        return self._x + r
         
     @property
     def bottom(self):
-        return self.y - self.height + self.anchor_y
+        t, r, b, l = self._trbl()
+        return self._y + b
         
     @property
     def left(self):
-        return self.x - self.width + self.anchor_x
+        t, r, b, l = self._trbl()
+        return self._x + l
         
+    @property
+    def radius(self):
+        t, r, b, l = self._trbl()
+        rs = max(t, b) ** 2 + max(r, l) ** 2
+        return rs ** .5
+        
+    def _trbl(self):
+        tx = self._texture
+        return trbl(
+            tx.width, 
+            tx.height, 
+            tx.anchor_x, 
+            tx.anchor_y, 
+            self._rotation,
+            self._scale
+        )
+
     def wrap_position(self, width, height, margin=50):
         self.x = (self.x + margin) % (width + 2 * margin) - margin
         self.y = (self.y + margin) % (height + 2 * margin) - margin
@@ -200,6 +258,12 @@ class Sprite(pyglet.sprite.Sprite):
     def clip_position(self, width, height, margin=0):
         self.x = max(-margin, min(margin + width, self.x))
         self.y = max(-margin, min(margin + height, self.y))
+
+    def show(self):
+        id0 = self._texture.get_image_data()
+        id1 = id0.get_data('RGBA', pitch=-id0.width*4)
+        im0 = PIL.Image.frombytes('RGBA', (id0.width, id0.height), id1)
+        return im0
 
 
 def canvas2sprite(c):
