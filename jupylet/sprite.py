@@ -30,8 +30,13 @@ import math
 
 import PIL.Image
 
+import numpy as np
+
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
 from .resource import image_from, pil_open
+
+
+_empty_array = np.array([])
 
 
 class Sprite(pyglet.sprite.Sprite):
@@ -114,10 +119,10 @@ class Sprite(pyglet.sprite.Sprite):
 
         self._update_position()
 
-    def collision_with(self, o, debug=False):
+    def collisions_with(self, o, debug=False):
         
         #if self.distance_to(o) > self.radius + o.radius:
-        #    return []
+        #    return
 
         x0, y0 = self.x, self.y
         x1, y1 = o.x, o.y
@@ -126,10 +131,10 @@ class Sprite(pyglet.sprite.Sprite):
         t1, r1, b1, l1 = o._trbl()
 
         if t0 + y0 < b1 + y1 or t1 + y1 < b0 + y0:
-            return []
+            return _empty_array[:0]
 
         if r0 + x0 < l1 + x1 or r1 + x1 < l0 + x0:
-            return []
+            return _empty_array[:0]
         
         return compute_collisions(o, self, debug=debug)
 
