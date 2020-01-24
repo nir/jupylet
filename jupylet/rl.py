@@ -82,51 +82,49 @@ class ModuleProcess(object):
         self.path = get_random_mm_path()
         self.debug = debug
 
-        self.q1 = mp.Queue()
-        self.q2 = mp.Queue()
-        self.q3 = mp.Queue()
+        self.c0, c1 = mp.Pipe()
+        self.c1 = None
+        self.p0 = mp.Process(target=self._worker, args=(c1,))
 
-        self.p0 = mp.Process(target=self._worker, args=(self.q1, self.q2, self.q3))
         self.mm = None
         
     def __del__(self):
         self.stop()
         
-    def _worker(self, q1, q2, q3):
+    def _worker(self, c1):
         
-        self.q1 = q1
-        self.q2 = q2
-        self.q3 = q3
+        self.c0 = None
+        self.c1 = c1
 
         module = importlib.import_module(self.name)
         
-        for name, args, kwargs in iter(self.q1.get, 'STOP'):            
+        for name, args, kwargs in iter(self.c1.recv, 'STOP'):            
             
             try:
                 if kwargs is not None:
                     foo = rgetattr(module, name)
                     r = foo(*args, **kwargs)
-                    self._q2_put(r)
+                    self._c1_send(r)
                     
                 elif args is not None:
                     rsetattr(module, name, args)
 
                 else:
-                    self._q2_put(rgetattr(module, name))
+                    self._c1_send(rgetattr(module, name))
              
             except:
-                self.q2.put(('ee', traceback.format_exception(*sys.exc_info())))
+                self.c1.send(('ee', traceback.format_exception(*sys.exc_info())))
                 
         if self.mm is not None:
             del self.mm
             self.mm = None
             os.remove(self.path)
     
-    def log(self, msg, *args):
+    """def log(self, msg, *args):
         if self.debug:
             msg = msg % args
             date = datetime.datetime.now().isoformat()[:23].replace('T', ' ')
-            self.q3.put('[%s] [%s]  %s' % (date, self.p0.ident, msg))
+            self.q3.put('[%s] [%s]  %s' % (date, self.p0.ident, msg))"""
 
     def start(self):
         if self.p0.ident is not None:
@@ -137,35 +135,35 @@ class ModuleProcess(object):
         return self.p0.start()
     
     def get(self, name):
-        self.q1.put((name, None, None))
-        return self._q2_get()
+        self.send(name, None, None)
+        return self.recv()
 
     def set(self, name, value):
-        self.q1.put((name, value, None))
+        self.send(name, value, None)
         
     def call(self, name, *args, **kwargs):
-        self.q1.put((name, args, kwargs))
-        return self._q2_get()
+        self.send(name, args, kwargs)
+        return self.recv()
     
-    def send(self, name, *args, **kwargs):
-        self.q1.put((name, args, kwargs))
+    def send(self, name, args, kwargs):
+        self.c0.send((name, args, kwargs))
     
     def recv(self):
-        return self._q2_get()
+        return self._c0_recv()
     
     def stop(self):
         if self.p0.ident is None or not self.p0.is_alive():
             return
 
         try:
-            self.q1.put('STOP')
+            self.c0.send('STOP')
             self.p0.join()
         except AssertionError:
             pass
 
-    def _q2_get(self, timeout=5.):
+    def _c0_recv(self, timeout=5.):
         
-        t, v = self.q2.get(timeout=timeout)
+        t, v = self.c0.recv()#timeout=timeout)
         
         if t == 'vv':
             return v
@@ -177,12 +175,12 @@ class ModuleProcess(object):
         if t == 'ee':
             sys.stderr.write('\n'.join(v))
         
-    def _q2_put(self, v):
+    def _c1_send(self, v):
         
         if isinstance(v, np.ndarray):
-            self.q2.put(('mm', self._mma(v)))
+            self.c1.send(('mm', self._mma(v)))
         else:
-            self.q2.put(('vv', v))
+            self.c1.send(('vv', v))
         
     def _mma(self, v):
         
@@ -231,9 +229,21 @@ class Games(object):
     def step(self):
         return self.call('app.step') 
     
-    def call(self, foo, *args, **kwargs):
-        for g in self.games:
-            g.send(foo, *args, **kwargs)
-            
-        return [g.recv() for g in self.games]
+    def get(self, name):
+        self.send(name, None, None)
+        return self.recv()
 
+    def set(self, name, value):
+        self.send(name, value, None)
+        
+    def call(self, name, *args, **kwargs):
+        self.send(name, args, kwargs)
+        return self.recv()
+
+    def send(self, name, args, kwargs):
+        for g in self.games:
+            g.send(name, args, kwargs)
+    
+    def recv(self):
+        return [g.recv() for g in self.games]
+    
