@@ -289,5 +289,5 @@ def highlights(dt):
             
 
 if __name__ == '__main__':
-    app.run()
+    print('This module is not intended to be run from the console. See pong-RL.ipynb for details.')
 
