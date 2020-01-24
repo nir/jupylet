@@ -25,12 +25,5 @@
 """
 
 
-VERSION = '0.5.1.dev'
-
-
-import traceback
-
-from .sprite import *
-from .label import *
-from .app import *
+VERSION = '0.6.0.dev'
 

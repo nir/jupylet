@@ -36,9 +36,11 @@ p1 = os.path.abspath(os.path.join(p0, '..'))
 
 sys.path.insert(0, p1)
 
-import jupylet
+import jupylet.color
 
-from jupylet import *
+from jupylet.app import App
+from jupylet.label import Label
+from jupylet.sprite import Sprite
 
 import pyglet.window.key as key
 
@@ -55,6 +57,10 @@ alien = Sprite('alien.png', scale=0.5)
 ship = Sprite('ship1.png', x=WIDTH/2, y=HEIGHT/2, scale=0.5)
 moon = Sprite('moon.png', x=WIDTH-70, y=HEIGHT-70, scale=0.5)
 
+circle = Sprite('yellow-circle.png')
+circle.opacity = 0
+circle.width = 184
+
 label = Label('Hello World!', color='cyan', font_size=16, x=10, y=10)
 
 
@@ -67,16 +73,22 @@ def on_draw():
     moon.draw()
     
     label.draw()
+
+    circle.draw()
     alien.draw()
     ship.draw()
 
 
 @app.event
 def on_mouse_motion(x, y, dx, dy):
+    
     alien.x = x
     alien.y = y
     
+    circle.x = x
+    circle.y = y    
     
+
 @app.run_me_again_and_again(1/36)
 def update_alien(dt):
     alien.rotation += dt * 36
@@ -109,7 +121,12 @@ def update_ship(dt):
     ship.y += vy * dt
     
     ship.wrap_position(WIDTH, HEIGHT)
-
+    
+    if len(ship.collisions_with(alien)) > 0:
+        circle.opacity = 128
+    else:
+        circle.opacity = 0
+        
 
 @app.event
 def on_key_press(symbol, modifiers):

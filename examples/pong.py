@@ -47,9 +47,11 @@ p1 = os.path.abspath(os.path.join(p0, '..'))
 
 sys.path.insert(0, p1)
 
-import jupylet
+import jupylet.color
 
-from jupylet import *
+from jupylet.app import App
+from jupylet.label import Label
+from jupylet.sprite import Sprite
 
 
 app = App(mode='hidden')
@@ -68,7 +70,7 @@ app.set_window_color(foreground)
 
 a0 = np.ones((32, 32)) * 255
 a1 = np.ones((128, 16)) * 255
-a2 = np.ones((HEIGHT * 9 // 10, WIDTH * 9 // 10, 3)) * jupylet.color2rgb(background)[:3]
+a2 = np.ones((HEIGHT * 9 // 10, WIDTH * 9 // 10, 3)) * jupylet.color.color2rgb(background)[:3]
 
 ball = Sprite(a0, y=HEIGHT/2, x=WIDTH/2, autocrop=True)
 

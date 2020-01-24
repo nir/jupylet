@@ -27,6 +27,7 @@
 
 import importlib
 import traceback
+import datetime
 import tempfile
 import hashlib
 import random
@@ -100,23 +101,20 @@ class ModuleProcess(object):
         module = importlib.import_module(self.name)
         
         for name, args, kwargs in iter(self.q1.get, 'STOP'):            
-            self.log('q1.get() -> %r', (name, args, kwargs))
-
+            
             try:
                 if kwargs is not None:
                     foo = rgetattr(module, name)
                     r = foo(*args, **kwargs)
-                    self.log('foo() -> %r', r)
                     self._q2_put(r)
-                    self.log('called q2.put()')
-
+                    
                 elif args is not None:
                     rsetattr(module, name, args)
 
                 else:
                     self._q2_put(rgetattr(module, name))
              
-            except Exception as e:
+            except:
                 self.q2.put(('ee', traceback.format_exception(*sys.exc_info())))
                 
         if self.mm is not None:
@@ -125,11 +123,17 @@ class ModuleProcess(object):
     
     def log(self, msg, *args):
         if self.debug:
-            self.q3.put(msg % args)
+            msg = msg % args
+            date = datetime.datetime.now().isoformat()[:23].replace('T', ' ')
+            self.q3.put('[%s] [%s]  %s' % (date, self.p0.ident, msg))
 
     def start(self):
-        if self.p0.ident is None:
-            return self.p0.start()
+        if self.p0.ident is not None:
+            return
+
+        assert 'pyglet' not in sys.modules, 'Avoid importing pyglet or jupylet modules except rl.py before starting worker processes.'
+
+        return self.p0.start()
     
     def get(self, name):
         self.q1.put((name, None, None))
