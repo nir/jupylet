@@ -75,29 +75,40 @@ def rsetattr(o, name, value):
 
 class ModuleProcess(object):
     
-    def __init__(self, name):
+    def __init__(self, name, debug=False):
         
         self.name = name
         self.path = get_random_mm_path()
+        self.debug = debug
 
         self.q1 = mp.Queue()
         self.q2 = mp.Queue()
-        self.p0 = mp.Process(target=self._worker, args=(self.q1, self.q2))
+        self.q3 = mp.Queue()
+
+        self.p0 = mp.Process(target=self._worker, args=(self.q1, self.q2, self.q3))
         self.mm = None
         
-    def __dell__(self):
+    def __del__(self):
         self.stop()
         
-    def _worker(self, q1, q2):
+    def _worker(self, q1, q2, q3):
         
+        self.q1 = q1
+        self.q2 = q2
+        self.q3 = q3
+
         module = importlib.import_module(self.name)
         
-        for name, args, kwargs in iter(self.q1.get, 'STOP'):
-            
+        for name, args, kwargs in iter(self.q1.get, 'STOP'):            
+            self.log('q1.get() -> %r', (name, args, kwargs))
+
             try:
                 if kwargs is not None:
                     foo = rgetattr(module, name)
-                    self._q2_put(foo(*args, **kwargs))
+                    r = foo(*args, **kwargs)
+                    self.log('foo() -> %r', r)
+                    self._q2_put(r)
+                    self.log('called q2.put()')
 
                 elif args is not None:
                     rsetattr(module, name, args)
@@ -111,7 +122,11 @@ class ModuleProcess(object):
         if self.mm is not None:
             del self.mm
             self.mm = None
-        
+    
+    def log(self, msg, *args):
+        if self.debug:
+            self.q3.put(msg % args)
+
     def start(self):
         if self.p0.ident is None:
             return self.p0.start()
