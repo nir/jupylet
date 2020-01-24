@@ -26,10 +26,12 @@
 
 
 import importlib
+import traceback
 import tempfile
 import hashlib
 import random
 import pickle
+import sys
 import os
 
 import multiprocessing as mp
@@ -92,16 +94,20 @@ class ModuleProcess(object):
         
         for name, args, kwargs in iter(self.q1.get, 'STOP'):
             
-            if kwargs is not None:
-                foo = rgetattr(module, name)
-                self._q2_put(foo(*args, **kwargs))
-                
-            elif args is not None:
-                rsetattr(module, name, args)
-                
-            else:
-                self._q2_put(rgetattr(module, name))
+            try:
+                if kwargs is not None:
+                    foo = rgetattr(module, name)
+                    self._q2_put(foo(*args, **kwargs))
+
+                elif args is not None:
+                    rsetattr(module, name, args)
+
+                else:
+                    self._q2_put(rgetattr(module, name))
              
+            except Exception as e:
+                self.q2.put(('ee', traceback.format_exception(*sys.exc_info())))
+                
         if self.mm is not None:
             del self.mm
             self.mm = None
@@ -137,6 +143,9 @@ class ModuleProcess(object):
             path, dtype, shape = v
             return np.memmap(path, dtype=dtype, mode='r', shape=shape)
         
+        if t == 'ee':
+            sys.stderr.write('\n'.join(v))
+        
     def _q2_put(self, v):
         
         if isinstance(v, np.ndarray):
@@ -153,7 +162,7 @@ class ModuleProcess(object):
         self.mm.flush()
         
         return self.path, v.dtype, v.shape
-            
+
             
 class GameProcess(ModuleProcess):
     
