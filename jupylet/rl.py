@@ -120,6 +120,7 @@ class ModuleProcess(object):
         if self.mm is not None:
             del self.mm
             self.mm = None
+            os.remove(self.path)
     
     def log(self, msg, *args):
         if self.debug:
@@ -146,11 +147,22 @@ class ModuleProcess(object):
         self.q1.put((name, args, kwargs))
         return self._q2_get()
     
+    def send(self, name, *args, **kwargs):
+        self.q1.put((name, args, kwargs))
+    
+    def recv(self):
+        return self._q2_get()
+    
     def stop(self):
-        if self.p0.ident is not None:
+        if self.p0.ident is None or not self.p0.is_alive():
+            return
+
+        try:
             self.q1.put('STOP')
             self.p0.join()
-        
+        except AssertionError:
+            pass
+
     def _q2_get(self, timeout=5.):
         
         t, v = self.q2.get(timeout=timeout)
@@ -194,4 +206,34 @@ class GameProcess(ModuleProcess):
         
     def step(self):
         return self.call('app.step')
+
+
+class Games(object):
+    
+    def __init__(self, games):
+        
+        if type(games[0]) is str:
+            self.games = [ModuleProcess(game) for game in games]
+        else:
+            self.games = games
+        
+    def start(self, size=224):
+        
+        for g in self.games:
+            if type(g) is GameProcess:
+                super(GameProcess, g).start()
+            else:
+                g.start()
+                
+        self.call('app.start')
+        self.call('app.scale_window_to', size)
+        
+    def step(self):
+        return self.call('app.step') 
+    
+    def call(self, foo, *args, **kwargs):
+        for g in self.games:
+            g.send(foo, *args, **kwargs)
+            
+        return [g.recv() for g in self.games]
 
