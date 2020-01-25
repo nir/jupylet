@@ -26,6 +26,7 @@
 
 
 import importlib
+import itertools
 import traceback
 import datetime
 import tempfile
@@ -39,6 +40,13 @@ import os
 
 import multiprocessing as mp
 import numpy as np
+
+
+SCALARS = {str, int, float, bool}
+
+
+def is_scalar(a):
+    return type(a) in SCALARS
 
 
 def o2h(o, n=12):
@@ -278,7 +286,16 @@ class GameProcess(ModuleProcess):
         self.call('app.step')
         
     def step(self, *args, **kwargs):
-        return self.call('app.step', *args, **kwargs)
+        return self.call('step', *args, **kwargs)
+        
+    def reset(self):
+        return self.call('reset')
+        
+    def load(self, path):
+        return self.call('load', path)        
+
+    def save(self, path=None):
+        return self.call('save', path)
 
 
 class Games(object):
@@ -303,8 +320,17 @@ class Games(object):
         self.call('app.step')
 
     def step(self, *args, **kwargs):
-        return self.call('app.step', *args, **kwargs) 
-    
+        return self.call('step', *args, **kwargs) 
+        
+    def reset(self):
+        return self.call('reset')
+        
+    def load(self, path):
+        return self.call('load', path)        
+
+    def save(self, path=None):
+        return self.call('save', path)
+
     def get(self, name):
         self.send(name, None, None)
         return self.recv()
@@ -317,7 +343,13 @@ class Games(object):
         return self.recv()
 
     def send(self, name, args, kwargs):
-        for g in self.games:
+
+        if all(is_scalar(a) for a in args):
+            args = [[a] * len(self.games) for a in args]
+        else:
+            assert not any(is_scalar(a) or len(a) != len(self.games) for a in args), 'Positional arguments should be batched with a "sample" for each game.'
+
+        for g, args in itertools.zip_longest(self.games, zip(*args), fillvalue=()):
             g.send(name, args, kwargs)
     
     def recv(self):
