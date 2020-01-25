@@ -34,6 +34,7 @@ import numpy as np
 
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
 from .resource import image_from, pil_open
+from .state import State
 
 
 _empty_array = np.array([])
@@ -269,6 +270,30 @@ class Sprite(pyglet.sprite.Sprite):
         id1 = id0.get_data('RGBA', pitch=-id0.width*4)
         im0 = PIL.Image.frombytes('RGBA', (id0.width, id0.height), id1)
         return im0
+
+    def get_state(self):
+
+        return State(
+            x = self.x,
+            y = self.y,
+            scale = self.scale,
+            opacity = self.opacity,
+            rotation = self.rotation,
+            anchor_x = self.anchor_x,
+            anchor_y = self.anchor_y,
+        )
+
+    def set_state(self, s):
+        
+        self.x = s.x
+        self.y = s.y
+        self.scale = s.scale
+        self.opacity = s.opacity
+        self.rotation = s.rotation
+        self.anchor_x = s.anchor_x
+        self.anchor_y = s.anchor_y
+
+        self._update_position()
 
 
 def canvas2sprite(c):

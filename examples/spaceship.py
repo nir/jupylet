@@ -45,7 +45,12 @@ from jupylet.sprite import Sprite
 import pyglet.window.key as key
 
 
-app = App(mode='window')
+if __name__ == '__main__':
+    mode = 'window'
+else:
+    mode = 'hidden'
+
+app = App(mode=mode)
 
 window = app.window
 

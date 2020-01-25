@@ -29,6 +29,7 @@ import webcolors
 import pyglet
 
 from .color import color2rgb
+from .state import State
 
 
 class Label(pyglet.text.Label):
@@ -81,4 +82,20 @@ class Label(pyglet.text.Label):
             color = tuple(int(v) for v in color)
 
         self.document.set_style(0, len(self.document.text), {'color': color})
+
+    def get_state(self):
+        
+        return State(
+            x = self.x,
+            y = self.y,
+            text = self.text,
+            color = self.color,
+        )
+
+    def set_state(self, s):
+        
+        self.x = s.x
+        self.y = s.y
+        self.text = s.text
+        self.color = s.color
 

@@ -52,9 +52,15 @@ import jupylet.color
 from jupylet.app import App
 from jupylet.label import Label
 from jupylet.sprite import Sprite
+from jupylet.state import State, load_state, save_state
 
 
-app = App(mode='hidden')
+if __name__ == '__main__':
+    mode = 'window'
+else:
+    mode = 'hidden'
+
+app = App(mode=mode)
 
 window = app.window
 
@@ -95,10 +101,6 @@ scorer = Label(
 )
 
 
-sl = 0
-sr = 0
-
-
 @app.event
 def on_draw():
     
@@ -114,151 +116,147 @@ def on_draw():
     padr.draw()
 
 
-vyl = 0
-pyl = HEIGHT/2
+state = State(
+    
+    sl = 0,
+    sr = 0,
+    
+    bvx = 192,
+    bvy = 192,
+    
+    vyl = 0,
+    pyl = HEIGHT/2,
 
-vyr = 0
-pyr = HEIGHT/2
+    vyr = 0,
+    pyr = HEIGHT/2,
 
-left = False
-right = False
+    left = False,
+    right = False,
 
-key_a = False
-key_d = False
-
+    key_a = False,
+    key_d = False,
+)
 
 @app.event
 def on_key_press(symbol, modifiers):
-    
-    global left, right, key_a, key_d
-    
+        
     if symbol == key.LEFT:
-        left = True
+        state.left = True
         
     if symbol == key.RIGHT:
-        right = True
+        state.right = True
         
     if symbol == key.A:
-        key_a = True
+        state.key_a = True
         
     if symbol == key.D:
-        key_d = True
+        state.key_d = True
         
 
 @app.event
 def on_key_release(symbol, modifiers):
     
-    global left, right, key_a, key_d
-    
     if symbol == key.LEFT:
-        left = False
+        state.left = False
         
     if symbol == key.RIGHT:
-        right = False
+        state.right = False
 
     if symbol == key.A:
-        key_a = False
+        state.key_a = False
         
     if symbol == key.D:
-        key_d = False
+        state.key_d = False
         
 
 @app.run_me_again_and_again(1/120)
 def update_pads(dt):
-    
-    global vyl, vyr, pyl, pyr
-    
-    if right:
-        pyr = min(HEIGHT, pyr + dt * 512)
         
-    if left:
-        pyr = max(0, pyr - dt * 512)
+    if state.right:
+        state.pyr = min(HEIGHT, state.pyr + dt * 512)
         
-    if key_a:
-        pyl = min(HEIGHT, pyl + dt * 512)
+    if state.left:
+        state.pyr = max(0, state.pyr - dt * 512)
         
-    if key_d:
-        pyl = max(0, pyl - dt * 512)
+    if state.key_a:
+        state.pyl = min(HEIGHT, state.pyl + dt * 512)
         
-    ayl = 200 * (pyl - padl.y)
-    vyl = vyl * 0.9 + (ayl * dt)
+    if state.key_d:
+        state.pyl = max(0, state.pyl - dt * 512)
+        
+    ayl = 200 * (state.pyl - padl.y)
+    ayr = 200 * (state.pyr - padr.y)
+
+    state.vyl = state.vyl * 0.9 + (ayl * dt)
+    state.vyr = state.vyr * 0.9 + (ayr * dt)
     
-    ayr = 200 * (pyr - padr.y)
-    vyr = vyr * 0.9 + (ayr * dt)
-    
-    padl.y += vyl * dt
-    padr.y += vyr * dt
+    padl.y += state.vyl * dt
+    padr.y += state.vyr * dt
     
     padr.clip_position(WIDTH, HEIGHT)
     padl.clip_position(WIDTH, HEIGHT)
 
 
-bvx = 192
-bvy = 192
-
-
 @app.run_me_again_and_again(1/120)
 def update_ball(dt):
     
-    global bvx, bvy, sl, sr
-
-    bs0 = bvx ** 2 + bvy ** 2
+    bs0 = state.bvx ** 2 + state.bvy ** 2
     
     ball.rotation += 200 * dt
     
-    ball.x += bvx * dt
-    ball.y += bvy * dt
+    ball.x += state.bvx * dt
+    ball.y += state.bvy * dt
     
     if ball.top >= HEIGHT:
         app.play_once(sound)
         ball.y -= ball.top - HEIGHT
-        bvy = -bvy
+        state.bvy = -state.bvy
         
     if ball.bottom <= 0:
         app.play_once(sound)
         ball.y -= ball.bottom
-        bvy = -bvy
+        state.bvy = -state.bvy
         
     if ball.right >= WIDTH:
         app.play_once(sound)
         ball.x -= ball.right - WIDTH
         
-        bvx = -192
-        bvy = 192 * np.sign(bvy)
+        state.bvx = -192
+        state.bvy = 192 * np.sign(state.bvy)
         bs0 = 0
         
-        sl += 1
-        scorel.text = str(sl)
+        state.sl += 1
+        scorel.text = str(state.sl)
         
     if ball.left <= 0:
         app.play_once(sound)
         ball.x -= ball.left
         
-        bvx = 192
-        bvy = 192 * np.sign(bvy)
+        state.bvx = 192
+        state.bvy = 192 * np.sign(state.bvy)
         bs0 = 0
         
-        sr += 1
-        scorer.text = str(sr)
+        state.sr += 1
+        scorer.text = str(state.sr)
         
-    if bvx > 0 and ball.top >= padr.bottom and padr.top >= ball.bottom: 
+    if state.bvx > 0 and ball.top >= padr.bottom and padr.top >= ball.bottom: 
         if 0 < ball.right - padr.left < 10:
             app.play_once(sound)
             ball.x -= ball.right - padr.left
-            bvx = -bvx
-            bvy += vyr / 2
+            state.bvx = -state.bvx
+            state.bvy += state.vyr / 2
             
-    if bvx < 0 and ball.top >= padl.bottom and padl.top >= ball.bottom: 
+    if state.bvx < 0 and ball.top >= padl.bottom and padl.top >= ball.bottom: 
         if 0 < padl.right - ball.left < 10:
             app.play_once(sound)
             ball.x += ball.left - padl.right
-            bvx = -bvx
-            bvy += vyl / 2
+            state.bvx = -state.bvx
+            state.bvy += state.vyl / 2
             
-    bs1 = bvx ** 2 + bvy ** 2
+    bs1 = state.bvx ** 2 + state.bvy ** 2
     
     if bs1 < 0.9 * bs0:
-        bvx = (bs0 - bvy ** 2) ** 0.5 * np.sign(bvx)
+        state.bvx = (bs0 - state.bvy ** 2) ** 0.5 * np.sign(state.bvx)
 
     ball.wrap_position(WIDTH, HEIGHT)
 
@@ -266,8 +264,8 @@ def update_ball(dt):
 @app.run_me_now()
 def highlights(dt):
     
-    sl0 = sl
-    sr0 = sr
+    sl0 = state.sl
+    sr0 = state.sr
     
     slc = np.array(scorel.color)
     src = np.array(scorer.color)
@@ -281,15 +279,51 @@ def highlights(dt):
         scorel.color = np.array(scorel.color) * r0 + (1 - r0) * slc
         scorer.color = np.array(scorer.color) * r0 + (1 - r0) * src
         
-        if sl0 != sl:
-            sl0 = sl
+        if sl0 != state.sl:
+            sl0 = state.sl
             scorel.color = 'white'
 
-        if sr0 != sr:
-            sr0 = sr
+        if sr0 != state.sr:
+            sr0 = state.sr
             scorer.color = 'white'
-            
+                        
+
+def step(player0=[0, 0], player1=[0, 0], n=1):
+    
+    state.key_a, state.key_d = player0
+    
+    state.left, state.right = player1
+    
+    sl0 = state.sl
+    sr0 = state.sr
+    
+    if app.mode == 'hidden': 
+        app.step(n)
+        
+    a = app.array0
+    
+    return {
+        'screen0': a,
+        'player0': {'reward': state.sl - sl0},
+        'player1': {'reward': state.sr - sr0},
+    }
+
+
+START = 'pong-start.state'
+
+
+def reset():
+    load(START)
+    
+    
+def load(path):
+    load_state(path, state, ball, padl, padr, scorel, scorer)
+    
+
+def save(path=None):
+    return save_state('pong', path, state, ball, padl, padr, scorel, scorer)
+
 
 if __name__ == '__main__':
-    print('This module is not intended to be run from the console. See pong-RL.ipynb for details.')
+    app.run()
 
