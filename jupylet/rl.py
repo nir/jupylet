@@ -32,6 +32,8 @@ import tempfile
 import hashlib
 import random
 import pickle
+import mmap
+import time
 import sys
 import os
 
@@ -74,6 +76,87 @@ def rsetattr(o, name, value):
     setattr(o, name, value)
 
 
+class mmcache(object):
+    
+    def __init__(self):
+        
+        self._r = {}
+        self._w = {}
+
+        self.ison = os.path.exists('/dev/shm')
+        
+    def __del__(self):
+
+        for cache in [self._r, self._w]:
+            while cache:
+                mmd = cache.popitem()[1]
+                while mmd:
+                    path, mm = mmd.popitem()
+                    mode = mm.mode
+                    del mm
+                    if mode == 'w+':
+                        os.remove(path)
+                        
+    def get(self, dtype, shape, path=None):
+
+        if path:
+
+            mmd = self._r.setdefault((dtype, shape), {})
+
+            if path not in mmd:
+                mmd[path] = np.memmap(path, dtype=dtype, shape=shape, mode='r')
+
+            return path, mmd[path]
+
+        mmd = self._w.setdefault((dtype, shape), {})
+        if mmd:
+            return mmd.popitem()
+
+        path = path or get_random_mm_path()
+        return path, np.memmap(path, dtype=dtype, shape=shape, mode='w+')
+    
+    def set(self, ml):
+        for path, mm in ml:
+            if mm.mode == 'w+':
+                self._w.setdefault((mm.dtype, mm.shape), {})[path] = mm
+        
+    def dump(self, o, ml, size=1024, depth=1):
+
+        if type(o) in [int, float, str]:
+            return o
+
+        if depth and type(o) in [list, tuple]:
+            return type(o)(self.dump(v, ml, size, depth-1) for v in o)
+
+        if depth and type(o) is dict:
+            return {k: self.dump(v, ml, size, depth-1) for k, v in o.items()}
+
+        if isinstance(o, np.ndarray) and o.size > size:
+            path, mm = self.get(o.dtype, o.shape)
+            mm[:] = o[:]
+            mm.flush()
+            ml.append((path, mm))
+            return ('__ndarray__', o.dtype.name, o.shape, path)
+
+        return o   
+    
+    def load(self, o, depth=1):
+
+        if type(o) in [int, float, str]:
+            return o
+
+        if type(o) is tuple and len(o) == 4 and o[0] == '__ndarray__':
+            return np.array(self.get(*o[1:])[1])
+
+        if depth and type(o) in [list, tuple]:
+            return type(o)(self.load(v, depth-1) for v in o)
+
+        if depth and type(o) is dict:
+            return {k: self.load(v, depth-1) for k, v in o.items()}
+
+        return o
+
+
 class ModuleProcess(object):
     
     def __init__(self, name, debug=False):
@@ -82,29 +165,29 @@ class ModuleProcess(object):
         self.path = get_random_mm_path()
         self.debug = debug
 
-        self.c0, c1 = mp.Pipe()
-        self.c1 = None
-        self.p0 = mp.Process(target=self._worker, args=(c1,))
+        self.c0, c0 = mp.Pipe()
+        self.c1 = self.c0
 
-        self.mm = None
+        self.p0 = mp.Process(target=self._worker0, args=(c0,))
+
+        self.mm = mmcache()
         
     def __del__(self):
         self.stop()
         
-    def _worker(self, c1):
+    def _worker0(self, c0):
         
-        self.c0 = None
-        self.c1 = c1
+        self.c0 = c0
+        self.c1 = c0
 
         module = importlib.import_module(self.name)
         
-        for name, args, kwargs in iter(self.c1.recv, 'STOP'):            
+        for name, args, kwargs in iter(self.c0.recv, 'STOP'):            
             
             try:
                 if kwargs is not None:
                     foo = rgetattr(module, name)
-                    r = foo(*args, **kwargs)
-                    self._c1_send(r)
+                    self._c1_send(foo(*args, **kwargs))
                     
                 elif args is not None:
                     rsetattr(module, name, args)
@@ -114,12 +197,7 @@ class ModuleProcess(object):
              
             except:
                 self.c1.send(('ee', traceback.format_exception(*sys.exc_info())))
-                
-        if self.mm is not None:
-            del self.mm
-            self.mm = None
-            os.remove(self.path)
-    
+                   
     """def log(self, msg, *args):
         if self.debug:
             msg = msg % args
@@ -132,7 +210,7 @@ class ModuleProcess(object):
 
         assert 'pyglet' not in sys.modules, 'Avoid importing pyglet or jupylet modules except rl.py before starting worker processes.'
 
-        return self.p0.start()
+        self.p0.start()
     
     def get(self, name):
         self.send(name, None, None)
@@ -161,36 +239,32 @@ class ModuleProcess(object):
         except AssertionError:
             pass
 
-    def _c0_recv(self, timeout=5.):
+    def _c1_send(self, v):
+
+        if not self.mm.ison:
+            return self.c1.send(('vv', v))
+
+        ml = []
+        v = self.mm.dump(v, ml)
+
+        if not ml:
+            return self.c1.send(('vv', v))
+
+        self.mm.set(ml)
+        return self.c1.send(('mm', v))
+            
+    def _c0_recv(self, timeout=5.):     
         
-        t, v = self.c0.recv()#timeout=timeout)
+        t, v = self.c1.recv()
         
         if t == 'vv':
             return v
         
         if t == 'mm':
-            path, dtype, shape = v
-            return np.memmap(path, dtype=dtype, mode='r', shape=shape)
+            return self.mm.load(v)
         
         if t == 'ee':
-            sys.stderr.write('\n'.join(v))
-        
-    def _c1_send(self, v):
-        
-        if isinstance(v, np.ndarray):
-            self.c1.send(('mm', self._mma(v)))
-        else:
-            self.c1.send(('vv', v))
-        
-    def _mma(self, v):
-        
-        if self.mm is None or self.mm.dtype != v.dtype or self.mm.shape != v.shape:
-            self.mm = np.memmap(self.path, dtype=v.dtype, mode='w+', shape=v.shape)
-            
-        self.mm[:] = v[:]
-        self.mm.flush()
-        
-        return self.path, v.dtype, v.shape
+            sys.stderr.write('\n'.join(v))   
 
             
 class GameProcess(ModuleProcess):
@@ -201,9 +275,10 @@ class GameProcess(ModuleProcess):
         
         self.call('app.start')
         self.call('app.scale_window_to', size)
+        self.call('app.step')
         
-    def step(self):
-        return self.call('app.step')
+    def step(self, *args, **kwargs):
+        return self.call('app.step', *args, **kwargs)
 
 
 class Games(object):
@@ -225,9 +300,10 @@ class Games(object):
                 
         self.call('app.start')
         self.call('app.scale_window_to', size)
-        
-    def step(self):
-        return self.call('app.step') 
+        self.call('app.step')
+
+    def step(self, *args, **kwargs):
+        return self.call('app.step', *args, **kwargs) 
     
     def get(self, name):
         self.send(name, None, None)
