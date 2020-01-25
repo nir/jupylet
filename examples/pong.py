@@ -54,7 +54,12 @@ from jupylet.label import Label
 from jupylet.sprite import Sprite
 
 
-app = App(mode='hidden')
+if __name__ == '__main__':
+    mode = 'window'
+else:
+    mode = 'hidden'
+
+app = App(mode=mode)
 
 window = app.window
 
@@ -291,5 +296,5 @@ def highlights(dt):
             
 
 if __name__ == '__main__':
-    print('This module is not intended to be run from the console. See pong-RL.ipynb for details.')
+    app.run()
 
