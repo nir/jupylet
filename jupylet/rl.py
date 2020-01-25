@@ -269,11 +269,11 @@ class ModuleProcess(object):
             
 class GameProcess(ModuleProcess):
     
-    def start(self, size=224):
+    def start(self, interval=1/30, size=224):
 
         super(GameProcess, self).start()
         
-        self.call('app.start')
+        self.call('app.start', interval)
         self.call('app.scale_window_to', size)
         self.call('app.step')
         
@@ -290,7 +290,7 @@ class Games(object):
         else:
             self.games = games
         
-    def start(self, size=224):
+    def start(self, interval=1/30, size=224):
         
         for g in self.games:
             if type(g) is GameProcess:
@@ -298,7 +298,7 @@ class Games(object):
             else:
                 g.start()
                 
-        self.call('app.start')
+        self.call('app.start', interval)
         self.call('app.scale_window_to', size)
         self.call('app.step')
 
