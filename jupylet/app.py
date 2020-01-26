@@ -45,6 +45,7 @@ import concurrent.futures
 import numpy as np
 
 from .color import color2rgb
+from .state import State
 
 
 __all__ = ['App']
@@ -684,27 +685,4 @@ class App(_ClockLeg, _EventLeg):
         self._redraw_windows(0, force_redraw=True)
 
         return self.array0
-            
-            
-class State(object):
-    
-    def __init__(self, **kwargs):
-        
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-            
-    def __repr__(self):
-        return repr(self.__dict__)
-    
-    def __setitem__(self, key, item):
-        self.__dict__[key] = item
-
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def get_state(self):
-        return self
-
-    def set_state(self, s):
-        self.__dict__ = vars(s)
 
