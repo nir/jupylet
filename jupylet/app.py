@@ -28,6 +28,7 @@
 import functools
 import ipycanvas
 import ipyevents
+import platform
 import asyncio
 import inspect
 import pyglet
@@ -44,6 +45,9 @@ from .color import color2rgb
 
 
 __all__ = ['App']
+
+
+WARNING = 'Will run the game in a window since on Mac computers only "window" mode is supported at the moment :-('
 
 
 _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
@@ -481,6 +485,14 @@ class App(_ClockLeg, _EventLeg):
     
     def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/']):
         
+        if platform.system() == 'Darwin':
+
+            assert mode not in ['both', 'hidden'], WARNING
+            if mode == 'jupyter':
+                mode = 'window'
+                sys.stderr.write(WARNING + '\n')
+                self._show_mac_warning = True
+                
         assert mode in ['window', 'jupyter', 'both', 'hidden']
         
         super(App, self).__init__(fake_time=(mode=='hidden'))
@@ -529,6 +541,8 @@ class App(_ClockLeg, _EventLeg):
     def run(self, interval=1/60):
         
         assert self.window._context, 'Window has closed. Create a new app object to run.'
+
+        hasattr(self, '_show_mac_warning') and sys.stderr.write(WARNING + '\n')
 
         self._run_timestamp = time.time()
 
