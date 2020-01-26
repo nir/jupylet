@@ -76,6 +76,8 @@ class Sprite(pyglet.sprite.Sprite):
                  usage,
                  subpixel)
 
+        self.scale = scale
+
         if width:
             self.width = width
 
@@ -84,7 +86,6 @@ class Sprite(pyglet.sprite.Sprite):
 
         self.anchor_x = anchor_x
         self.anchor_y = anchor_y        
-        self.scale = scale
 
         self._update_position()
 

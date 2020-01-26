@@ -30,8 +30,11 @@ import ipycanvas
 import ipyevents
 import platform
 import asyncio
+import hashlib
 import inspect
+import pickle
 import pyglet
+import random
 import time
 import sys
 import re
@@ -56,6 +59,10 @@ _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 def async_thread(foo, *args, **kwargs):
     future = _thread_pool.submit(foo, *args, **kwargs)
     return asyncio.wrap_future(future)
+
+
+def o2h(o, n=12):
+    return hashlib.sha256(pickle.dumps(o)).hexdigest()[:n]
 
 
 class EventLoop(pyglet.app.EventLoop):
@@ -587,9 +594,9 @@ class App(_ClockLeg, _EventLeg):
         self.clock.unschedule(self._redraw_windows)
         self.clock.schedule_interval_soft(self._redraw_windows, interval)
 
-    def _redraw_windows(self, dt):
+    def _redraw_windows(self, dt, force_redraw=False):
         
-        if self.window.invalid:
+        if self.window.invalid or force_redraw:
 
             self.window.switch_to()
             self.window.dispatch_event('on_draw')
@@ -653,4 +660,51 @@ class App(_ClockLeg, _EventLeg):
 
     def set_window_color(self, color):
         pyglet.gl.glClearColor(*color2rgb(color, zero2one=True))
+
+
+    def save_state(self, name, path, *args):
+        
+        if not path:
+            path = '%s-%s.state' % (name, o2h(random.random()))
+
+        with open(path, 'wb') as f:
+            sl = [o.get_state() for o in args]
+            pickle.dump(sl, f)
+            
+        return path
+            
+    def load_state(self, path, *args):
+        
+        with open(path, 'rb') as f:
+            sl = pickle.load(f)
+            for o, s in zip(args, sl):
+                o.set_state(s)
+
+        self._redraw_windows(0, force_redraw=True)
+        self._redraw_windows(0, force_redraw=True)
+
+        return self.array0
+            
+            
+class State(object):
+    
+    def __init__(self, **kwargs):
+        
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+            
+    def __repr__(self):
+        return repr(self.__dict__)
+    
+    def __setitem__(self, key, item):
+        self.__dict__[key] = item
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def get_state(self):
+        return self
+
+    def set_state(self, s):
+        self.__dict__ = vars(s)
 

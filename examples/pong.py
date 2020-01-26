@@ -49,10 +49,9 @@ sys.path.insert(0, p1)
 
 import jupylet.color
 
-from jupylet.app import App
+from jupylet.app import App, State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
-from jupylet.state import State, load_state, save_state
 
 
 if __name__ == '__main__':
@@ -288,11 +287,11 @@ def highlights(dt):
             scorer.color = 'white'
                         
 
-def step(player0=[0, 0], player1=[0, 0], n=1):
+def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
     
-    state.key_a, state.key_d = player0
+    state.key_a, state.key_d = player0[:2]
     
-    state.left, state.right = player1
+    state.left, state.right = player1[:2]
     
     sl0 = state.sl
     sr0 = state.sr
@@ -300,12 +299,12 @@ def step(player0=[0, 0], player1=[0, 0], n=1):
     if app.mode == 'hidden': 
         app.step(n)
         
-    a = app.array0
-    
+    reward = (state.sl - sl0) - (state.sr - sr0)
+
     return {
-        'screen0': a,
-        'player0': {'reward': state.sl - sl0},
-        'player1': {'reward': state.sr - sr0},
+        'screen0': app.array0,
+        'player0': {'score': state.sl, 'reward': reward},
+        'player1': {'score': state.sr, 'reward': -reward},
     }
 
 
@@ -313,15 +312,15 @@ START = 'pong-start.state'
 
 
 def reset():
-    load(START)
+    return load(START)
     
     
 def load(path):
-    load_state(path, state, ball, padl, padr, scorel, scorer)
+    return app.load_state(path, state, ball, padl, padr, scorel, scorer)
     
 
 def save(path=None):
-    return save_state('pong', path, state, ball, padl, padr, scorel, scorer)
+    return app.save_state('pong', path, state, ball, padl, padr, scorel, scorer)
 
 
 if __name__ == '__main__':

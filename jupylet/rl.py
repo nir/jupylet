@@ -42,7 +42,7 @@ import multiprocessing as mp
 import numpy as np
 
 
-SCALARS = {str, int, float, bool}
+SCALARS = {str, bytes, int, float, bool}
 
 
 def is_scalar(a):
@@ -216,7 +216,7 @@ class ModuleProcess(object):
         if self.p0.ident is not None:
             return
 
-        assert 'pyglet' not in sys.modules, 'Avoid importing pyglet or jupylet modules except rl.py before starting worker processes.'
+        assert 'pyglet' not in sys.modules, 'Don\'t import pyglet or jupylet modules except jupylet.rl before starting worker processes.'
 
         self.p0.start()
     
@@ -283,7 +283,11 @@ class GameProcess(ModuleProcess):
         
         self.call('app.start', interval)
         self.call('app.scale_window_to', size)
-        self.call('app.step')
+        self.call('app._redraw_windows', 0)
+        self.call('app._redraw_windows', 0)
+
+    def get_observation(self):
+        return self.get('app.array0')
         
     def step(self, *args, **kwargs):
         return self.call('step', *args, **kwargs)
@@ -317,7 +321,11 @@ class Games(object):
                 
         self.call('app.start', interval)
         self.call('app.scale_window_to', size)
-        self.call('app.step')
+        self.call('app._redraw_windows', 0)
+        self.call('app._redraw_windows', 0)
+
+    def get_observation(self):
+        return self.get('app.array0')        
 
     def step(self, *args, **kwargs):
         return self.call('step', *args, **kwargs) 
@@ -344,13 +352,15 @@ class Games(object):
 
     def send(self, name, args, kwargs):
 
-        if all(is_scalar(a) for a in args):
-            args = [[a] * len(self.games) for a in args]
+        if not args or all(is_scalar(a) for a in args):
+            for g in self.games:
+                g.send(name, args, kwargs)
+            
         else:
             assert not any(is_scalar(a) or len(a) != len(self.games) for a in args), 'Positional arguments should be batched with a "sample" for each game.'
 
-        for g, args in itertools.zip_longest(self.games, zip(*args), fillvalue=()):
-            g.send(name, args, kwargs)
+            for g, args in zip(self.games, zip(*args)):
+                g.send(name, args, kwargs)
     
     def recv(self):
         return [g.recv() for g in self.games]
