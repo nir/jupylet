@@ -25,35 +25,6 @@
 """
 
 
-import hashlib
-import random
-import pickle
-
-
-def o2h(o, n=12):
-    return hashlib.sha256(pickle.dumps(o)).hexdigest()[:n]
-
-
-def save_state(name, path, *args):
-    
-    if not path:
-        path = '%s-%s.state' % (name, o2h(random.random()))
-
-    with open(path, 'wb') as f:
-        sl = [o.get_state() for o in args]
-        pickle.dump(sl, f)
-        
-    return path
-
-        
-def load_state(path, *args):
-    
-    with open(path, 'rb') as f:
-        sl = pickle.load(f)
-        for o, s in zip(args, sl):
-            o.set_state(s)
-            
-            
 class State(object):
     
     def __init__(self, **kwargs):
