@@ -38,7 +38,7 @@ Then enter the _./jupylet/examples/_ folder and start a jupyter notebook with:
 
 Run the notebook and a game canvas should appear with the spaceship example:
 
-<img src="https://raw.githubusercontent.com/nir/jupylet/master/docs/images/spaceship.jpg" width="256" height="256" />
+<img src="https://raw.githubusercontent.com/nir/jupylet/master/docs/images/spaceship.gif" width="256" height="256" />
 
 You can run essentially the same code from the console with:
 
