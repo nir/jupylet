@@ -10,7 +10,7 @@ with open('README.md', 'r') as f:
 setuptools.setup(
     name = 'jupylet',
     packages = ['jupylet'],
-    version = '0.6.0',
+    version = '0.6.1',
     license='bsd-2-clause',
     description = 'A marriage of Jupyter and the pyglet game programming library',
     long_description=long_description,
@@ -18,7 +18,7 @@ setuptools.setup(
     author = 'Nir Aides',
     author_email = 'nir@winpdb.org',
     url = 'https://github.com/nir/jupylet',
-    download_url = 'https://github.com/nir/jupylet/archive/v0.6.0.tar.gz',
+    download_url = 'https://github.com/nir/jupylet/archive/v0.6.1.tar.gz',
     keywords = ['python', 'pyglet', 'jupyter', 'kids', 'games', 'children', 'deep learning', 'reinforcement learning', 'RL'],
     install_requires=[
         'pyglet', 'webcolors', 'numpy', 'scipy', 'pillow', 'jupyter', 'ipyevents', 'ipycanvas'
