@@ -62,6 +62,15 @@ def async_thread(foo, *args, **kwargs):
     return asyncio.wrap_future(future)
 
 
+def get_glscalef():
+    
+    x0 = (pyglet.gl.GLfloat * 16)()
+    pyglet.gl.glGetFloatv(pyglet.gl.GL_MODELVIEW_MATRIX, x0)
+    sx, sy, sz = list(x0)[::5][:3]
+    
+    return sx, sy, sz
+
+
 def o2h(o, n=12):
     return hashlib.sha256(pickle.dumps(o)).hexdigest()[:n]
 
@@ -493,7 +502,9 @@ class App(_ClockLeg, _EventLeg):
     
     def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/']):
         
-        if platform.system() == 'Darwin':
+        assert mode in ['window', 'jupyter', 'hidden']
+        
+        if False: #platform.system() == 'Darwin':
 
             assert mode not in ['both', 'hidden'], WARNING
             if mode == 'jupyter':
@@ -501,8 +512,6 @@ class App(_ClockLeg, _EventLeg):
                 sys.stderr.write(WARNING + '\n')
                 self._show_mac_warning = True
                 
-        assert mode in ['window', 'jupyter', 'both', 'hidden']
-        
         super(App, self).__init__(fake_time=(mode=='hidden'))
         
         self.event_loop = EventLoop(self.clock)
@@ -611,24 +620,43 @@ class App(_ClockLeg, _EventLeg):
             nc = self.canvas_last_update + self.canvas_interval
             
             if self.canvas is not None and t0 >= nc:
-                self.array0 = self._get_buffer()
+                self.array0 = self._get_buffer(self.window.width, self.window.height)
                 self.canvas.put_image_data(self.array0) 
                 self.canvas_last_update = t0
 
             elif self.buffer:
-                self.array0 = self._get_buffer()
+                self.array0 = self._get_buffer(self.window.width, self.window.height)
             
         if self.buffer:
             self.window.dispatch_event('on_buffer', self.array0)
             self.event_loop.ndraw += 1
         
-    def _get_buffer(self):
+    def _get_buffer(self, w, h, rescale=True):
+        
         bm = pyglet.image.get_buffer_manager()
+        
+        if rescale:
+            x0, y0, w0, h0 = bm.get_viewport() 
+            sx, sy, sz = get_glscalef()
+            
+            sx = w / w0 / sx
+            sy = w / h0 / sy
+            
+            if sx != 1. or sy != 1.:
+                pyglet.gl.glScalef(sx, sy, 1.)
+                
         cb = bm.get_color_buffer()
-        di = cb.get_image_data()
-        d0 = di.get_data('RGBA', di.width * 4)
-        a0 = np.array(d0, dtype='uint8').reshape(self.window.height, self.window.width, 4)[::-1,:,:3]
-        return a0
+        
+        buffer = (pyglet.gl.GLubyte * (len(cb.format) * w * h))()
+
+        pyglet.gl.glReadBuffer(cb.gl_buffer)
+        pyglet.gl.glPushClientAttrib(pyglet.gl.GL_CLIENT_PIXEL_STORE_BIT)
+        pyglet.gl.glPixelStorei(pyglet.gl.GL_PACK_ALIGNMENT, 1)
+
+        pyglet.gl.glReadPixels(0, 0, w, h, cb.gl_format, pyglet.gl.GL_UNSIGNED_BYTE, buffer)
+        pyglet.gl.glPopClientAttrib()
+        
+        return np.frombuffer(buffer, dtype='uint8').reshape(w, h, 4)[::-1,:,:3]
 
     def scale_window_to(self, px):
 
