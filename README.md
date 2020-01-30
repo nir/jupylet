@@ -22,13 +22,11 @@ If you are new to Python, I strongly recommend that you install and use the [Min
 
 Once Miniconda is installed start a Miniconda Prompt. To do this on Windows click the Windows key, search for "Miniconda Prompt", and click it. This should open a small dark window that programmers call _console_ or _shell_ in which you can enter commands and run programs.
 
-To run _jupylet_ first install its dependencies with:
+To run _jupylet_ first install it with:
 
-    pip install pyglet webcolors numpy scipy pillow
+    pip install jupylet
 
-    pip install jupyter ipyevents ipycanvas
-
-Download the _jupylet_ archive or use [git](https://git-scm.com/) to clone this repository with:
+Next, download the _jupylet_ archive or use [git](https://git-scm.com/) to clone this repository with:
 
     git clone https://github.com/nir/jupylet.git
 
