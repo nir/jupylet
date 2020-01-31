@@ -10,7 +10,7 @@ pyglet is a powerful game programming library. It is wonderfully easy to use for
 
 By marrying Jupyter and pyglet, you get the best of both worlds. Learn to program by creating games interactively. Watch the game change as you type new code. Change a variable or a function and the game will be affected immediately. 
 
-_jupylet_ is also a tool for **reinforcement learning research and development**. It is easy to use to create novel environments in which to experiment with reinforcement learning algorithms, and it can render thousands of frames per second. Head to [./examples/pong-RL.ipynb](https://github.com/nir/jupylet/blob/master/examples/pong-RL.ipynb) to see how to programmatically control and render a 2-player version of pong.
+_jupylet_ is also a tool for **reinforcement learning research and development**. It is easy to use to create novel environments in which to experiment with reinforcement learning algorithms, and it can render thousands of frames per second. Head to [examples/pong-RL.ipynb](https://github.com/nir/jupylet/blob/master/examples/pong-RL.ipynb) to see how to programmatically control and render a 2-player version of pong.
 
 # Requirements
 
@@ -30,7 +30,7 @@ Next, download the _jupylet_ archive or use [git](https://git-scm.com/) to clone
 
     git clone https://github.com/nir/jupylet.git
 
-Then enter the _./jupylet/examples/_ folder and start a jupyter notebook with:
+Then enter the _jupylet/examples/_ folder and start a jupyter notebook with:
 
     jupyter notebook spaceship.ipynb
 
