@@ -2,7 +2,7 @@
 
 _jupylet_ is the marriage of Jupyter and the pyglet game programming library. It is intended for two types of audiences:
 * Kids and their parents interested in learning to program, 
-* Researchers and programmers of reinforcement learning.
+* Researchers and programmers of deep reinforcement learning.
 
 A Jupyter notebook is in essence a laboratory for programming. It is the ideal environment for playing around with code, experimenting, and exploring ideas. It is used by professional machine learning scientists who come every day to play at work, so why not by kids?
 
