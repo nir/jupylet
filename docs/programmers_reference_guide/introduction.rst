@@ -1,10 +1,5 @@
-.. Jupylet documentation master file, created by
-   sphinx-quickstart on Sat Feb  1 08:19:08 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-JUPYLET PROGRAMMER'S REFERENCE GUIDE
-====================================
+INTRODUCTION
+============
 
 Jupylet is a Python library that lets you create and run games interactively
 in a Jupyter notebook. It is intended for two types of audiences:
@@ -45,16 +40,4 @@ a swirling giant flower to experiment with transfer learning, or turn the game
 into 4-way pong with agents on all four sides of the game court to experiment
 with cooperation between multiple agents. And since you can modify the game
 interactively in Jupyter this process is not only easy but fun.
-
-
-.. toctree::
-    :maxdepth: 3
-    :caption: TABLE OF CONTENTS
-
-    programmers_reference_guide/introduction
-    programmers_reference_guide/getting_started
-    programmers_reference_guide/graphics
-    programmers_reference_guide/sound
-    programmers_reference_guide/rl
-    programmers_reference_guide/appendices
 
