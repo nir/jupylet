@@ -20,7 +20,9 @@ To run *jupylet* first install it by typing the following command in the console
 
     pip install jupylet
 
-Next, download the *jupylet* archive or use `Git <https://git-scm.com/>`_ to clone this repository with:
+Next, download and extract the `jupylet archive
+<https://github.com/nir/jupylet/archive/master.zip>`_ or use
+`Git <https://git-scm.com/>`_ to clone the jupylet repository with:
 
 .. code-block:: bash
 
