@@ -1,8 +1,8 @@
 GETTING STARTED
 ===============
 
-How to Install Jupylet
-----------------------
+How to Install and Run Jupylet
+------------------------------
 
 If you are new to Python, I strongly recommend that you install and use the
 `Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
@@ -28,7 +28,13 @@ Next, download and extract the `jupylet archive
 
     git clone https://github.com/nir/jupylet.git
 
-Then enter the *jupylet/examples/* folder and start a jupyter notebook with:
+Next, enter the *jupylet/examples/* directory with the change directory command:
+
+.. code-block:: bash
+
+    cd ./jupylet/examples/
+
+And start a jupyter notebook with:
 
 .. code-block:: bash
 
