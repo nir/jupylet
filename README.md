@@ -48,7 +48,7 @@ The only difference in the code is that the application object is instantiated w
 
 # Documentation
 
-In terms of its interface _jupylet_ introduces only minor additions and modifications to the underlying pyglet library. Therefore the bulk of learning to use it is covered by the [pyglet documentation](https://pyglet.readthedocs.io/en/stable/). I will add documentation in the comming days; in the mean time head to the [spaceship.ipynb](https://github.com/nir/jupylet/blob/master/examples/spaceship.ipynb) example to get started. 
+In terms of its interface _jupylet_ introduces only minor additions and modifications to the underlying pyglet library. Therefore the bulk of learning to use it is covered by the [pyglet documentation](https://pyglet.readthedocs.io/en/stable/). I have started writing a [guide](https://jupylet.readthedocs.io/en/latest/) and will add documentation in the comming days; in the mean time head to the [spaceship.ipynb](https://github.com/nir/jupylet/blob/master/examples/spaceship.ipynb) example to get started. 
 
 # Contact
 
