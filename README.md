@@ -1,6 +1,4 @@
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nir/jupylet/master?filepath=examples%2Fspaceship.ipynb)
-
-# jupylet
+# Jupylet
 
 _jupylet_ is the marriage of Jupyter and the pyglet game programming library. It is intended for two types of audiences:
 * Kids and their parents interested in learning to program, 
@@ -13,6 +11,12 @@ pyglet is a powerful game programming library. It is wonderfully easy to use for
 By marrying Jupyter and pyglet, you get the best of both worlds. Learn to program by creating games interactively. Watch the game change as you type new code. Change a variable or a function and the game will be affected immediately. 
 
 _jupylet_ is also a tool for **reinforcement learning research and development**. It is easy to use to create novel environments in which to experiment with reinforcement learning algorithms, and it can render thousands of frames per second. Head to [examples/pong-RL.ipynb](https://github.com/nir/jupylet/blob/master/examples/pong-RL.ipynb) to see how to programmatically control and render a 2-player version of pong.
+
+# Try It Online
+
+You can try Jupylet on a Binder server without installing it by clicking:  
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nir/jupylet/master?filepath=examples%2Fspaceship.ipynb)
 
 # Requirements
 
