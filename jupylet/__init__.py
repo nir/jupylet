@@ -25,5 +25,5 @@
 """
 
 
-VERSION = '0.6.2.dev'
+VERSION = '0.6.3.dev'
 
