@@ -1,3 +1,5 @@
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nir/jupylet/master?filepath=examples%2Fspaceship.ipynb)
+
 # jupylet
 
 _jupylet_ is the marriage of Jupyter and the pyglet game programming library. It is intended for two types of audiences:
