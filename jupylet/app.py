@@ -39,6 +39,7 @@ import random
 import time
 import sys
 import io
+import os
 import re
 
 import PIL.Image
@@ -53,7 +54,23 @@ from .state import State
 __all__ = ['App']
 
 
-WARNING = 'Will run the game in a window since on Mac computers only "window" mode is supported at the moment :-('
+BINDER_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote binder server. This is expected. If you install Jupylet on your computer video quality will be high.'
+
+
+def is_binder_env():
+    return 'BINDER_REQUEST' in os.environ
+
+
+def start_xvfb():
+    global xvfb
+    import xvfbwrapper
+    xvfb = xvfbwrapper.Xvfb()
+    xvfb.start()
+
+
+# Start virtual frame buffer if running in binder.
+if is_binder_env():
+    start_xvfb()
 
 
 _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
@@ -506,13 +523,10 @@ class App(_ClockLeg, _EventLeg):
         
         assert mode in ['window', 'jupyter', 'hidden']
         
-        if False: #platform.system() == 'Darwin':
-
-            assert mode not in ['both', 'hidden'], WARNING
-            if mode == 'jupyter':
-                mode = 'window'
-                sys.stderr.write(WARNING + '\n')
-                self._show_mac_warning = True
+        if is_binder_env() and quality is None:
+            quality = 20
+            sys.stderr.write(BINDER_WARNING + '\n')
+            self._show_binder_warning = True
                 
         super(App, self).__init__(fake_time=(mode=='hidden'))
         
@@ -562,7 +576,7 @@ class App(_ClockLeg, _EventLeg):
         
         assert self.window._context, 'Window has closed. Create a new app object to run.'
 
-        hasattr(self, '_show_mac_warning') and sys.stderr.write(WARNING + '\n')
+        hasattr(self, '_show_binder_warning') and sys.stderr.write(BINDER_WARNING + '\n')
 
         self._run_timestamp = time.time()
 
