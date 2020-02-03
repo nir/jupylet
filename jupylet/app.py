@@ -54,18 +54,23 @@ from .state import State
 __all__ = ['App']
 
 
-BINDER_WARNING = 'Game video will be compressed and include noticeable artifacts to accommodate running from a remote binder server.'
+BINDER_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote binder server. This is expected. If you install Jupylet on your computer video quality will be high.'
 
 
 def is_binder_env():
     return 'BINDER_REQUEST' in os.environ
 
 
+def start_xvfb():
+    global xvfb
+    import xvfbwrapper
+    xvfb = xvfbwrapper.Xvfb()
+    xvfb.start()
+
+
 # Start virtual frame buffer if running in binder.
 if is_binder_env():
-    import xvfbwrapper
-    vdisplay = xvfbwrapper.Xvfb()
-    vdisplay.start()
+    start_xvfb()
 
 
 _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
