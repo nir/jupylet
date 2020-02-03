@@ -25,6 +25,7 @@
 """
 
 
+import ipywidgets
 import functools
 import ipycanvas
 import ipyevents
@@ -37,6 +38,7 @@ import pyglet
 import random
 import time
 import sys
+import io
 import re
 
 import PIL.Image
@@ -500,7 +502,7 @@ class _EventLeg(object):
 
 class App(_ClockLeg, _EventLeg):
     
-    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/']):
+    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/'], quality=None):
         
         assert mode in ['window', 'jupyter', 'hidden']
         
@@ -540,9 +542,10 @@ class App(_ClockLeg, _EventLeg):
         self.array0 = None
         
         self.canvas = ipycanvas.Canvas(size=(width, height)) if canvas_ else None
+        self.canvas_quality = quality
         self.canvas_interval = 1 / 15
         self.canvas_last_update = 0
-        
+
         self._watch(self.window, self.canvas)
 
         self._run_timestamp = None
@@ -621,7 +624,10 @@ class App(_ClockLeg, _EventLeg):
             
             if self.canvas is not None and t0 >= nc:
                 self.array0 = self._get_buffer(self.window.width, self.window.height)
-                self.canvas.put_image_data(self.array0) 
+                if self.canvas_quality:
+                    self.canvas.draw_image(_a2w(self.array0, 'JPEG', quality=self.canvas_quality)[0], 0, 0)
+                else:
+                    self.canvas.put_image_data(self.array0) 
                 self.canvas_last_update = t0
 
             elif self.buffer:
@@ -713,4 +719,12 @@ class App(_ClockLeg, _EventLeg):
         self._redraw_windows(0, force_redraw=True)
 
         return self.array0
+
+
+def _a2w(a, format='JPEG', **kwargs):
+    b0 = io.BytesIO()
+    i0 = PIL.Image.fromarray(a)
+    i0.save(b0, format, **kwargs)
+    w0 = ipywidgets.Image(value=b0.getvalue(), format=format)
+    return w0, b0.getvalue()
 

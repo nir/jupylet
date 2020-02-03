@@ -1,0 +1,2 @@
+xvfb
+freeglut3-dev
