@@ -30,13 +30,10 @@ import math
 import sys
 import os
 
-
-p0 = os.path.abspath('.')
+p0 = os.path.abspath(os.path.dirname(__file__))
 p1 = os.path.abspath(os.path.join(p0, '..'))
 
 sys.path.insert(0, p1)
-
-import jupylet.color
 
 from jupylet.app import App
 from jupylet.label import Label

@@ -42,10 +42,11 @@ import numpy as np
 
 import pyglet.window.key as key
 
-p0 = os.path.abspath('.')
+p0 = os.path.abspath(os.path.dirname(__file__))
 p1 = os.path.abspath(os.path.join(p0, '..'))
 
 sys.path.insert(0, p1)
+os.chdir(p0)
 
 import jupylet.color
 
