@@ -14,7 +14,7 @@ _jupylet_ is also a tool for **reinforcement learning research and development**
 
 # Try It Online
 
-You can try Jupylet on a Binder server without installing it by clicking:  
+You can try Jupylet online on a Binder server without installing it by clicking:  
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nir/jupylet/master?filepath=examples%2Fspaceship.ipynb)
 
@@ -22,7 +22,7 @@ You can try Jupylet on a Binder server without installing it by clicking:
 
 _jupylet_ should run on Python 3.4+ on Windows, Mac, and Linux.
 
-# Installation
+# How to Install
 
 If you are new to Python, I strongly recommend that you install and use the [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html) distribution. Download and run the 64-bit installer and stick to the default install options.
 
