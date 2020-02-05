@@ -12,12 +12,6 @@ By marrying Jupyter and pyglet, you get the best of both worlds. Learn to progra
 
 _jupylet_ is also a tool for **reinforcement learning research and development**. It is easy to use to create novel environments in which to experiment with reinforcement learning algorithms, and it can render thousands of frames per second. Head to [examples/pong-RL.ipynb](https://github.com/nir/jupylet/blob/master/examples/pong-RL.ipynb) to see how to programmatically control and render a 2-player version of pong.
 
-# Try It Online
-
-You can try Jupylet online on a Binder server without installing it by clicking:  
-
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nir/jupylet/master?filepath=examples%2Fspaceship.ipynb)
-
 # Requirements
 
 _jupylet_ should run on Python 3.4+ on Windows, Mac, and Linux.
