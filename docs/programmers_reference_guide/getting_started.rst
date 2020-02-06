@@ -28,7 +28,8 @@ Next, download and extract the `jupylet archive
 
     git clone https://github.com/nir/jupylet.git
 
-Next, enter the *jupylet/examples/* directory with the change directory command:
+Next, enter the *jupylet/examples/* directory with the change directory
+command:
 
 .. code-block:: bash
 
@@ -43,4 +44,30 @@ And start a jupyter notebook with:
 Run the notebook and a game canvas should appear with the spaceship example:
 
 .. image:: ../images/spaceship.gif
+
+Hello, World!
+-------------
+
+.. code-block:: python
+
+    from jupylet.label import Label
+    from jupylet.app import App
+
+    app = App(width=320, height=64)
+    hello = Label('hello, world', color='cyan', font_size=32, x=app.width, y=16)
+
+    @app.event
+    def on_draw():
+        app.window.clear()
+        hello.draw()
+
+    @app.run_me_again_and_again(1/30)
+    def scroll(dt):
+        hello.x -= 1
+        if hello.x < -220:
+            hello.x = app.width
+
+    app.run()
+
+.. image:: ../images/hello-world.gif
 
