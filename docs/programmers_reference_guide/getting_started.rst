@@ -10,11 +10,12 @@ distribution. Download and run the 64-bit installer and stick to the default
 install options.
 
 Once Miniconda is installed start a Miniconda Prompt. To do this on Windows
-click the :guilabel:`⊞ Winkey`  then search for "Miniconda Prompt" and
-click it. This should open a small dark window that programmers call *console*
-or *shell* in which you can enter commands and run programs.
+click the :guilabel:`⊞ Winkey` then type *Miniconda* and press the
+:guilabel:`Enter` key. This should open a small dark window that programmers
+call *console* or *shell* in which you can enter commands and run programs.
 
-To run *jupylet* first install it by typing the following command in the console:
+To run *jupylet* first install it by typing the following command in the
+console:
 
 .. code-block:: bash
 
@@ -41,33 +42,49 @@ And start a jupyter notebook with:
 
     jupyter notebook spaceship.ipynb
 
-Run the notebook and a game canvas should appear with the spaceship example:
+Run the notebook by following the instructions in the notebook and a game
+canvas should appear with the spaceship example:
 
 .. image:: ../images/spaceship.gif
 
-Hello, World!
--------------
+Python Programming Language
+---------------------------
 
-.. code-block:: python
+Python is an awesome programming language to learn. It is both simple for kids
+to learn and powerful enough to be `one of the most popular programming
+languages <https://www.tiobe.com/tiobe-index/>`_ among computer scientists and
+programmers.
 
-    from jupylet.label import Label
-    from jupylet.app import App
+However, this reference guide is not designed to teach the Python programming
+language. If you don't already have a working knowlege of Python and how to
+use it to program, I would like to suggest a few resources that may help you
+get started:
 
-    app = App(width=320, height=64)
-    hello = Label('hello, world', color='cyan', font_size=32, x=app.width, y=16)
+- `Microsoft's introduction to Python <https://docs.microsoft.com/en-us/learn/modules/intro-to-python/1-introduction>`_
+  \- Microsoft has a long tradition of publishing good guides to programming
+  languages and this tutorial appears to be in line with this tradition.
 
-    @app.event
-    def on_draw():
-        app.window.clear()
-        hello.draw()
+- `Python's own tutorial <https://docs.python.org/3/tutorial/index.html>`_
+  \- Perhaps not as didactic as Microsoft's guide, but it is a good idea to
+  get familiar with Python's documentation.
 
-    @app.run_me_again_and_again(1/30)
-    def scroll(dt):
-        hello.x -= 1
-        if hello.x < -220:
-            hello.x = app.width
+These guides will instruct you how to start a python interpreter where you
+can type and run Python code. You may do that, but once you gain a little bit
+of confidence or if you feel adventurous try starting a Jupyter notebook
+instead of a simple python interpreter.
 
-    app.run()
+To do that start the Miniconda Prompt
+`as explained above <#how-to-install-and-run-jupylet>`_, then change
+directory into the *jupylet/examples/* directory and start a new notebook by
+typing:
 
-.. image:: ../images/hello-world.gif
+.. code-block:: bash
+
+    jupyter notebook hello-world.ipynb
+
+Jupyter Notebooks
+-----------------
+
+We will get back to the *hello-world.ipynb* in a moment, but first a few words
+about Jupyter notebooks.
 
