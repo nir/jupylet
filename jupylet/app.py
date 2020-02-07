@@ -29,7 +29,6 @@ import ipywidgets
 import functools
 import ipycanvas
 import ipyevents
-import platform
 import asyncio
 import hashlib
 import inspect
@@ -47,6 +46,7 @@ import concurrent.futures
 
 import numpy as np
 
+from .rl import start_xvfb, is_xvfb
 from .color import color2rgb
 from .state import State
 
@@ -59,13 +59,6 @@ BINDER_WARNING = 'Game video will be compressed and may include noticeable artif
 
 def is_binder_env():
     return 'BINDER_REQUEST' in os.environ
-
-
-def start_xvfb():
-    global xvfb
-    import xvfbwrapper
-    xvfb = xvfbwrapper.Xvfb()
-    xvfb.start()
 
 
 # Start virtual frame buffer if running in binder.
@@ -655,7 +648,7 @@ class App(_ClockLeg, _EventLeg):
         
         bm = pyglet.image.get_buffer_manager()
         
-        if rescale:
+        if rescale and not is_xvfb():
             x0, y0, w0, h0 = bm.get_viewport() 
             sx, sy, sz = get_glscalef()
             

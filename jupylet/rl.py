@@ -29,6 +29,7 @@ import importlib
 import itertools
 import traceback
 import datetime
+import platform
 import tempfile
 import hashlib
 import random
@@ -40,6 +41,22 @@ import os
 
 import multiprocessing as mp
 import numpy as np
+
+
+xvfb = None
+
+
+def start_xvfb():
+    
+    if platform.system() == 'Linux':
+        global xvfb
+        import xvfbwrapper
+        xvfb = xvfbwrapper.Xvfb()
+        xvfb.start()
+
+
+def is_xvfb():
+    return xvfb
 
 
 SCALARS = {str, bytes, int, float, bool}
