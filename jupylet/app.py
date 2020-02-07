@@ -623,26 +623,26 @@ class App(_ClockLeg, _EventLeg):
 
     def _redraw_windows(self, dt, force_redraw=False):
         
+        #
+        # This should be real time, not fake time, since it updates to jupyter canvas.
+        #
+        t0 = time.time()
+
         if self.window.invalid or force_redraw:
 
             self.window.switch_to()
             self.window.dispatch_event('on_draw')
             self.window.flip()
 
-            #
-            # This should be real time, not fake time, since it updates to jupyter canvas.
-            #
-            t0 = time.time()
-
             nc = self.canvas_last_update + self.canvas_interval
             
             if self.canvas is not None and t0 >= nc:
+                self.canvas_last_update = t0
                 self.array0 = self._get_buffer(self.window.width, self.window.height)
                 if self.canvas_quality:
                     self.canvas.draw_image(_a2w(self.array0, 'JPEG', quality=self.canvas_quality)[0], 0, 0)
                 else:
                     self.canvas.put_image_data(self.array0) 
-                self.canvas_last_update = t0
 
             elif self.buffer:
                 self.array0 = self._get_buffer(self.window.width, self.window.height)
@@ -660,7 +660,7 @@ class App(_ClockLeg, _EventLeg):
             sx, sy, sz = get_glscalef()
             
             sx = w / w0 / sx
-            sy = w / h0 / sy
+            sy = h / h0 / sy
             
             if sx != 1. or sy != 1.:
                 pyglet.gl.glScalef(sx, sy, 1.)
@@ -676,7 +676,7 @@ class App(_ClockLeg, _EventLeg):
         pyglet.gl.glReadPixels(0, 0, w, h, cb.gl_format, pyglet.gl.GL_UNSIGNED_BYTE, buffer)
         pyglet.gl.glPopClientAttrib()
         
-        return np.frombuffer(buffer, dtype='uint8').reshape(w, h, 4)[::-1,:,:3]
+        return np.frombuffer(buffer, dtype='uint8').reshape(h, w, 4)[::-1,:,:3]
 
     def scale_window_to(self, px):
 

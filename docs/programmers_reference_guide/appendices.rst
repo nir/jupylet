@@ -1,8 +1,8 @@
 APPENDICES
 ==========
 
-A Few Words on Notebooks
-------------------------
+A Few Words About Notebooks
+---------------------------
 
 A Jupyter notebook lets you mix formatted text with computer code and graphics.
 Jupyter notebooks belong to the more general category of `computational
