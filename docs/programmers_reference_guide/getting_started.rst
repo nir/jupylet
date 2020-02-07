@@ -21,13 +21,25 @@ console:
 
     pip install jupylet
 
-Next, download and extract the `jupylet archive
-<https://github.com/nir/jupylet/archive/master.zip>`_ or use
-`Git <https://git-scm.com/>`_ to clone the jupylet repository with:
+Next, you need to download the *jupylet* repository since it contains the
+example notebooks. If you have `Git <https://git-scm.com/>`_ installed you
+can use it to clone the *jupylet* repository with:
 
 .. code-block:: bash
 
     git clone https://github.com/nir/jupylet.git
+
+Alternatively, if you don't have Git installed, you can download and unzip
+the *jupylet* archive by typing:
+
+.. code-block:: bash
+
+    python -m wget https://github.com/nir/jupylet/archive/master.zip
+    python -m zipfile -e jupylet-master.zip .
+    move jupylet-master jupylet
+
+.. note::
+    On Mac OS X or Linux type *mv* instead of *move* in the command above.
 
 Next, enter the *jupylet/examples/* directory with the change directory
 command:
