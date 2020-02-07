@@ -46,7 +46,7 @@ import concurrent.futures
 
 import numpy as np
 
-from .rl import start_xvfb, is_xvfb
+from .rl import start_xvfb
 from .color import color2rgb
 from .state import State
 
@@ -631,45 +631,45 @@ class App(_ClockLeg, _EventLeg):
             
             if self.canvas is not None and t0 >= nc:
                 self.canvas_last_update = t0
-                self.array0 = self._get_buffer(self.window.width, self.window.height)
+                self.array0 = self._get_buffer()
                 if self.canvas_quality:
                     self.canvas.draw_image(_a2w(self.array0, 'JPEG', quality=self.canvas_quality)[0], 0, 0)
                 else:
                     self.canvas.put_image_data(self.array0) 
 
             elif self.buffer:
-                self.array0 = self._get_buffer(self.window.width, self.window.height)
+                self.array0 = self._get_buffer()
             
         if self.buffer:
             self.window.dispatch_event('on_buffer', self.array0)
             self.event_loop.ndraw += 1
         
-    def _get_buffer(self, w, h, rescale=True):
+    def _get_buffer(self):
         
         bm = pyglet.image.get_buffer_manager()
         
-        if rescale and not is_xvfb():
-            x0, y0, w0, h0 = bm.get_viewport() 
-            sx, sy, sz = get_glscalef()
-            
-            sx = w / w0 / sx
-            sy = h / h0 / sy
-            
-            if sx != 1. or sy != 1.:
-                pyglet.gl.glScalef(sx, sy, 1.)
-                
+        x0, y0, w0, h0 = bm.get_viewport() 
+        sx, sy, sz = get_glscalef()
+        
+        sx = self.window.width ** 2 / self.width / w0 / sx
+        sy = self.window.height ** 2 / self.width / h0 / sy
+        
+        if sx != 1. or sy != 1.:
+            pyglet.gl.glScalef(sx, sy, 1.)
+            #return
+
         cb = bm.get_color_buffer()
         
-        buffer = (pyglet.gl.GLubyte * (len(cb.format) * w * h))()
+        buffer = (pyglet.gl.GLubyte * (len(cb.format) * w0 * h0))()
 
         pyglet.gl.glReadBuffer(cb.gl_buffer)
         pyglet.gl.glPushClientAttrib(pyglet.gl.GL_CLIENT_PIXEL_STORE_BIT)
         pyglet.gl.glPixelStorei(pyglet.gl.GL_PACK_ALIGNMENT, 1)
 
-        pyglet.gl.glReadPixels(0, 0, w, h, cb.gl_format, pyglet.gl.GL_UNSIGNED_BYTE, buffer)
+        pyglet.gl.glReadPixels(0, 0, self.window.width, self.window.height, cb.gl_format, pyglet.gl.GL_UNSIGNED_BYTE, buffer)
         pyglet.gl.glPopClientAttrib()
         
-        return np.frombuffer(buffer, dtype='uint8').reshape(h, w, 4)[::-1,:,:3]
+        return np.frombuffer(buffer, dtype='uint8').reshape(self.window.height, self.window.width, 4)[::-1,:,:3]
 
     def scale_window_to(self, px):
 
