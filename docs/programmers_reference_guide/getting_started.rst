@@ -62,9 +62,9 @@ canvas should appear with the spaceship example:
 Python Programming Language
 ---------------------------
 
-Python is an awesome programming language to learn. It is both simple for kids
-to learn and powerful enough to be `one of the most popular programming
-languages <https://www.tiobe.com/tiobe-index/>`_ among computer scientists and
+Python is an awesome programming language. It is both simple for kids to
+learn and powerful enough to be `one of the most popular programming languages
+<https://www.tiobe.com/tiobe-index/>`_ among computer scientists and
 programmers.
 
 However, this reference guide is not designed to teach the Python programming
@@ -97,6 +97,15 @@ typing:
 Jupyter Notebooks
 -----------------
 
-We will get back to the *hello-world.ipynb* in a moment, but first a few words
-about Jupyter notebooks.
+Jupyter notebooks are a powerful tool but they can be a little confusing at
+first. Here are a few resources that explain how to use them:
+
+- `Running Code <https://mybinder.org/v2/gh/jupyter/notebook/master?filepath=docs%2Fsource%2Fexamples%2FNotebook%2FRunning%20Code.ipynb>`_
+  \- This is a Jupyter notebook explaining how to use Jupyter notebooks 🙂.
+  It is in fact a live notebook running in a web service called mybinder. The
+  first time you click it may take a moment to start, so give it that moment.
+  Since it is "live" you can play around with it. It works!
+
+- `Jupyter's documentation <https://jupyter-notebook.readthedocs.io/en/latest/notebook.html>`_
+  \- There's a whole lot of text in there.
 
