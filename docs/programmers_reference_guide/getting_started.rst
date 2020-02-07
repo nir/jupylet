@@ -100,6 +100,9 @@ Jupyter Notebooks
 Jupyter notebooks are a powerful tool but they can be a little confusing at
 first. Here are a few resources that explain how to use them:
 
+- *jupylet/examples/hello-world.ipynb* notebook contains some instructions on
+  how to use Jupyter notebooks. Check it out.
+
 - `Running Code <https://mybinder.org/v2/gh/jupyter/notebook/master?filepath=docs%2Fsource%2Fexamples%2FNotebook%2FRunning%20Code.ipynb>`_
   \- This is a Jupyter notebook explaining how to use Jupyter notebooks 🙂.
   It is in fact a live notebook running in a web service called mybinder. The
