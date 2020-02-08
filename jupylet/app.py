@@ -47,6 +47,7 @@ import concurrent.futures
 import numpy as np
 
 from .rl import start_xvfb
+from .env import is_remote
 from .color import color2rgb
 from .state import State
 
@@ -54,15 +55,11 @@ from .state import State
 __all__ = ['App']
 
 
-BINDER_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote binder server. This is expected. If you install Jupylet on your computer video quality will be high.'
+REMOTE_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote server. This is expected. If you install Jupylet on your computer video quality will be high.'
 
 
-def is_binder_env():
-    return 'BINDER_REQUEST' in os.environ
-
-
-# Start virtual frame buffer if running in binder.
-if is_binder_env():
+# Start virtual frame buffer if running in headless remote server.
+if is_remote():
     start_xvfb()
 
 
@@ -515,11 +512,12 @@ class App(_ClockLeg, _EventLeg):
     def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/'], quality=None):
         
         assert mode in ['window', 'jupyter', 'hidden']
-        
-        if is_binder_env() and quality is None:
+        assert not (is_remote() and mode == 'window')
+
+        if is_remote() and mode =='jupyter' and quality is None:
             quality = 20
-            sys.stderr.write(BINDER_WARNING + '\n')
-            self._show_binder_warning = True
+            sys.stderr.write(REMOTE_WARNING + '\n')
+            self._show_remote_warning = True
                 
         super(App, self).__init__(fake_time=(mode=='hidden'))
         
@@ -569,7 +567,7 @@ class App(_ClockLeg, _EventLeg):
         
         assert self.window._context, 'Window has closed. Create a new app object to run.'
 
-        hasattr(self, '_show_binder_warning') and sys.stderr.write(BINDER_WARNING + '\n')
+        hasattr(self, '_show_remote_warning') and sys.stderr.write(REMOTE_WARNING + '\n')
 
         self._run_timestamp = time.time()
 
