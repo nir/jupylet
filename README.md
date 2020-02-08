@@ -22,8 +22,6 @@ limit really.
 By marrying Jupyter and pyglet, *Jupylet* lets you have the best of both
 worlds. Create games interactively and experimentally, change a variable or a
 function and see how the game is affected immediately while it is running.
-:any:`Let's get started!<getting_started>`
-
 
 ## Deep Reinforcement Learning with Jupylet
 
@@ -48,13 +46,13 @@ _jupylet_ should run on Python 3.4+ on Windows, Mac, and Linux.
 ## How to Install and Run Jupylet
 
 If you are new to Python, I strongly recommend that you install and use the
-`Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
+[Miniconda Python](https://docs.conda.io/en/latest/miniconda.html)
 distribution. Download and run the 64-bit installer and stick to the default
 install options.
 
 Once Miniconda is installed start a Miniconda Prompt. To do this on Windows
-click the :guilabel:`⊞ Winkey` then type *Miniconda* and press the
-:guilabel:`Enter` key. This should open a small dark window that programmers
+click the `⊞ Winkey` then type *Miniconda* and press the
+`Enter` key. This should open a small dark window that programmers
 call *console* or *shell* in which you can enter commands and run programs.
 
 To run *jupylet* first install it by typing the following command in the
@@ -63,7 +61,7 @@ console:
     pip install jupylet
 
 Next, you need to download the *jupylet* repository since it contains the
-example notebooks. If you have `Git <https://git-scm.com/>`_ installed you
+example notebooks. If you have [Git](https://git-scm.com/) installed you
 can use it to clone the *jupylet* repository with:
 
     git clone https://github.com/nir/jupylet.git
@@ -75,7 +73,7 @@ the *jupylet* archive by typing:
     python -m zipfile -e jupylet-master.zip .
     move jupylet-master jupylet
 
-| ⚠️ NOTE: On Mac OS X or Linux type *mv* instead of *move* in the command above. |
+| `⚠️ NOTE:` On Mac OS X or Linux type *mv* instead of *move* in the command above. |
 | --- |
 
 Next, enter the *jupylet/examples/* directory with the change directory
