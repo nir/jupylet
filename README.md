@@ -73,7 +73,7 @@ the *jupylet* archive by typing:
     python -m zipfile -e jupylet-master.zip .
     move jupylet-master jupylet
 
-| `⚠️ NOTE:` On Mac OS X or Linux type *mv* instead of *move* in the command above. |
+| `⚠️ NOTE` On Mac OS X or Linux type *mv* instead of *move* in the command above. |
 | --- |
 
 Next, enter the *jupylet/examples/* directory with the change directory
