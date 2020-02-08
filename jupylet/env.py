@@ -25,10 +25,14 @@
 """
 
 
+import functools
 import platform
 import os
 
+import multiprocessing as mp
 
+
+@functools.lru_cache()
 def is_remote():
 
     if is_binder_env():
@@ -48,4 +52,56 @@ def is_aws_linux():
 def is_binder_env():
     return 'BINDER_REQUEST' in os.environ
 
+
+_has_display = None
+
+
+def has_display():
+    
+    global _has_display
+    
+    if _has_display is not None:
+        return _has_display
+    
+    v = mp.Value('i', 0)
+
+    if 'pyglet' in sys.modules:
+        _has_display0(v)
+
+    else:
+        p = mp.Process(target=_has_display0, args=(v,))
+        p.start()
+        p.join()
+    
+    _has_display = v.value
+    
+    return _has_display
+
+
+def _has_display0(v):
+
+    try:
+        import pyglet    
+        pyglet.canvas.get_display()
+        v.value = 1
+    except:
+        pass
+
+
+_xvfb = None
+
+
+def start_xvfb():
+    
+    global _xvfb
+
+    if platform.system() == 'Linux' and _xvfb is None:
+
+        import xvfbwrapper
+        _xvfb = xvfbwrapper.Xvfb()
+        _xvfb.start()
+
+
+def is_xvfb():
+    return _xvfb is not None
 

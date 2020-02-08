@@ -46,8 +46,7 @@ import concurrent.futures
 
 import numpy as np
 
-from .rl import start_xvfb
-from .env import is_remote
+from .env import is_remote, start_xvfb
 from .color import color2rgb
 from .state import State
 
@@ -56,11 +55,6 @@ __all__ = ['App']
 
 
 REMOTE_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote server. This is expected. If you install Jupylet on your computer video quality will be high.'
-
-
-# Start virtual frame buffer if running in headless remote server.
-if is_remote():
-    start_xvfb()
 
 
 _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
