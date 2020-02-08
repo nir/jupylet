@@ -1,5 +1,5 @@
 """
-    jupylet.py
+    jupylet/env.py
     
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
@@ -25,18 +25,83 @@
 """
 
 
+import functools
 import platform
+import os
 
-from .env import is_remote, start_xvfb, has_display
-
-
-VERSION = '0.6.4.dev'
+import multiprocessing as mp
 
 
-# Start virtual frame buffer if running in headless remote server.
-if is_remote():
-   start_xvfb()
+@functools.lru_cache()
+def is_remote():
 
-elif platform.system() == 'Linux' and not has_display():
-   start_xvfb()
+    if is_binder_env():
+        return True
+
+    if is_aws_linux():
+        return True
+
+
+def is_aws_linux():
+
+    if platform.system() == 'Linux':
+        cmd = 'find /sys/devices/virtual/dmi/id/ -type f | xargs grep "Amazon EC2" 2> /dev/null'
+        return 'Amazon' in os.popen(cmd).read()
+
+
+def is_binder_env():
+    return 'BINDER_REQUEST' in os.environ
+
+
+_has_display = None
+
+
+def has_display():
+    
+    global _has_display
+    
+    if _has_display is not None:
+        return _has_display
+    
+    v = mp.Value('i', 0)
+
+    if 'pyglet' in sys.modules:
+        _has_display0(v)
+
+    else:
+        p = mp.Process(target=_has_display0, args=(v,))
+        p.start()
+        p.join()
+    
+    _has_display = v.value
+    
+    return _has_display
+
+
+def _has_display0(v):
+
+    try:
+        import pyglet    
+        pyglet.canvas.get_display()
+        v.value = 1
+    except:
+        pass
+
+
+_xvfb = None
+
+
+def start_xvfb():
+    
+    global _xvfb
+
+    if platform.system() == 'Linux' and _xvfb is None:
+
+        import xvfbwrapper
+        _xvfb = xvfbwrapper.Xvfb()
+        _xvfb.start()
+
+
+def is_xvfb():
+    return _xvfb is not None
 
