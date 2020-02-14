@@ -4,29 +4,36 @@ PROGRAMMING GRAPHICS
 Hello, Jupylet!
 ---------------
 
-We begin with the simplest *Jupylet* app. I displays a scolling banner with the
+We begin with the simplest *Jupylet* app. It displays a scolling banner with the
 text *"hello, world"*. You can find the notebook at
 `examples/hello-jupylet.ipynb <https://github.com/nir/jupylet/blob/master/examples/hello-jupylet.ipynb>`_.
 
 .. note::
-    To understand this code you need to understand Python imports, functions, and
-    classes.
+    To understand this code you need to understand Python
+    `imports <https://docs.python.org/3.7/tutorial/modules.html#modules>`_,
+    `functions <https://docs.python.org/3.7/tutorial/controlflow.html#defining-functions>`_
+    , and `classes <https://docs.python.org/3.7/tutorial/classes.html>`_.
 
-The code begins with two import statements that import the `App` class which
-represents a game or an application and the `Label` class which will be used
-to display the text:
+The code begins with two import statements that import the
+:class:`jupylet.app.App` class which represents a game or an application and
+the `Label` class which will be used to display the text:
 
 .. code-block:: python
 
     from jupylet.label import Label
     from jupylet.app import App
 
-Next, we instantiate the application object and specify its width and height.
-Then we instantiate a label:
+Next, we instantiate the application object and specify the width and height
+of the game canvas:
 
 .. code-block:: python
 
     app = App(width=320, height=64)
+
+Then we instantiate a label with the text *hello, world*:
+
+.. code-block:: python
+
     hello = Label('hello, world', color='cyan', font_size=32, x=app.width, y=16)
 
 There are two things to note here:

@@ -17,4 +17,5 @@ JUPYLET PROGRAMMER'S REFERENCE GUIDE
     programmers_reference_guide/sound
     programmers_reference_guide/rl
     programmers_reference_guide/appendices
+    programmers_reference_guide/api
 
