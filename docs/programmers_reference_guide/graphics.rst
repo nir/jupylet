@@ -15,8 +15,8 @@ text *"hello, world"*. You can find the notebook at
     , and `classes <https://docs.python.org/3.7/tutorial/classes.html>`_.
 
 The code begins with two import statements that import the
-:class:`jupylet.app.App` class which represents a game or an application and
-the `Label` class which will be used to display the text:
+:class:`jupylet.app.App` class which represents a game and
+the :class:`jupylet.label.Label` class that we will use to display the text:
 
 .. code-block:: python
 

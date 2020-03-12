@@ -24,7 +24,7 @@
 #    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""
+"""Jupylet application functionality.
 """
 
 
@@ -474,11 +474,15 @@ class _EventLeg(object):
 
     def event(self, *args):
         """Function decorator for an event handler.
-        Usage::
+        
+        Examples::
+
             @app.event
             def on_resize(self, width, height):
                 # ...
+
         or::
+
             @app.event('on_resize')
             def foo(self, width, height):
                 # ...
