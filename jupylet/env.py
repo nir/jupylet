@@ -1,6 +1,6 @@
 """
     jupylet/env.py
-    
+
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
     Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 import functools
 import platform
 import os
+import sys
 
 import multiprocessing as mp
 
@@ -57,12 +58,12 @@ _has_display = None
 
 
 def has_display():
-    
+
     global _has_display
-    
+
     if _has_display is not None:
         return _has_display
-    
+
     v = mp.Value('i', 0)
 
     if 'pyglet' in sys.modules:
@@ -72,16 +73,16 @@ def has_display():
         p = mp.Process(target=_has_display0, args=(v,))
         p.start()
         p.join()
-    
+
     _has_display = v.value
-    
+
     return _has_display
 
 
 def _has_display0(v):
 
     try:
-        import pyglet    
+        import pyglet
         pyglet.canvas.get_display()
         v.value = 1
     except:
@@ -92,7 +93,7 @@ _xvfb = None
 
 
 def start_xvfb():
-    
+
     global _xvfb
 
     if platform.system() == 'Linux' and _xvfb is None:
@@ -104,4 +105,3 @@ def start_xvfb():
 
 def is_xvfb():
     return _xvfb is not None
-
