@@ -661,7 +661,7 @@ class App(_ClockLeg, _EventLeg):
         sx, sy, sz = get_glscalef()
         
         sx = self.window.width ** 2 / self.width / w0 / sx
-        sy = self.window.height ** 2 / self.width / h0 / sy
+        sy = self.window.height ** 2 / self.height / h0 / sy
         
         if sx != 1. or sy != 1.:
             pyglet.gl.glScalef(sx, sy, 1.)
@@ -681,7 +681,11 @@ class App(_ClockLeg, _EventLeg):
         return np.frombuffer(buffer, dtype='uint8').reshape(self.window.height, self.window.width, 4)[::-1,:,:3]
 
     def scale_window_to(self, px):
+        """Scale window size so that its bigges dimension (either width or height)
+        is px pixels.
 
+        This is useful for RL applications since smaller windows render faster.
+        """
         assert self.mode not in ['jupyter', 'both'], 'Cannot rescale window in Jupyter mode.'
         assert self.event_loop.is_running, 'Window can only be scaled once app has been started.'
 
@@ -738,6 +742,8 @@ class App(_ClockLeg, _EventLeg):
 
 
 def _a2w(a, format='JPEG', **kwargs):
+    """Convert a numpy array of a JPEG image to an ipywidget image."""
+
     b0 = io.BytesIO()
     i0 = PIL.Image.fromarray(a)
     i0.save(b0, format, **kwargs)

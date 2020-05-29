@@ -3,8 +3,8 @@
 import setuptools
 
 
-with open('README.md', 'r') as f:
-    long_description = f.read()
+with open('README.md', 'rb') as f:
+    long_description = f.read().decode()
 
 
 setuptools.setup(
