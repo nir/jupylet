@@ -6,7 +6,7 @@ Hello, Jupylet!
 
 We begin with the simplest *Jupylet* app. I displays a scolling banner with the
 text *"hello, world"*. You can find the notebook at
-`examples/hello-jupylet.ipynb <https://github.com/nir/jupylet/blob/master/examples/hello-jupylet.ipynb>`_.
+`examples/02-hello-jupylet.ipynb <https://github.com/nir/jupylet/blob/master/examples/02-hello-jupylet.ipynb>`_.
 
 .. note::
     To understand this code you need to understand Python imports, functions, and

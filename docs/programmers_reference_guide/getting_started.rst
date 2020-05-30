@@ -52,7 +52,7 @@ And start a jupyter notebook with:
 
 .. code-block:: bash
 
-    jupyter notebook spaceship.ipynb
+    jupyter notebook 11-spaceship.ipynb
 
 Run the notebook by following the instructions in the notebook and a game
 canvas should appear with the spaceship example:
@@ -92,7 +92,7 @@ typing:
 
 .. code-block:: bash
 
-    jupyter notebook hello-world.ipynb
+    jupyter notebook 01-hello-world.ipynb
 
 Jupyter Notebooks
 -----------------
@@ -100,7 +100,7 @@ Jupyter Notebooks
 Jupyter notebooks are a powerful tool but they can be a little confusing at
 first. Here are a few resources that explain how to use them:
 
-- *jupylet/examples/hello-world.ipynb* notebook contains some instructions on
+- *jupylet/examples/01-hello-world.ipynb* notebook contains some instructions on
   how to use Jupyter notebooks. Check it out.
 
 - `Running Code <https://mybinder.org/v2/gh/jupyter/notebook/master?filepath=docs%2Fsource%2Fexamples%2FNotebook%2FRunning%20Code.ipynb>`_

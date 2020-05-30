@@ -37,7 +37,7 @@ into 4-way pong with agents on all four sides of the game court to experiment
 with cooperation between multiple agents. And since you can modify the game
 interactively in Jupyter this process is not only easy but fun.  
 
-Head to [examples/pong-RL.ipynb](https://github.com/nir/jupylet/blob/master/examples/pong-RL.ipynb) to see how to programmatically control and render a 2-player version of pong.
+Head to [examples/22-pong-RL.ipynb](https://github.com/nir/jupylet/blob/master/examples/22-pong-RL.ipynb) to see how to programmatically control and render a 2-player version of pong.
 
 ## Requirements
 
@@ -83,7 +83,7 @@ command:
 
 And start a jupyter notebook with:
 
-    jupyter notebook spaceship.ipynb
+    jupyter notebook 11-spaceship.ipynb
 
 Run the notebook by following the instructions in the notebook and a game
 canvas should appear with the spaceship example:
@@ -100,7 +100,7 @@ The only difference in the code is that the application object is instantiated w
 
 ## Documentation
 
-In terms of its interface _jupylet_ introduces only minor additions and modifications to the underlying pyglet library. Therefore the bulk of learning to use it is covered by the [pyglet documentation](https://pyglet.readthedocs.io/en/stable/). I have started writing a [guide](https://jupylet.readthedocs.io/en/latest/) and will add documentation in the comming days; in the mean time head to the [spaceship.ipynb](https://github.com/nir/jupylet/blob/master/examples/spaceship.ipynb) example to get started. 
+In terms of its interface _jupylet_ introduces only minor additions and modifications to the underlying pyglet library. Therefore the bulk of learning to use it is covered by the [pyglet documentation](https://pyglet.readthedocs.io/en/stable/). I have started writing a [guide](https://jupylet.readthedocs.io/en/latest/) and will add documentation in the comming days; in the mean time head to the [11-spaceship.ipynb](https://github.com/nir/jupylet/blob/master/examples/11-spaceship.ipynb) example to get started. 
 
 ## Contact
 
