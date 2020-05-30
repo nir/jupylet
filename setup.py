@@ -39,7 +39,6 @@ setuptools.setup(
         'jupyter', 
         'webcolors', 
         'ipyevents', 
-        'ipycanvas', 
         'ipywidgets', 
         'matplotlib', 
         'xvfbwrapper',

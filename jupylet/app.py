@@ -27,7 +27,6 @@
 
 import ipywidgets
 import functools
-import ipycanvas
 import ipyevents
 import asyncio
 import hashlib
@@ -538,11 +537,11 @@ class App(_ClockLeg, _EventLeg):
         self.window.set_size(width, height)	
         self.window.set_vsync(False)  
       
-        self.array0 = None
+        self.array0 = np.zeros((width, height, 3), dtype='uint8')
         
-        self.canvas = ipycanvas.Canvas(size=(width, height)) if canvas_ else None
-        self.canvas_quality = quality
-        self.canvas_interval = 1 / 15
+        self.canvas = _a2w(self.array0) if canvas_ else None
+        self.canvas_quality = quality or 85
+        self.canvas_interval = 1 / 30 if self.canvas_quality > 50 else 1 / 15
         self.canvas_last_update = 0
 
         self._watch(self.window, self.canvas)
@@ -624,10 +623,11 @@ class App(_ClockLeg, _EventLeg):
             if self.canvas is not None and t0 >= nc:
                 self.canvas_last_update = t0
                 self.array0 = self._get_buffer()
-                if self.canvas_quality:
-                    self.canvas.draw_image(_a2w(self.array0, 'JPEG', quality=self.canvas_quality)[0], 0, 0)
-                else:
-                    self.canvas.put_image_data(self.array0) 
+                self.canvas.value = _a2b(
+                    self.array0, 
+                    'JPEG', 
+                    quality=self.canvas_quality
+                )
 
             elif self.buffer:
                 self.array0 = self._get_buffer()
@@ -724,12 +724,18 @@ class App(_ClockLeg, _EventLeg):
         return self.array0
 
 
-def _a2w(a, format='JPEG', **kwargs):
-    """Convert a numpy array of a JPEG image to an ipywidget image."""
+def _a2b(a, format='JPEG', **kwargs):
+    """Encode a numpy array of an image using given format."""
 
     b0 = io.BytesIO()
     i0 = PIL.Image.fromarray(a)
     i0.save(b0, format, **kwargs)
-    w0 = ipywidgets.Image(value=b0.getvalue(), format=format)
-    return w0, b0.getvalue()
+    return b0.getvalue()
+
+
+def _a2w(a, format='JPEG', **kwargs):
+    """Convert a numpy array of an image to an ipywidget image."""
+
+    b0 = _a2b(a, format=format, **kwargs)
+    return ipywidgets.Image(value=b0, format=format)
 
