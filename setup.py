@@ -35,7 +35,7 @@ setuptools.setup(
         'numpy', 
         'scipy', 
         'pillow', 
-        'pyglet', 
+        'pyglet==1.5.5', 
         'jupyter', 
         'webcolors', 
         'ipyevents', 
