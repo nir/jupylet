@@ -30,7 +30,7 @@ import platform
 from .env import is_remote, start_xvfb, has_display
 
 
-VERSION = '0.6.5.dev'
+VERSION = '0.6.6.dev'
 
 
 # Start virtual frame buffer if running in headless remote server.
