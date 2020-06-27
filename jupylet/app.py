@@ -502,7 +502,7 @@ class _EventLeg(object):
 
 class App(_ClockLeg, _EventLeg):
     
-    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/'], quality=None):
+    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/', 'models/'], quality=None):
         
         assert mode in ['window', 'jupyter', 'hidden']
         assert not (is_remote() and mode == 'window')
@@ -722,6 +722,12 @@ class App(_ClockLeg, _EventLeg):
         self._redraw_windows(0, force_redraw=True)
 
         return self.array0
+
+    def set2d(self):
+        self.window.projection = pyglet.window.Projection2D()
+
+    def set3d(self):
+        self.window.projection = pyglet.window.Projection3D()
 
 
 def _a2b(a, format='JPEG', **kwargs):
