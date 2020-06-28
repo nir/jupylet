@@ -329,3 +329,95 @@ class Camera(Objection):
         shader['view'] = flatten(glm.lookAt(self.position, self.position + self.front, self.up))
         shader['camera.position'] = self.position
 
+
+class Lights(object):
+    
+    def __init__(self):
+        
+        self.lights = []
+        
+    def add(self, light):
+        
+        self.lights.append(light)
+        light.set_index(len(self.lights)-1)
+        
+        return light
+    
+ 
+DIRECTIONAL_LIGHT = 0
+POINT_LIGHT = 1
+SPOT_LIGHT = 2
+
+
+class Light(jupylet.model.Model):
+    
+    def __init__(self, 
+        wavefront,
+        shader, 
+        batch,
+        **kwargs
+    ):
+
+        super(Light, self).__init__(wavefront, shader, batch)
+        
+        self.index = None
+        self.shader = shader
+        
+        self.properties = {
+            
+            'type': POINT_LIGHT,
+            
+            'direction': glm.vec3(-0.5),
+            'position': glm.vec3(1.0),
+            
+            'constant': 1.,
+            'linear': 0.045,
+            'quadratic': 0.0075,
+            
+            'ambient': glm.vec3(0.1),
+            'diffuse': glm.vec3(1.0),
+            'specular': glm.vec3(1.0),
+        }
+        
+        for k, v in kwargs.items():
+            if k in self.properties:
+                gt = type(self.properties[k])
+                self.properties[k] = gt(v)
+            
+            if hasattr(self, k):
+                setattr(self, k, v)
+            
+    def update(self):
+        
+        self['position'] = self.position
+        self['direction'] = self.front
+        
+    def set_index(self, index):
+        
+        self.index = index
+        
+        with self.shader:
+            if self.shader['nlights'] < index + 1:
+                self.shader['nlights'] = index + 1
+            
+        for k, v in self.properties.items():
+            self[k] = v
+        
+    def get_uniform_name(self, key):
+        return 'lights[%s].%s' % (self.index, key)
+    
+    def __getitem__(self, key):
+        
+        gt = type(self.properties[key])
+        
+        with self.shader:
+            return gt(self.shader[self.get_uniform_name(key)])
+        
+    def __setitem__(self, key, value):
+        
+        gt = type(self.properties[key])
+        
+        with self.shader:
+            self.shader[self.get_uniform_name(key)] = value
+
+            
