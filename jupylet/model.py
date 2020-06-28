@@ -131,32 +131,43 @@ class MaterialGroup(Group):
         
         self.texture = get_material_texture(material.texture)
         self.texture_bump = get_material_texture(material.texture_bump)
+        self.texture_specular_highlight = get_material_texture(material.texture_specular_highlight)
         
     def set_state(self, face=GL_FRONT_AND_BACK):
         
         super(MaterialGroup, self).set_state()
         
+        shader = self.get_shader()
+
         if self.texture is not None:
-            glEnable(self.texture.target)
+            #glEnable(self.texture.target)
+            glActiveTexture(GL_TEXTURE0)
             glBindTexture(self.texture.target, self.texture.id)
+            shader['material.texture'] = 0
             
+        shader['material.texture_exists'] = self.texture is not None
+
         if self.texture_bump is not None:
-            glEnable(self.texture_bump.target)
+            #glEnable(self.texture_bump.target)
+            glActiveTexture(GL_TEXTURE1)            
             glBindTexture(self.texture_bump.target, self.texture_bump.id)
-                    
-        self.get_shader()['has_diffuse_texture'] = self.texture is not None
-        self.get_shader()['diffuse'] = self.material.diffuse
+            shader['material.texture_bump'] = 1
+
+        shader['material.texture_bump_exists'] = self.texture_bump is not None
+        
+        if self.texture_specular_highlight is not None:
+            #glEnable(self.texture_specular_highlight.target)
+            glActiveTexture(GL_TEXTURE2)
+            glBindTexture(self.texture_specular_highlight.target, self.texture_specular_highlight.id)
+            shader['material.texture_specular_highlight'] = 2
+
+        shader['material.texture_specular_highlight_exists'] = self.texture_specular_highlight is not None
+        
+        #shader['material.ambient'] = self.material.ambient
+        shader['material.diffuse'] = self.material.diffuse
+        shader['material.specular'] = self.material.specular
+        shader['material.shininess'] = self.material.shininess
                 
-    def unset_state(self):
-
-        if self.texture is not None:
-            glDisable(self.texture.target)
-
-        if self.texture_bump is not None:
-            glDisable(self.texture_bump.target)
-
-        super(MaterialGroup, self).unset_state()
-
     def __eq__(self, other):
         # Do not consolidate Groups when adding to a Batch.
         # Matrix multiplications requires isolation.
@@ -282,7 +293,7 @@ class Model(Objection):
 
         self.group = Group(shader)
         self.vertex_lists = []
-        self._groups = []
+        self._groups = {}
 
         for name, material in wavefront.materials.items():
             
@@ -291,7 +302,7 @@ class Model(Objection):
             sz = len(material.vertices) // material.vertex_size
             
             self.vertex_lists.append(batch.add(sz, GL_TRIANGLES, g0, *d0))
-            self._groups.append(g0)
+            self._groups[name] = g0
 
     @property
     def matrix(self):
@@ -314,5 +325,7 @@ class Camera(Objection):
             self.position = position
                 
     def set_state(self, shader):
+
         shader['view'] = flatten(glm.lookAt(self.position, self.position + self.front, self.up))
+        shader['camera.position'] = self.position
 
