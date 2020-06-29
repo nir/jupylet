@@ -349,7 +349,7 @@ POINT_LIGHT = 1
 SPOT_LIGHT = 2
 
 
-class Light(jupylet.model.Model):
+class Light(Model):
     
     def __init__(self, 
         wavefront,
@@ -420,4 +420,3 @@ class Light(jupylet.model.Model):
         with self.shader:
             self.shader[self.get_uniform_name(key)] = value
 
-            
