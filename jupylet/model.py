@@ -25,6 +25,8 @@
 """
 
 
+import pywavefront
+import logging
 import pyglet
 import glm
 import os
@@ -32,6 +34,34 @@ import os
 import numpy as np
 
 from pyglet.graphics import *
+
+from .utils import abspath
+from .shader import Shader, ShaderProgram
+
+
+_shader_program = None
+
+
+def set_shader_program(sp):
+
+    global _shader_program
+
+    _shader_program = sp
+
+
+def get_shader_program():
+
+    if _shader_program is None:
+
+        vp = abspath('./shaders/default-vertex-shader.glsl')
+        fp = abspath('./shaders/default-fragment-shader.glsl')
+
+        vs = Shader(open(vp).read(), 'vertex')
+        fs = Shader(open(fp).read(), 'fragment')
+
+        set_shader_program(ShaderProgram(vs, fs))
+
+    return _shader_program
 
 
 def flatten(m):
@@ -82,42 +112,46 @@ class Group(pyglet.graphics.Group):
         
         super(Group, self).__init__(parent)
         
-        self.shader = shader
-        self.matrix = matrix
+        self._shader = shader
+        self._matrix = matrix
         
         if matrix is None and self.parent is None:
-            self.matrix = glm.mat4() 
-                
-    def get_matrix(self):
+            self._matrix = glm.mat4() 
+
+    @property
+    def matrix(self):
         
-        if self.matrix:
-            return self.matrix
-        
-        if self.parent:
-            return self.parent.get_matrix()
-        
-    def get_shader(self):
-        
-        if self.shader:
-            return self.shader
+        if self._matrix:
+            return self._matrix
         
         if self.parent:
-            return self.parent.get_shader()
+            return self.parent.matrix
+
+    @property    
+    def shader(self):
+        
+        if self._shader:
+            return self._shader
+        
+        if self.parent:
+            return self.parent.shader
+
+        return get_shader_program()
         
     def set_state(self, face=GL_FRONT_AND_BACK):
         
-        if self.shader:
+        if self._shader or not self.parent:
             self.shader.use()
             
-        if self.matrix:
-            self.get_shader()['model'] = flatten(self.matrix)
+        if self._matrix:
+            self.shader['model'] = flatten(self._matrix)
         
     def unset_state(self):
         
-        if self.matrix and self.parent:
-            self.get_shader()['model'] = flatten(self.parent.get_matrix())
+        if self._matrix and self.parent:
+            self.shader['model'] = flatten(self.parent.matrix)
         
-        if self.shader:
+        if self._shader or not self.parent:
             self.shader.stop()
 
 
@@ -137,11 +171,16 @@ class MaterialGroup(Group):
         
         super(MaterialGroup, self).set_state()
         
-        shader = self.get_shader()
+        self.active_texture_orig = ctypes.c_int()
+        glGetIntegerv(GL_ACTIVE_TEXTURE, self.active_texture_orig)
+
+        shader = self.shader
 
         if self.texture is not None:
             #glEnable(self.texture.target)
             glActiveTexture(GL_TEXTURE0)
+            self.texture_id_orig = ctypes.c_int()
+            glGetIntegerv(GL_TEXTURE_BINDING_2D, self.texture_id_orig)
             glBindTexture(self.texture.target, self.texture.id)
             shader['material.texture'] = 0
             
@@ -150,6 +189,8 @@ class MaterialGroup(Group):
         if self.texture_bump is not None:
             #glEnable(self.texture_bump.target)
             glActiveTexture(GL_TEXTURE1)            
+            self.texture_bump_id_orig = ctypes.c_int()
+            glGetIntegerv(GL_TEXTURE_BINDING_2D, self.texture_bump_id_orig)
             glBindTexture(self.texture_bump.target, self.texture_bump.id)
             shader['material.texture_bump'] = 1
 
@@ -158,6 +199,8 @@ class MaterialGroup(Group):
         if self.texture_specular_highlight is not None:
             #glEnable(self.texture_specular_highlight.target)
             glActiveTexture(GL_TEXTURE2)
+            self.texture_specular_highlight_id_orig = ctypes.c_int()
+            glGetIntegerv(GL_TEXTURE_BINDING_2D, self.texture_specular_highlight_id_orig)
             glBindTexture(self.texture_specular_highlight.target, self.texture_specular_highlight.id)
             shader['material.texture_specular_highlight'] = 2
 
@@ -167,7 +210,26 @@ class MaterialGroup(Group):
         shader['material.diffuse'] = self.material.diffuse
         shader['material.specular'] = self.material.specular
         shader['material.shininess'] = self.material.shininess
-                
+
+    def unset_state(self):	
+
+        if self.texture is not None:	
+            #glDisable(self.texture.target)
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(self.texture.target, self.texture_id_orig.value)
+                    
+        if self.texture_bump is not None:	
+            #glDisable(self.texture_bump.target)
+            glActiveTexture(GL_TEXTURE1)
+            glBindTexture(self.texture.target, self.texture_bump_id_orig.value)
+                    
+        if self.texture_specular_highlight is not None:	
+            #glDisable(self.texture_specular_highlight.target)
+            glActiveTexture(GL_TEXTURE2)
+            glBindTexture(self.texture.target, self.texture_specular_highlight_id_orig.value)
+                    
+        glActiveTexture(self.active_texture_orig.value)
+
     def __eq__(self, other):
         # Do not consolidate Groups when adding to a Batch.
         # Matrix multiplications requires isolation.
@@ -282,15 +344,35 @@ class Objection(object):
         return (self.matrix * glm.vec4(0, 0, 1, 0)).xyz
 
 
+def load_wavefront(path, debug=False):
+
+    if not debug:
+        try:
+            level = pywavefront.logger.level
+            pywavefront.logger.setLevel(logging.ERROR)
+        except:
+            pass
+        
+    wf = pywavefront.Wavefront(path, debug)
+
+    if not debug:
+        try:
+            pywavefront.logger.setLevel(level)
+        except:
+            pass
+
+    return wf
+
+
 class Model(Objection):
     
-    def __init__(self, wavefront, shader, batch):
+    def __init__(self, wavefront, batch, shader=None, debug=False, **kwargs):
         
-        self.wavefront = wavefront
-        self.shader = shader
-        
-        self._scale = 1.
+        if type(wavefront) is str:
+            wavefront = load_wavefront(wavefront, debug)
 
+        self.wavefront = wavefront
+        
         self.group = Group(shader)
         self.vertex_lists = []
         self._groups = {}
@@ -304,30 +386,54 @@ class Model(Objection):
             self.vertex_lists.append(batch.add(sz, GL_TRIANGLES, g0, *d0))
             self._groups[name] = g0
 
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def shader(self):
+        return self.group.shader
+
     @property
     def matrix(self):
         return self.group.matrix
 
     @matrix.setter
     def matrix(self, m):
-        self.group.matrix = m
+        self.group._matrix = m
         
 
 class Camera(Objection):
 
-    def __init__(self, position=None):
-        
-        #super(Camera, self).__init__(inverted=True)
+    def __init__(self, fov=60, near=0.01, far=32., shader=None, **kwargs):
         
         self.matrix = glm.mat4() 
-        
-        if position:
-            self.position = position
-                
-    def set_state(self, shader):
 
-        shader['view'] = flatten(glm.lookAt(self.position, self.position + self.front, self.up))
-        shader['camera.position'] = self.position
+        self.shader = shader
+
+        self.fov = fov
+        self.near = near
+        self.far = far
+        
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def set_state(self, shader=None):
+
+        shader = shader or self.shader or get_shader_program()
+
+        x0, y0, w0, h0 = pyglet.image.get_buffer_manager().get_viewport()
+        aspect = w0 / h0
+        
+        with shader:
+            
+            shader['view'] = flatten(glm.lookAt(self.position, self.position + self.front, self.up))
+            shader['projection'] = flatten(glm.perspective(
+                glm.radians(self.fov), 
+                aspect, 
+                self.near, 
+                self.far
+            ))
+            shader['camera.position'] = self.position
 
 
 class Lights(object):
@@ -353,15 +459,14 @@ class Light(Model):
     
     def __init__(self, 
         wavefront,
-        shader, 
         batch,
+        shader=None, 
         **kwargs
     ):
 
-        super(Light, self).__init__(wavefront, shader, batch)
+        super(Light, self).__init__(wavefront, batch, shader)
         
         self.index = None
-        self.shader = shader
         
         self.properties = {
             
@@ -370,9 +475,9 @@ class Light(Model):
             'direction': glm.vec3(-0.5),
             'position': glm.vec3(1.0),
             
-            'constant': 1.,
-            'linear': 0.045,
-            'quadratic': 0.0075,
+            'constant': 0.1,
+            'linear': 0.3,
+            'quadratic': 0.3,
             
             'ambient': glm.vec3(0.1),
             'diffuse': glm.vec3(1.0),

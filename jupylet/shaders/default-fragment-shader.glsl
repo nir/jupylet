@@ -61,6 +61,30 @@ uniform Light lights[16];
 uniform int nlights;
 
 
+//
+// https://gamedev.stackexchange.com/questions/68612/how-to-compute-tangent-and-bitangent-vectors
+// https://www.gamasutra.com/blogs/RobertBasler/20131122/205462/Three_Normal_Mapping_Techniques_Explained_For_the_Mathematically_Uninclined.php
+// http://www.thetenthplanet.de/archives/1180
+//
+
+mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv ) { 
+    
+    // get edge vectors of the pixel triangle 
+    vec3 dp1 = dFdx( p ); 
+    vec3 dp2 = dFdy( p ); 
+    vec2 duv1 = dFdx( uv ); 
+    vec2 duv2 = dFdy( uv );   
+    // solve the linear system 
+    vec3 dp2perp = cross( dp2, N ); 
+    vec3 dp1perp = cross( N, dp1 ); 
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x; 
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;   
+    // construct a scale-invariant frame 
+    float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) ); 
+    return mat3( T * invmax, B * invmax, N ); 
+}
+
+
 vec3 compute_light(Light light) {
 
     float attenuation = 1.0;
@@ -75,18 +99,22 @@ vec3 compute_light(Light light) {
         attenuation = 1.0 / (light.constant + light.linear * r + light.quadratic * r * r);
     }
 
-    vec3 normal = frag_normal;
+    vec3 view_direction = normalize(frag_position - camera.position);
 
+    vec3 normal = frag_normal;
+    
     if (material.texture_bump_exists == 1) {
-        normal += texture(material.texture_bump, frag_uv).xyz * 2 - 1;
+
+        mat3 TBN = cotangent_frame(frag_normal, view_direction, frag_uv); 
+
+        normal = texture(material.texture_bump, frag_uv).rgb * 2 - 1;
+        normal = normalize(TBN * normal); 
+
     }
 
-    normal = normalize(normal);
-
     vec3 light_reflection = normalize(reflect(-light_direction, normal));
-    vec3 camera_direction = normalize(camera.position - frag_position);
 
-    float specular_intensity = pow(max(0.0, dot(camera_direction, light_reflection)), material.shininess * 10);
+    float specular_intensity = pow(max(0.0, dot(-view_direction, light_reflection)), material.shininess) / 10;
     float diffuse_intensity = max(0.0, dot(normal, light_direction));
 
     vec3 color = material.diffuse.xyz;
@@ -117,3 +145,4 @@ void main() {
 
     FragColor = vec4(color, 1.0);
 } 
+
