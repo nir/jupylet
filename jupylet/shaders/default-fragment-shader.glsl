@@ -4,9 +4,19 @@ uniform mat4 model;
 
 out vec4 FragColor;
 
+in vec3 vert_position;
 in vec3 frag_position;
 in vec3 frag_normal;
 in vec2 frag_uv;
+
+struct Cubemap {
+    int render_cubemap;
+    int texture_exists;
+    float intensity;
+    samplerCube texture;
+};
+
+uniform Cubemap cubemap;
 
 struct Material { 
 
@@ -32,7 +42,6 @@ uniform Material material;
 struct Camera { 
 
     vec3 position;
-    vec3 direction;
 };  
 
 uniform Camera camera;
@@ -94,7 +103,7 @@ vec3 compute_light(Light light) {
         light_direction = normalize(light.direction);
     } 
     else {
-        light_direction = normalize(light.position - frag_position);
+        light_direction = normalize(frag_position - light.position);
         float r = length(light.position - frag_position);
         attenuation = 1.0 / (light.constant + light.linear * r + light.quadratic * r * r);
     }
@@ -112,10 +121,10 @@ vec3 compute_light(Light light) {
 
     }
 
-    vec3 light_reflection = normalize(reflect(-light_direction, normal));
+    vec3 halfway_direction = normalize(light_direction + view_direction);
 
-    float specular_intensity = pow(max(0.0, dot(-view_direction, light_reflection)), material.shininess) / 10;
-    float diffuse_intensity = max(0.0, dot(normal, light_direction));
+    float specular_intensity = 0; pow(max(0.0, dot(normal, -halfway_direction)), material.shininess / 256) / 10;
+    float diffuse_intensity = max(0.0, dot(normal, -light_direction));
 
     vec3 color = material.diffuse.xyz;
 
@@ -137,10 +146,15 @@ vec3 compute_light(Light light) {
 
 void main() {
 
+    if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
+        FragColor = cubemap.intensity * texture(cubemap.texture, vert_position);
+        return;
+    }
+
     vec3 color = vec3(0.0);
 
     for (int i = 0; i < nlights; i++) {
-        color += compute_light(lights[i]);
+        color += clamp(compute_light(lights[i]), 0.0, 1.0);
     }
 
     FragColor = vec4(color, 1.0);

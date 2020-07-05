@@ -74,6 +74,8 @@ _uniform_setters = {
         
     GL_SAMPLER_3D: (GLint, glUniform1iv, 1, 1),
 
+    GL_SAMPLER_CUBE: (GLint, glUniform1iv, 1, 1),
+    
     GL_FLOAT_MAT2: (GLfloat, glUniformMatrix2fv, 4, 1),
     GL_FLOAT_MAT3: (GLfloat, glUniformMatrix3fv, 6, 1),
     GL_FLOAT_MAT4: (GLfloat, glUniformMatrix4fv, 16, 1),

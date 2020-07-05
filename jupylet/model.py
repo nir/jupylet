@@ -178,31 +178,31 @@ class MaterialGroup(Group):
 
         if self.texture is not None:
             #glEnable(self.texture.target)
-            glActiveTexture(GL_TEXTURE0)
+            glActiveTexture(GL_TEXTURE1)
             self.texture_id_orig = ctypes.c_int()
             glGetIntegerv(GL_TEXTURE_BINDING_2D, self.texture_id_orig)
             glBindTexture(self.texture.target, self.texture.id)
-            shader['material.texture'] = 0
+            shader['material.texture'] = 1
             
         shader['material.texture_exists'] = self.texture is not None
 
         if self.texture_bump is not None:
             #glEnable(self.texture_bump.target)
-            glActiveTexture(GL_TEXTURE1)            
+            glActiveTexture(GL_TEXTURE2)            
             self.texture_bump_id_orig = ctypes.c_int()
             glGetIntegerv(GL_TEXTURE_BINDING_2D, self.texture_bump_id_orig)
             glBindTexture(self.texture_bump.target, self.texture_bump.id)
-            shader['material.texture_bump'] = 1
+            shader['material.texture_bump'] = 2
 
         shader['material.texture_bump_exists'] = self.texture_bump is not None
         
         if self.texture_specular_highlight is not None:
             #glEnable(self.texture_specular_highlight.target)
-            glActiveTexture(GL_TEXTURE2)
+            glActiveTexture(GL_TEXTURE3)
             self.texture_specular_highlight_id_orig = ctypes.c_int()
             glGetIntegerv(GL_TEXTURE_BINDING_2D, self.texture_specular_highlight_id_orig)
             glBindTexture(self.texture_specular_highlight.target, self.texture_specular_highlight.id)
-            shader['material.texture_specular_highlight'] = 2
+            shader['material.texture_specular_highlight'] = 3
 
         shader['material.texture_specular_highlight_exists'] = self.texture_specular_highlight is not None
         
@@ -215,20 +215,22 @@ class MaterialGroup(Group):
 
         if self.texture is not None:	
             #glDisable(self.texture.target)
-            glActiveTexture(GL_TEXTURE0)
+            glActiveTexture(GL_TEXTURE1)
             glBindTexture(self.texture.target, self.texture_id_orig.value)
                     
         if self.texture_bump is not None:	
             #glDisable(self.texture_bump.target)
-            glActiveTexture(GL_TEXTURE1)
+            glActiveTexture(GL_TEXTURE2)
             glBindTexture(self.texture.target, self.texture_bump_id_orig.value)
                     
         if self.texture_specular_highlight is not None:	
             #glDisable(self.texture_specular_highlight.target)
-            glActiveTexture(GL_TEXTURE2)
+            glActiveTexture(GL_TEXTURE3)
             glBindTexture(self.texture.target, self.texture_specular_highlight_id_orig.value)
                     
         glActiveTexture(self.active_texture_orig.value)
+
+        super(MaterialGroup, self).unset_state()
 
     def __eq__(self, other):
         # Do not consolidate Groups when adding to a Batch.
@@ -366,13 +368,14 @@ def load_wavefront(path, debug=False):
 
 class Model(Objection):
     
-    def __init__(self, wavefront, batch, shader=None, debug=False, **kwargs):
+    def __init__(self, wavefront, batch=None, shader=None, debug=False, **kwargs):
         
         if type(wavefront) is str:
             wavefront = load_wavefront(wavefront, debug)
 
         self.wavefront = wavefront
-        
+        self.batch = batch or pyglet.graphics.Batch()
+
         self.group = Group(shader)
         self.vertex_lists = []
         self._groups = {}
@@ -383,7 +386,7 @@ class Model(Objection):
             d0 = wavefront2pyglet(material)
             sz = len(material.vertices) // material.vertex_size
             
-            self.vertex_lists.append(batch.add(sz, GL_TRIANGLES, g0, *d0))
+            self.vertex_lists.append(self.batch.add(sz, GL_TRIANGLES, g0, *d0))
             self._groups[name] = g0
 
         for k, v in kwargs.items():
@@ -436,17 +439,33 @@ class Camera(Objection):
             shader['camera.position'] = self.position
 
 
-class Lights(object):
+class Scene(object):
     
-    def __init__(self):
+    def __init__(self, shader=None, batch=None):
         
+        self.shader = shader or get_shader_program()
+        self.batch = batch or pyglet.graphics.Batch()
+
+        self.camera = None
         self.lights = []
         
-    def add(self, light):
+    def draw(self):
+        
+        self.camera.set_state()
+
+        for light in self.lights:
+            light.set_state()
+
+        self.batch.draw()
+
+    def set_camera(self, camera):
+        self.camera = camera
+        return camera
+
+    def add_light(self, light):
         
         self.lights.append(light)
         light.set_index(len(self.lights)-1)
-        
         return light
     
  
@@ -459,7 +478,7 @@ class Light(Model):
     
     def __init__(self, 
         wavefront,
-        batch,
+        batch=None,
         shader=None, 
         **kwargs
     ):
@@ -472,8 +491,8 @@ class Light(Model):
             
             'type': POINT_LIGHT,
             
-            'direction': glm.vec3(-0.5),
-            'position': glm.vec3(1.0),
+            'position': glm.vec3(1.),
+            'direction': glm.vec3(0., -1., 0.),
             
             'constant': 0.1,
             'linear': 0.3,
@@ -492,10 +511,9 @@ class Light(Model):
             if hasattr(self, k):
                 setattr(self, k, v)
             
-    def update(self):
+    def set_state(self):
         
         self['position'] = self.position
-        self['direction'] = self.front
         
     def set_index(self, index):
         
@@ -525,3 +543,6 @@ class Light(Model):
         with self.shader:
             self.shader[self.get_uniform_name(key)] = value
 
+        if key == 'position':
+            self.position = value
+            
