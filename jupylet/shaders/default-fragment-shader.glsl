@@ -10,6 +10,7 @@ in vec3 frag_normal;
 in vec2 frag_uv;
 
 struct Cubemap {
+
     int render_cubemap;
     int texture_exists;
     float intensity;
@@ -20,12 +21,12 @@ uniform Cubemap cubemap;
 
 struct Material { 
 
-    vec4 ambient;
-    vec4 diffuse;
+    vec4 color;
     vec4 specular;
     vec4 emissive;
     
-    float shininess;
+    float roughness;
+    float metallic;
 
     int texture_exists;
     sampler2D texture;
@@ -57,13 +58,8 @@ struct Light {
     vec3 position;
     vec3 direction;   
     
-    float constant;
-    float linear;
-    float quadratic;  
-
+    vec3 color;
     vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
 };  
 
 uniform Light lights[16];
@@ -94,53 +90,93 @@ mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv ) {
 }
 
 
+float pi = 3.141592653589793;
+float eps = 0.000001;
+
+
+float dggx(float nh, float a) {
+
+    float v = nh * nh * (a * a - 1.0) + 1.0;
+    return a * a / (pi * v * v + eps);
+}
+
+
+float gschlick(float nv, float k) {
+
+    return nv / (nv * (1.0 - k) + k + eps);
+}
+
+
+float gsmith(float nv, float nl, float k) {
+
+    return gschlick(nv, k) * gschlick(nl, k);
+}
+
+
+vec3 fschlick(float vh, vec3 f0) {
+
+    return f0 + (1.0 - f0) * pow(1.0 - vh, 5.0);
+}
+
+
 vec3 compute_light(Light light) {
 
-    float attenuation = 1.0;
+    float light_distance = 1.0;
     vec3 light_direction;
 
     if (light.type == DIRECTIONAL_LIGHT) {
-        light_direction = normalize(light.direction);
+        light_direction = -normalize(light.direction);
     } 
     else {
-        light_direction = normalize(frag_position - light.position);
-        float r = length(light.position - frag_position);
-        attenuation = 1.0 / (light.constant + light.linear * r + light.quadratic * r * r);
+        light_direction = normalize(light.position - frag_position);
+        light_distance = length(light.position - frag_position);
     }
 
-    vec3 view_direction = normalize(frag_position - camera.position);
+    vec3 view_direction = normalize(camera.position - frag_position);
 
-    vec3 normal = frag_normal;
+    vec3 normal = normalize(frag_normal);
     
     if (material.texture_bump_exists == 1) {
 
-        mat3 TBN = cotangent_frame(frag_normal, view_direction, frag_uv); 
+        mat3 TBN = cotangent_frame(frag_normal, -view_direction, frag_uv); 
 
         normal = texture(material.texture_bump, frag_uv).rgb * 2 - 1;
         normal = normalize(TBN * normal); 
-
     }
 
     vec3 halfway_direction = normalize(light_direction + view_direction);
 
-    float specular_intensity = 0; pow(max(0.0, dot(normal, -halfway_direction)), material.shininess / 256) / 10;
-    float diffuse_intensity = max(0.0, dot(normal, -light_direction));
+    float nv = max(dot(normal, view_direction), 0);
+    float nl = max(dot(normal, light_direction), 0);
+    float nh = max(dot(normal, halfway_direction), 0);
+    float vh = max(dot(view_direction, halfway_direction), 0);
 
-    vec3 color = material.diffuse.xyz;
+    vec3 color = material.color.xyz;
 
     if (material.texture_exists == 1) {
         color = texture(material.texture, frag_uv).xyz;
     }
 
-    vec3 ambient = light.ambient * color * attenuation;
-    vec3 diffuse = light.diffuse * diffuse_intensity * color * attenuation;
-    vec3 specular = light.specular * specular_intensity * material.specular.xyz * attenuation;
+    vec3 f0 = mix(vec3(0.04), color, material.metallic);
+    vec3 f = fschlick(vh, f0);
 
-    if (material.texture_specular_highlight_exists == 1) {
-        specular *= texture(material.texture_specular_highlight, frag_uv);
-    }
+    //float r = material.roughness + 1.0;
+    //float k = r * r / 8.0;
 
-    return ambient + diffuse + specular; 
+    float d = dggx(nh, material.roughness);// * material.roughness);
+    float g = gsmith(nv, nl, material.roughness);
+
+    vec3 ks = f + 0.0 * material.specular.xyz;
+    vec3 kd = (vec3(1.0) - ks) * (1.0 - material.metallic);
+
+    vec3 radiance = light.color / (light_distance * light_distance);
+
+    vec3 fcooktor = d * g * f / (4 * nv * nl + eps);
+    vec3 flambert = color / pi;
+
+    vec3 fr = kd * flambert + ks * fcooktor;
+
+    return fr * radiance * nl;
 } 
 
 
@@ -154,8 +190,11 @@ void main() {
     vec3 color = vec3(0.0);
 
     for (int i = 0; i < nlights; i++) {
-        color += clamp(compute_light(lights[i]), 0.0, 1.0);
+        color += compute_light(lights[i]);
     }
+
+    //color = color / (color + vec3(1.0));
+    //color = pow(color, vec3(1.0 / 2.2));
 
     FragColor = vec4(color, 1.0);
 } 

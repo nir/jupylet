@@ -14,6 +14,7 @@ out vec3 frag_normal;
 out vec2 frag_uv;
 
 struct Cubemap {
+    
     int render_cubemap;
     int texture_exists;
     float intensity;

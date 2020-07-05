@@ -162,7 +162,13 @@ class MaterialGroup(Group):
         super(MaterialGroup, self).__init__(shader, matrix, parent)
         
         self.material = material
-        
+
+        self.roughness = (self.material.shininess / 900) ** 0.5
+        self.metallic = 0. 
+
+        if self.material.illumination_model == 3:
+            self.metallic = self.material.ambient[0]
+                
         self.texture = get_material_texture(material.texture)
         self.texture_bump = get_material_texture(material.texture_bump)
         self.texture_specular_highlight = get_material_texture(material.texture_specular_highlight)
@@ -204,12 +210,12 @@ class MaterialGroup(Group):
             glBindTexture(self.texture_specular_highlight.target, self.texture_specular_highlight.id)
             shader['material.texture_specular_highlight'] = 3
 
-        shader['material.texture_specular_highlight_exists'] = self.texture_specular_highlight is not None
+        #shader['material.texture_specular_highlight_exists'] = self.texture_specular_highlight is not None
         
-        #shader['material.ambient'] = self.material.ambient
-        shader['material.diffuse'] = self.material.diffuse
+        shader['material.color'] = self.material.diffuse
         shader['material.specular'] = self.material.specular
-        shader['material.shininess'] = self.material.shininess
+        shader['material.roughness'] = self.roughness
+        shader['material.metallic'] = self.metallic    
 
     def unset_state(self):	
 
@@ -494,13 +500,8 @@ class Light(Model):
             'position': glm.vec3(1.),
             'direction': glm.vec3(0., -1., 0.),
             
-            'constant': 0.1,
-            'linear': 0.3,
-            'quadratic': 0.3,
-            
+            'color': glm.vec3(1.0),
             'ambient': glm.vec3(0.1),
-            'diffuse': glm.vec3(1.0),
-            'specular': glm.vec3(1.0),
         }
         
         for k, v in kwargs.items():
