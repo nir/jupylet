@@ -214,6 +214,7 @@ class MaterialGroup(Group):
         
         shader['material.color'] = self.material.diffuse
         shader['material.specular'] = self.material.specular
+        shader['material.emissive'] = self.material.emissive
         shader['material.roughness'] = self.roughness
         shader['material.metallic'] = self.metallic    
 
@@ -339,7 +340,7 @@ class Objection(object):
         angle = math.acos(c) * 2
         s = math.sin(angle / 2)
 
-        return angle, glm.vec3(x / s, y / s, z / s)
+        return angle, glm.vec3(xs / s, ys / s, zs / s)
     
     @property
     def up(self):
