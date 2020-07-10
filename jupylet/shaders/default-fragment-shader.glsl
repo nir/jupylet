@@ -22,20 +22,22 @@ uniform Cubemap cubemap;
 struct Material { 
 
     vec4 color;
-    vec4 specular;
-    vec4 emissive;
-    
-    float roughness;
+    sampler2D color_texture;
+    int color_texture_exists;
+
+    sampler2D normals_texture;
+    int normals_texture_exists;
+
+    float specular;
     float metallic;
 
-    int texture_exists;
-    sampler2D texture;
+    float roughness;
+    sampler2D roughness_texture;
+    int roughness_texture_exists;
 
-    int texture_bump_exists;
-    sampler2D texture_bump;
-
-    int texture_specular_highlight_exists;
-    sampler2D texture_specular_highlight;
+    vec3 emissive;  
+    sampler2D emissive_texture;
+    int emissive_texture_exists;
 };  
 
 uniform Material material;
@@ -57,9 +59,9 @@ struct Light {
 
     vec3 position;
     vec3 direction;   
-    
+
     vec3 color;
-    vec3 ambient;
+    float intensity;
 };  
 
 uniform Light lights[16];
@@ -136,11 +138,11 @@ vec3 compute_light(Light light) {
 
     vec3 normal = normalize(frag_normal);
     
-    if (material.texture_bump_exists == 1) {
+    if (material.normals_texture_exists == 1) {
 
         mat3 TBN = cotangent_frame(frag_normal, -view_direction, frag_uv); 
 
-        normal = texture(material.texture_bump, frag_uv).rgb * 2 - 1;
+        normal = texture(material.normals_texture, frag_uv).rgb * 2 - 1;
         normal = normalize(TBN * normal); 
     }
 
@@ -153,28 +155,40 @@ vec3 compute_light(Light light) {
 
     vec3 color = material.color.xyz;
 
-    if (material.texture_exists == 1) {
-        color = texture(material.texture, frag_uv).xyz;
+    if (material.color_texture_exists == 1) {
+        color = texture(material.color_texture, frag_uv).xyz;
     }
 
-    vec3 f0 = mix(vec3(0.04), color, material.metallic);
+    color = pow(color, vec3(2.2));
+
+    float metallic = material.metallic;
+    float roughness = material.roughness;
+
+    if (material.roughness_texture_exists == 1) {
+        vec4 r4 = texture(material.roughness_texture, frag_uv);
+        roughness = r4.y;
+        metallic = 1.0 - r4.w;
+    }
+
+    vec3 f0 = mix(color * material.specular, color, metallic);
     vec3 f = fschlick(vh, f0);
 
     //float r = material.roughness + 1.0;
     //float k = r * r / 8.0;
 
-    float d = dggx(nh, material.roughness);// * material.roughness);
-    float g = gsmith(nv, nl, material.roughness);
+    float d = dggx(nh, material.roughness * material.roughness);
+    float g = gsmith(nv, nl, (material.roughness + 1.0) * (material.roughness + 1.0) / 8.0);
 
-    vec3 ks = f + 0.0 * material.specular.xyz;
-    vec3 kd = (vec3(1.0) - ks) * (1.0 - material.metallic);
+    vec3 ks = f;
+    vec3 kd = (vec3(1.0) - ks) * (1.0 - metallic);
 
-    vec3 radiance = light.color / (light_distance * light_distance);
+    vec3 radiance = light.intensity * pow(light.color, vec3(2.2));
+    radiance = radiance / (light_distance * light_distance);
 
     vec3 fcooktor = d * g * f / (4 * nv * nl + eps);
     vec3 flambert = color / pi;
 
-    vec3 fr = kd * flambert + ks * fcooktor;
+    vec3 fr = kd * flambert + fcooktor;
 
     return fr * radiance * nl;
 } 
@@ -182,19 +196,28 @@ vec3 compute_light(Light light) {
 
 void main() {
 
+    //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    //return;
+
     if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
-        FragColor = cubemap.intensity * texture(cubemap.texture, vert_position);
+        FragColor = cubemap.intensity * pow(texture(cubemap.texture, vert_position), vec4(2.2));
         return;
     }
 
-    vec3 color = vec3(0.0);
+    vec3 color = material.emissive;
+
+    if (material.emissive_texture_exists == 1) {
+        color = texture(material.emissive_texture, frag_uv).xyz;
+    }
+
+    color = pow(color, vec3(2.2));
 
     for (int i = 0; i < nlights; i++) {
         color += compute_light(lights[i]);
     }
 
-    //color = color / (color + vec3(1.0));
-    //color = pow(color, vec3(1.0 / 2.2));
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0 / 2.2));
 
     FragColor = vec4(color, 1.0);
 } 
