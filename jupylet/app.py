@@ -541,7 +541,7 @@ class App(_ClockLeg, _EventLeg):
         
         self.canvas = _a2w(self.array0) if canvas_ else None
         self.canvas_quality = quality or 85
-        self.canvas_interval = 1 / 30 if self.canvas_quality > 50 else 1 / 15
+        self.canvas_interval = 1 / 24 if self.canvas_quality > 50 else 1 / 12
         self.canvas_last_update = 0
 
         self._watch(self.window, self.canvas)

@@ -278,7 +278,7 @@ class ModuleProcess(object):
             
 class GameProcess(ModuleProcess):
     
-    def start(self, interval=1/30, size=224):
+    def start(self, interval=1/24, size=224):
 
         super(GameProcess, self).start()
         
@@ -312,7 +312,7 @@ class Games(object):
         else:
             self.games = games
         
-    def start(self, interval=1/30, size=224):
+    def start(self, interval=1/24, size=224):
         
         for g in self.games:
             if type(g) is GameProcess:

@@ -127,8 +127,9 @@ def load_blender_gltf(path):
         material = load_blender_gltf_material(g0, m0)
         scene.add_material(material)
     
-    for n0 in g0.model.nodes:
-        
+    for n0 in s0.nodes:
+        n0 = g0.model.nodes[n0]
+
         if is_blender_gltf_light(g0, n0):
             light = load_blender_gltf_light(g0, n0)
             scene.add_light(light)
@@ -206,6 +207,7 @@ class Scene(Object):
     def unset_state(self):
         self._shader.stop()
 
+
 def load_blender_gltf_material(g0, m0):
     
     lbt = load_blender_gltf_texture
@@ -278,6 +280,17 @@ class Material(Object):
         self.emissive = emissive
         self.occlusion = occlusion
         self.normals = normals
+        self.normals_gamma = self.compute_normals_gamma(normals)
+
+    def compute_normals_gamma(self, normals):
+
+        if not isinstance(normals, pyglet.image.Texture):
+            return 1.
+
+        na = np.array(t2i(normals))
+        nm = na[...,:2].mean() / 255
+
+        return math.log(0.5) / math.log(nm)        
 
     def set_state(self, shader):
             
@@ -301,6 +314,7 @@ class Material(Object):
             glActiveTexture(GL_TEXTURE2)
             glBindTexture(self.normals.target, self.normals.id) 
             
+            shader['material.normals_gamma'] = self.normals_gamma
             shader['material.normals_texture'] = 2
             shader['material.normals_texture_exists'] = True
         else:
@@ -650,58 +664,62 @@ def is_blender_gltf_mesh(g0, n0):
     return False
 
     
-def load_blender_gltf_mesh(g0, n0, materials):
-    
-    children = [load_blender_gltf_mesh(g0, cn, materials) for cn in n0.children or []]
+def load_blender_gltf_mesh(g0, n0, materials, parent=None):
     
     mesh = Mesh(
         n0.name, 
         xyzw2wxyz(n0.rotation), 
         n0.scale, 
-        n0.translation
+        n0.translation,
+        parent
     )
     mesh._source = n0
     
-    for child in children:
-        mesh.add_child(child)
-        
     m0 = g0.model.meshes[n0.mesh]
     
     for p0 in m0.primitives:
         mesh.add_primitive(load_blender_gltf_primitive(g0, p0, materials))
     
+    for cn in n0.children or []:
+        n1 = g0.model.nodes[cn]
+        mesh.children[n1.name] = load_blender_gltf_mesh(g0, n1, materials, mesh)
+        
     return mesh
 
     
 class Mesh(Node):
     
-    def __init__(self, name, rotation=None, scale=None, translation=None):
+    def __init__(self, name, rotation=None, scale=None, translation=None, parent=None):
         
         super(Mesh, self).__init__(name, rotation, scale, translation)
         
         self.primitives = []
-        self.children = []
+        self.children = {}
         
-        self._group = Group(self)
+        self._parent = weakref.proxy(parent) if parent else None
+        self._group = Group(self, parent._group if parent else None)
 
     def add_primitive(self, primitive):
         self.primitives.append(primitive)
         primitive._group.parent = self._group
-        
-    def add_child(self, child):
-        self.children.append(child)
-        child._group.parent = self._group
         
     def batch_add(self, batch):
         
         for primitive in self.primitives:
             primitive.batch_add(batch)
             
-        for mesh in self.children:
+        for mesh in self.children.values():
             mesh.batch_add(batch)
             
+    def composed_matrix(self):
+        
+        if self._parent is None:
+            return self._matrix
+
+        return self._matrix * self._parent.composed_matrix()
+
     def set_state(self):
-        self._group.shader['model'] = flatten(self._matrix)
+        self._group.shader['model'] = flatten(self.composed_matrix())
         
     def unset_state(self):
         pass
@@ -711,16 +729,17 @@ def load_blender_gltf_primitive(g0, p0, materials):
     primitive = Primitive(
         material=materials[p0.material], 
         indices=get_buffer0(g0, p0.indices, '')[-1],
-        vertices=get_buffer0(g0, p0.attributes.POSITION, '0g'),
-        normals=get_buffer0(g0, p0.attributes.NORMAL, '1g'),
-        coords=get_buffer0(g0, p0.attributes.TEXCOORD_0, '2g')
+        vertices=get_buffer0(g0, p0.attributes.POSITION),
+        tangents=get_buffer0(g0, p0.attributes.TANGENT),
+        normals=get_buffer0(g0, p0.attributes.NORMAL),
+        coords=get_buffer0(g0, p0.attributes.TEXCOORD_0)
     )
     primitive._source = p0
     
     return primitive
 
 
-def get_buffer0(g0, ai, prefix):
+def get_buffer0(g0, ai, prefix=''):
     
     if ai is not None:
         a0 = g0.model.accessors[ai]
@@ -732,17 +751,19 @@ def get_buffer(g0, a0):
     
     t2f = {
         'FLOAT': 'f',
-        'UNSIGNED_SHORT': 'H',
+        'UNSIGNED_SHORT': 'HS',
+        'UNSIGNED_INT': 'I',
     }
     
     t2n = {
         'SCALAR': '1',
         'VEC2': '2',
         'VEC3': '3',
+        'VEC4': '4',
     }
     
     ctn = gltflib.ComponentType._value2member_map_[a0.componentType].name
-    fmt = t2n[a0.type] + t2f[ctn]
+    fmt = t2n[a0.type] + t2f[ctn][-1]
     
     v0 = g0.model.bufferViews[a0.bufferView]
     b0 = g0.model.buffers[v0.buffer]
@@ -754,19 +775,20 @@ def get_buffer(g0, a0):
     ao = a0.byteOffset or 0
     d0 = r0.data[ao + v0.byteOffset: ao + v0.byteOffset + v0.byteLength]
 
-    data = [s[0] for s in struct.Struct(t2f[ctn]).iter_unpack(d0)]   
+    data = [s[0] for s in struct.Struct(t2f[ctn][0]).iter_unpack(d0)]   
     
     return fmt, data
 
     
 class Primitive(Object):
     
-    def __init__(self, material, indices, vertices, normals=None, coords=None):
+    def __init__(self, material, indices, vertices, tangents=None, normals=None, coords=None):
         
         self.material = material
 
         self._indices = indices
         self._vertices = vertices
+        self._tangents = tangents
         self._normals = normals
         self._coords = coords
         
@@ -777,13 +799,17 @@ class Primitive(Object):
         
     def batch_add(self, batch):
 
-        vl = [self._vertices, self._normals, self._coords]
-        vl = [v for v in vl if v]
+        vl = [self._vertices, self._normals, self._coords, self._tangents]
+        vl = [('%sg%s' % (i, fv[0]), fv[1]) for i, fv in enumerate(vl) if fv]
         
         batch.add_indexed(self.nvertices, GL_TRIANGLES, self._group, self._indices, *vl)
         
     def set_state(self):
-        self.material.set_state(self._group.shader)
+
+        shader = self._group.shader
+        shader['has_tangents'] = int(self._tangents is not None)
+
+        self.material.set_state(shader)
         
     def unset_state(self):
         self.material.unset_state()
