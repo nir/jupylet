@@ -500,10 +500,26 @@ class _EventLeg(object):
             return decorator        
 
 
+def in_python_script():
+
+    f0 = inspect.currentframe()
+    
+    while f0:
+        if not f0.f_back and f0.f_globals.get('__name__') == '__main__':
+            return True
+        
+        f0 = f0.f_back
+        
+    return False
+
+
 class App(_ClockLeg, _EventLeg):
     
-    def __init__(self, width=512, height=512, mode='jupyter', buffer=False, resource_path=['.', 'images/', 'models/'], quality=None):
+    def __init__(self, width=512, height=512, mode='auto', buffer=False, resource_path=['.', 'images/', 'models/'], quality=None):
         
+        if mode == 'auto':
+            mode = 'window' if in_python_script() else 'jupyter'
+
         assert mode in ['window', 'jupyter', 'hidden']
         assert not (is_remote() and mode == 'window')
 
@@ -727,6 +743,10 @@ class App(_ClockLeg, _EventLeg):
         self.window.projection = pyglet.window.Projection2D()
 
     def set3d(self):
+
+        pyglet.gl.glEnable(pyglet.gl.GL_DEPTH_TEST)
+        pyglet.gl.glEnable(pyglet.gl.GL_CULL_FACE)
+        
         self.window.projection = pyglet.window.Projection3D()
 
 

@@ -272,7 +272,7 @@ def highlights(dt):
     
     while True:
         
-        dt = yield 1/30
+        dt = yield 1/24
         
         r0 = 0.9 ** (120 * dt)
         

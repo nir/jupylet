@@ -33,9 +33,11 @@ setuptools.setup(
     install_requires=[
         'wget',
         'numpy', 
+        'PyGLM',
         'scipy', 
         'pillow', 
         'pyglet==1.5.5', 
+        'gltflib',
         'jupyter', 
         'webcolors', 
         'ipyevents', 

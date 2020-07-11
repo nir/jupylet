@@ -9,10 +9,6 @@ in vec3 frag_position;
 in vec3 frag_normal;
 in vec2 frag_uv;
 
-uniform int has_tangents;
-in float frag_tangent_handedness;
-in vec3 frag_tangent;
-
 struct Cubemap {
 
     int render_cubemap;
@@ -79,7 +75,7 @@ uniform int nlights;
 // http://www.thetenthplanet.de/archives/1180
 //
 
-mat3 cotangent_frame1( vec3 N, vec3 p, vec2 uv ) { 
+mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv ) { 
     
     // get edge vectors of the pixel triangle 
     vec3 dp1 = dFdx( p ); 
@@ -94,24 +90,6 @@ mat3 cotangent_frame1( vec3 N, vec3 p, vec2 uv ) {
     // construct a scale-invariant frame 
     float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) ); 
     return mat3( T * invmax, B * invmax, N ); 
-}
-
-
-//
-// https://www.reddit.com/r/GraphicsProgramming/comments/gahx0l/help_calculating_correct_tangent_matrix_for/
-//
-
-mat3 cotangent_frame0() {
-
-    vec3 N = normalize(frag_normal);
-
-    vec3 T = normalize(frag_tangent);
-
-    vec3 X = normalize(T - N * dot(N, T));
-
-    vec3 B = cross(X, N) * frag_tangent_handedness;
-
-    return mat3(T, B, N);    
 }
 
 
@@ -160,19 +138,11 @@ vec3 compute_light(Light light) {
     vec3 view_direction = normalize(camera.position - frag_position);
 
     vec3 normal = normalize(frag_normal);
-    //vec3 normal = normalize(frag_tangent);
     
     if (material.normals_texture_exists == 1) {
 
-        mat3 TBN;
-        
-        if (has_tangents == -1) {
-            TBN = cotangent_frame0(); 
-        }
-        else {
-            TBN = cotangent_frame1(frag_normal, -view_direction, frag_uv); 
-        } 
-
+        mat3 TBN = cotangent_frame(frag_normal, -view_direction, frag_uv); 
+       
         normal = texture(material.normals_texture, frag_uv).rgb;
         normal = pow(normal, vec3(material.normals_gamma)) * 2 - 1;
         normal = normalize(TBN * normal); 
@@ -232,7 +202,7 @@ void main() {
     //return;
 
     if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
-        FragColor = cubemap.intensity * pow(texture(cubemap.texture, vert_position), vec4(2.2));
+        FragColor = cubemap.intensity * texture(cubemap.texture, vert_position);
         return;
     }
 

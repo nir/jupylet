@@ -30,6 +30,7 @@ import logging
 import weakref
 import pyglet
 import struct
+import glob
 import math
 import glm
 import os
@@ -162,7 +163,13 @@ class Scene(Object):
         self._batch = pyglet.graphics.Batch()
         self._group = Group(self)
         self._shader = None
-        
+
+    def add_cubemap(self, path, intensity=1.0):
+
+        self.cubemap = CubeMap(path, intensity)
+        self.cubemap._group.parent = self._group
+        self.cubemap.cube.batch_add(self._batch)
+
     def add_material(self, material):
         self.materials[material.name] = material
         
@@ -507,9 +514,13 @@ def load_blender_gltf_light(g0, n0):
     l1 = g0.model.extensions['KHR_lights_punctual']['lights'][l0]
     
     m0 = glm.mat4_cast(glm.quat(xyzw2wxyz(nc.rotation)))
-    m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation)))  
+    m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation))) if n0.rotation else glm.mat4(1.0) 
     qq = glm.quat_cast(m1 * m0)
-    
+
+    attenuation = {
+        'point': 1/4
+    }
+
     light = Light(
         n0.name, 
         qq, 
@@ -517,7 +528,7 @@ def load_blender_gltf_light(g0, n0):
         n0.translation,
         l1['type'],
         l1['color'],
-        l1['intensity'] / 4.,
+        l1['intensity'] * attenuation.get(l1['type'], 1.),
         l1.get('spot')
     )
     light._source = n0
@@ -572,7 +583,7 @@ class Light(Node):
         shader[prefix + 'intensity'] = self.intensity
         
         shader[prefix + 'position'] = self.position
-        shader[prefix + 'direction'] = self.front
+        shader[prefix + 'direction'] = -self.front
         
         
 
@@ -730,7 +741,6 @@ def load_blender_gltf_primitive(g0, p0, materials):
         material=materials[p0.material], 
         indices=get_buffer0(g0, p0.indices, '')[-1],
         vertices=get_buffer0(g0, p0.attributes.POSITION),
-        tangents=get_buffer0(g0, p0.attributes.TANGENT),
         normals=get_buffer0(g0, p0.attributes.NORMAL),
         coords=get_buffer0(g0, p0.attributes.TEXCOORD_0)
     )
@@ -782,13 +792,12 @@ def get_buffer(g0, a0):
     
 class Primitive(Object):
     
-    def __init__(self, material, indices, vertices, tangents=None, normals=None, coords=None):
+    def __init__(self, material, indices, vertices, normals=None, coords=None):
         
         self.material = material
 
         self._indices = indices
         self._vertices = vertices
-        self._tangents = tangents
         self._normals = normals
         self._coords = coords
         
@@ -799,18 +808,89 @@ class Primitive(Object):
         
     def batch_add(self, batch):
 
-        vl = [self._vertices, self._normals, self._coords, self._tangents]
+        vl = [self._vertices, self._normals, self._coords]
         vl = [('%sg%s' % (i, fv[0]), fv[1]) for i, fv in enumerate(vl) if fv]
         
         batch.add_indexed(self.nvertices, GL_TRIANGLES, self._group, self._indices, *vl)
         
     def set_state(self):
-
-        shader = self._group.shader
-        shader['has_tangents'] = int(self._tangents is not None)
-
-        self.material.set_state(shader)
+        self.material.set_state(self._group.shader)
         
     def unset_state(self):
         self.material.unset_state()
+
+
+class CubeMap(object):
+    
+    def __init__(self, path, intensity=1.0):
+        
+        scene = load_blender_gltf(abspath('./assets/cube.gltf'))
+        self.cube = scene.meshes['CubeMap']
+
+        self.path = path
+        self.intensity = intensity
+        self.texture_id = self.load_cubemap(path)
+                
+        self._group = Group(self)
+        self.cube._group.parent = self._group
+
+    def set_state(self):
+                
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, self.texture_id)
+
+        glCullFace(GL_FRONT)
+        glDepthFunc(GL_LEQUAL)   
+        
+        shader = self._group.shader
+
+        shader['cubemap.intensity'] = self.intensity
+        shader['cubemap.texture_exists'] = True
+        shader['cubemap.texture'] = 0
+        shader['cubemap.render_cubemap'] = True
+
+    def unset_state(self):
+
+        self._group.shader['cubemap.render_cubemap'] = False
+
+        glDepthFunc(GL_LESS)        
+        glCullFace(GL_BACK) 
+
+    def load_cubemap(self, path):
+        
+        paths = set(glob.glob(path))
+
+        tid = GLuint()
+        glGenTextures(1, ctypes.byref(tid))
+        glBindTexture(GL_TEXTURE_CUBE_MAP, tid.value)
+
+        faces = {
+            'right': 'RT',
+            'left': 'LF',
+            'bottom': 'DN', # Bottom and top should actually be reversed...
+            'top': 'UP',
+            'front': 'FT',
+            'back': 'BK',
+        }
+
+        def get_face_path(face, paths):
+            return [p for p in paths if faces[face] in p][0]
+
+        for i, face in enumerate(faces):
+        
+            path = get_face_path(face, paths)
+            
+            im = PIL.Image.open(path)
+            b0 = im.tobytes("raw", "RGB", 0, -1)
+            w0, h0 = im.size
+            
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_RGB, w0, h0, 0, GL_RGB, GL_UNSIGNED_BYTE, b0)
+    
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
+        
+        return tid
 
