@@ -62,7 +62,7 @@ state = State(
     
     capslock = False,
     shift = False,
-    ctrl = False,
+    alt = False,
     
     up = False,
     down = False,
@@ -94,8 +94,8 @@ def on_key(symbol, modifiers, value):
     if symbol == key.CAPSLOCK and value:
         state.capslock = not state.capslock
         
-    if symbol == key.LCTRL:
-        state.ctrl = value
+    if symbol == key.LALT:
+        state.alt = value
         
     if symbol == key.LSHIFT:
         state.shift = value
@@ -156,16 +156,16 @@ def move_object(dt):
     if state.down:
         state.av.x += angular_acceleration
         
-    if state.key_w and state.ctrl:
+    if state.key_w and state.alt:
         state.lv.y += linear_acceleration
                 
-    if state.key_w and not state.ctrl:
+    if state.key_w and not state.alt:
         state.lv.z += linear_acceleration * sign
                 
-    if state.key_s and state.ctrl:
+    if state.key_s and state.alt:
         state.lv.y -= linear_acceleration
         
-    if state.key_s and not state.ctrl:
+    if state.key_s and not state.alt:
         state.lv.z -= linear_acceleration * sign
         
     if state.key_a:
