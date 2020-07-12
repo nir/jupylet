@@ -215,8 +215,16 @@ class Scene(Object):
         self._shader.stop()
 
 
+def fix_pyglet_image_decoders():
+    
+    dext = pyglet.image.codecs._decoder_extensions
+    dext['.jpg'][:] = sorted(dext['.jpg'], key=lambda d: d.__class__.__name__ != 'PILImageDecoder')
+
+
 def load_blender_gltf_material(g0, m0):
     
+    fix_pyglet_image_decoders()
+
     lbt = load_blender_gltf_texture
     pbr = m0.pbrMetallicRoughness
     
@@ -227,8 +235,10 @@ def load_blender_gltf_material(g0, m0):
     e = lbt(g0, m0.emissiveTexture) if m0.emissiveTexture else m0.emissiveFactor
     o = lbt(g0, m0.occlusionTexture)
     n = lbt(g0, m0.normalTexture)
+    
+    ns = getattr(m0.normalTexture, 'scale', 1.)
 
-    material = Material(m0.name, c, m, r, s, e, o, n)
+    material = Material(m0.name, c, m, r, s, e, o, n, ns)
     material._source = m0
     
     return material
@@ -275,7 +285,8 @@ class Material(Object):
         specular=0.1,
         emissive=[0, 0, 0],
         occlusion=None,
-        normals=None
+        normals=None,
+        normals_scale=1
     ):
         
         self.name = name
@@ -287,6 +298,7 @@ class Material(Object):
         self.emissive = emissive
         self.occlusion = occlusion
         self.normals = normals
+        self.normals_scale = normals_scale or 1
         self.normals_gamma = self.compute_normals_gamma(normals)
 
     def compute_normals_gamma(self, normals):
@@ -304,7 +316,6 @@ class Material(Object):
         self.active_texture_orig = ctypes.c_int()
         glGetIntegerv(GL_ACTIVE_TEXTURE, self.active_texture_orig)
 
-            
         if isinstance(self.color, pyglet.image.Texture):
             
             glActiveTexture(GL_TEXTURE1)
@@ -321,6 +332,7 @@ class Material(Object):
             glActiveTexture(GL_TEXTURE2)
             glBindTexture(self.normals.target, self.normals.id) 
             
+            shader['material.normals_scale'] = self.normals_scale
             shader['material.normals_gamma'] = self.normals_gamma
             shader['material.normals_texture'] = 2
             shader['material.normals_texture_exists'] = True

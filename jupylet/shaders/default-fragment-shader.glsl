@@ -28,6 +28,7 @@ struct Material {
     sampler2D normals_texture;
     int normals_texture_exists;
     float normals_gamma;
+    float normals_scale;
 
     float specular;
     float metallic;
@@ -145,7 +146,8 @@ vec3 compute_light(Light light) {
        
         normal = texture(material.normals_texture, frag_uv).rgb;
         normal = pow(normal, vec3(material.normals_gamma)) * 2 - 1;
-        normal = normalize(TBN * normal); 
+        normal.xy *= material.normals_scale;
+        normal = normalize(TBN * normalize(normal)); 
     }
 
     vec3 halfway_direction = normalize(light_direction + view_direction);

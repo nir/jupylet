@@ -53,24 +53,15 @@
             },
             "name" : "Scene",
             "nodes" : [
-                0,
-                2,
-                4,
+                1,
+                3,
+                5,
                 6,
                 9
             ]
         }
     ],
     "nodes" : [
-        {
-            "mesh" : 0,
-            "name" : "Moon",
-            "translation" : [
-                -14.543010711669922,
-                -27.33977699279785,
-                -89.70619201660156
-            ]
-        },
         {
             "camera" : 0,
             "name" : "Camera_Orientation",
@@ -83,7 +74,7 @@
         },
         {
             "children" : [
-                1
+                0
             ],
             "name" : "Camera",
             "rotation" : [
@@ -114,7 +105,7 @@
         },
         {
             "children" : [
-                3
+                2
             ],
             "name" : "Light.Sun",
             "rotation" : [
@@ -145,13 +136,22 @@
         },
         {
             "children" : [
-                5
+                4
             ],
             "name" : "Point",
             "translation" : [
                 -12.996612548828125,
                 6.367466926574707,
                 8.722558975219727
+            ]
+        },
+        {
+            "mesh" : 0,
+            "name" : "Moon",
+            "translation" : [
+                -19.300857543945312,
+                -21.403621673583984,
+                -91.70156860351562
             ]
         },
         {
@@ -191,9 +191,14 @@
                 0
             ],
             "name" : "Moon",
+            "normalTexture" : {
+                "index" : 0,
+                "scale" : 0.10000000149011612,
+                "texCoord" : 0
+            },
             "pbrMetallicRoughness" : {
                 "baseColorTexture" : {
-                    "index" : 0,
+                    "index" : 1,
                     "texCoord" : 0
                 },
                 "metallicFactor" : 0,
@@ -210,7 +215,7 @@
             "name" : "eye",
             "pbrMetallicRoughness" : {
                 "baseColorTexture" : {
-                    "index" : 1,
+                    "index" : 2,
                     "texCoord" : 0
                 },
                 "metallicFactor" : 0,
@@ -245,17 +250,17 @@
             ],
             "name" : "Skin",
             "normalTexture" : {
-                "index" : 2,
+                "index" : 3,
                 "texCoord" : 0
             },
             "pbrMetallicRoughness" : {
                 "baseColorTexture" : {
-                    "index" : 3,
+                    "index" : 4,
                     "texCoord" : 0
                 },
                 "metallicFactor" : 0,
                 "metallicRoughnessTexture" : {
-                    "index" : 4,
+                    "index" : 5,
                     "texCoord" : 0
                 }
             }
@@ -263,7 +268,7 @@
     ],
     "meshes" : [
         {
-            "name" : "Sphere",
+            "name" : "Sphere.002",
             "primitives" : [
                 {
                     "attributes" : {
@@ -334,9 +339,17 @@
         },
         {
             "source" : 4
+        },
+        {
+            "source" : 5
         }
     ],
     "images" : [
+        {
+            "mimeType" : "image/jpeg",
+            "name" : "moon-normal-map",
+            "uri" : "moon-normal-map.jpg"
+        },
         {
             "mimeType" : "image/jpeg",
             "name" : "lroc_color_poles_4k",
@@ -367,35 +380,35 @@
         {
             "bufferView" : 0,
             "componentType" : 5126,
-            "count" : 9073,
+            "count" : 10115,
             "max" : [
-                24.00430679321289,
-                24.01433753967285,
-                23.956809997558594
+                23.78554916381836,
+                23.957914352416992,
+                23.785551071166992
             ],
             "min" : [
-                -24.004318237304688,
-                -24.014341354370117,
-                -23.956804275512695
+                -23.785539627075195,
+                -23.957914352416992,
+                -23.785541534423828
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 9073,
+            "count" : 10115,
             "type" : "VEC3"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 9073,
+            "count" : 10115,
             "type" : "VEC2"
         },
         {
             "bufferView" : 3,
             "componentType" : 5123,
-            "count" : 47616,
+            "count" : 53760,
             "type" : "SCALAR"
         },
         {
@@ -504,88 +517,88 @@
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 108876,
+            "byteLength" : 121380,
             "byteOffset" : 0
         },
         {
             "buffer" : 0,
-            "byteLength" : 108876,
-            "byteOffset" : 108876
+            "byteLength" : 121380,
+            "byteOffset" : 121380
         },
         {
             "buffer" : 0,
-            "byteLength" : 72584,
-            "byteOffset" : 217752
+            "byteLength" : 80920,
+            "byteOffset" : 242760
         },
         {
             "buffer" : 0,
-            "byteLength" : 95232,
-            "byteOffset" : 290336
-        },
-        {
-            "buffer" : 0,
-            "byteLength" : 14304,
-            "byteOffset" : 385568
+            "byteLength" : 107520,
+            "byteOffset" : 323680
         },
         {
             "buffer" : 0,
             "byteLength" : 14304,
-            "byteOffset" : 399872
+            "byteOffset" : 431200
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 14304,
+            "byteOffset" : 445504
         },
         {
             "buffer" : 0,
             "byteLength" : 9536,
-            "byteOffset" : 414176
+            "byteOffset" : 459808
         },
         {
             "buffer" : 0,
             "byteLength" : 13464,
-            "byteOffset" : 423712
+            "byteOffset" : 469344
         },
         {
             "buffer" : 0,
             "byteLength" : 21024,
-            "byteOffset" : 437176
+            "byteOffset" : 482808
         },
         {
             "buffer" : 0,
             "byteLength" : 21024,
-            "byteOffset" : 458200
+            "byteOffset" : 503832
         },
         {
             "buffer" : 0,
             "byteLength" : 14016,
-            "byteOffset" : 479224
+            "byteOffset" : 524856
         },
         {
             "buffer" : 0,
             "byteLength" : 13824,
-            "byteOffset" : 493240
+            "byteOffset" : 538872
         },
         {
             "buffer" : 0,
             "byteLength" : 132396,
-            "byteOffset" : 507064
+            "byteOffset" : 552696
         },
         {
             "buffer" : 0,
             "byteLength" : 132396,
-            "byteOffset" : 639460
+            "byteOffset" : 685092
         },
         {
             "buffer" : 0,
             "byteLength" : 88264,
-            "byteOffset" : 771856
+            "byteOffset" : 817488
         },
         {
             "buffer" : 0,
             "byteLength" : 110088,
-            "byteOffset" : 860120
+            "byteOffset" : 905752
         }
     ],
     "buffers" : [
         {
-            "byteLength" : 970208,
+            "byteLength" : 1015840,
             "uri" : "alien-moon.bin"
         }
     ]

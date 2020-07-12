@@ -553,7 +553,7 @@ class App(_ClockLeg, _EventLeg):
         self.window.set_size(width, height)	
         self.window.set_vsync(False)  
       
-        self.array0 = np.zeros((width, height, 3), dtype='uint8')
+        self.array0 = np.zeros((height, width, 3), dtype='uint8')
         
         self.canvas = _a2w(self.array0) if canvas_ else None
         self.canvas_quality = quality or 85

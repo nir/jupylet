@@ -33,25 +33,13 @@ import os
 
 sys.path.insert(0, os.path.abspath('./..'))
 
-from jupylet.label import Label
-from jupylet.app import App, State
-
-from jupylet.model import load_blender_gltf, t2i
-
-import pywavefront
 import glm
 
-import numpy as np
-
-import PIL.Image
-
-import matplotlib.pyplot as plt
-
-import pyglet
-
-from pyglet.graphics import *
-
 import pyglet.window.key as key
+
+from jupylet.label import Label
+from jupylet.app import App, State
+from jupylet.model import load_blender_gltf
 
 
 if __name__ == '__main__':
@@ -67,7 +55,7 @@ scene.add_cubemap('./scenes/moon/nebula/nebula*.png', 2.)
 
 camera = scene.cameras['Camera']
 
-mesh = random.choice(list(scene.meshes.values()))
+moon = scene.meshes['Moon']
 
 
 state = State(
@@ -83,7 +71,10 @@ state = State(
     key_w = False,
     key_s = False,
     key_a = False,
-    key_d = False
+    key_d = False,
+    
+    lv = glm.vec3(0),
+    av = glm.vec3(0),
 )
 
 
@@ -130,54 +121,74 @@ def on_key(symbol, modifiers, value):
         state.key_d = value
 
 
+obj = moon if state.capslock else camera
+
+linear_acceleration = 1 / 2
+angular_acceleration = 1 / 24
+
 @app.run_me_again_and_again(1/48)
 def move_object(dt):
         
-    obj = mesh if state.capslock else camera
+    global obj
     
-    sign = -1 if mesh is camera else 1
+    obj = moon if state.capslock else camera
+    sign = -1 if obj is camera else 1
     
     if state.right and state.shift:
-        obj.rotate_local(sign * 2. * dt, (0, 0, 1))
+        state.av.z += angular_acceleration * sign
             
     if state.right and not state.shift:
-        obj.rotate_local(-dt / 2., (0, 1, 0))
-            
+        state.av.y -= angular_acceleration
+        
     if state.left and state.shift:
-        obj.rotate_local(sign * 2. * -dt, (0, 0, 1))
+        state.av.z -= angular_acceleration * sign
             
     if state.left and not state.shift:
-        obj.rotate_local(dt / 2., (0, 1, 0))
+        state.av.y += angular_acceleration
             
     if state.up:
-        obj.rotate_local(sign * dt / 2., (1, 0, 0))
+        state.av.x -= angular_acceleration
         
     if state.down:
-        obj.rotate_local(sign * -dt / 2., (1, 0, 0))
+        state.av.x += angular_acceleration
         
     if state.key_w and state.shift:
-        obj.move_local((0, dt / 0.1, 0))
+        state.lv.y += linear_acceleration
                 
     if state.key_w and not state.shift:
-        obj.move_local((0, 0, sign * dt / 0.1))
+        state.lv.z += linear_acceleration * sign
                 
     if state.key_s and state.shift:
-        obj.move_local((0, -dt / 0.1, 0))
+        state.lv.y -= linear_acceleration
         
     if state.key_s and not state.shift:
-        obj.move_local((0, 0, sign * -dt / 0.1))
+        state.lv.z -= linear_acceleration * sign
         
     if state.key_a:
-        obj.move_local((sign * dt / 0.1, 0, 0))
+        state.lv.x += linear_acceleration * sign
         
     if state.key_d:
-        obj.move_local((sign * -dt / 0.1, 0, 0))
+        state.lv.x -= linear_acceleration * sign
         
+    state.lv = glm.clamp(state.lv, -10, 10)
+    state.av = glm.clamp(state.av, -10, 10)
+    
+    obj.move_local(dt * state.lv)
+    
+    obj.rotate_local(dt * state.av.x, (1, 0, 0))
+    obj.rotate_local(dt * state.av.y, (0, 1, 0))
+    obj.rotate_local(dt * state.av.z, (0, 0, 1))
+    
+    state.lv *= 0.67 ** dt
+    state.av *= 0.67 ** dt
+
 
 label0 = Label('Hello World!', color='white', font_size=12, x=10, y=74)
 label1 = Label('Hello World!', color='white', font_size=12, x=10, y=52)
 label2 = Label('Hello World!', color='white', font_size=12, x=10, y=30)
 label3 = Label('Hello World!', color='white', font_size=12, x=10, y=8)
+
+hello_world = Label('Hello World 3D!', color='cyan', font_size=16, x=600, y=10)
 
 
 dtl = [0]
@@ -198,14 +209,16 @@ def on_draw():
     app.set2d()
             
     label0.text = 'time to draw - %.2f ms' % (1000 * dtl[-1])
-    label1.text = 'up - %r' % mesh.up
-    label2.text = 'front - %r' % mesh.front
-    label3.text = 'position - %r' % mesh.position
+    label1.text = 'up - %r' % obj.up
+    label2.text = 'front - %r' % obj.front
+    label3.text = 'position - %r' % obj.position
     
     label0.draw()
     label1.draw()  
     label2.draw()  
     label3.draw()  
+
+    hello_world.draw()
 
 
 @app.schedule_interval(1/30)
