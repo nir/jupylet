@@ -157,12 +157,16 @@ class Scene(Object):
         self.cameras = {}
         self.materials = {}
         
+        self.shadowmap = ShadowMap()
         self.cubemap = None
         self.hdri = None
                 
         self._batch = pyglet.graphics.Batch()
         self._group = Group(self)
         self._shader = None
+
+        self._width = None
+        self._height = None
 
     def add_cubemap(self, path, intensity=1.0):
 
@@ -190,30 +194,117 @@ class Scene(Object):
         for mesh in self.meshes.values():
             mesh.batch_add(self._batch)
             
-    def draw(self):
+    def get_viewport(self):
+        """Get viewport dimensions. 
+
+        This call takes about ~5us, therefore the code should minimize calling it.
+        """
+        viewport = (GLint * 4)()
+        glGetIntegerv(GL_VIEWPORT, viewport)
+        return viewport
+        
+    def draw(self, width=None, height=None):
+        
+        if width is None or height is None:
+            width, height = self.get_viewport()[2:]
+
+        self._width = width
+        self._height = height
+
+        self._active_texture_orig = ctypes.c_int()
+        glGetIntegerv(GL_ACTIVE_TEXTURE, self._active_texture_orig)
         
         if not self._shader:
             self._shader = get_shader_program()
             
-        self._batch.draw()
+        with self._shader:
+
+            self._shader['nlights'] = len(self.lights)
+            
+            self.shadowmap.draw(self, self._shader, self._width, self._height)
+
+            for light in self.lights.values():
+                light.set_state(self._shader)
+            
+            for camera in self.cameras.values():
+                camera.set_state(self._shader, self._width, self._height)
+            
+            self._batch.draw()
         
+        glActiveTexture(self._active_texture_orig.value)
+
     def set_state(self):
-        
-        self.active_texture_orig = ctypes.c_int()
-        glGetIntegerv(GL_ACTIVE_TEXTURE, self.active_texture_orig)
-        
-        self._shader.use()
-        self._shader['nlights'] = len(self.lights)
-        
-        for light in self.lights.values():
-            light.set_state(self._shader)
-        
-        for camera in self.cameras.values():
-            camera.set_state(self._shader)
+        pass
         
     def unset_state(self):
-        self._shader.stop()
+        pass
 
+
+class ShadowMap(object):
+
+    def __init__(self, width=1024, height=1024):
+        
+        self.width = width
+        self.height = height
+        
+        self.fbo = GLuint()
+        self.depthmap = GLuint()
+        
+        glGenFramebuffers(1, ctypes.byref(self.fbo))        
+        glGenTextures(1, ctypes.byref(self.depthmap))
+        glBindTexture(GL_TEXTURE_2D, self.depthmap)
+        
+        blank = (GLubyte * (self.width * self.height * 4))()
+        glTexImage2D(
+            GL_TEXTURE_2D, 
+            0, 
+            GL_DEPTH_COMPONENT, 
+            self.width, self.height, 
+            0, 
+            GL_DEPTH_COMPONENT, 
+            GL_FLOAT, 
+            blank
+        )
+        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+                
+        glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.depthmap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        
+    def draw(self, scene, shader, width, height):
+
+        if not any(light.shadow for light in scene.lights.values()):
+            return
+
+        self.set_state(shader)
+
+        for i, light in enumerate(scene.lights.values()):
+            if light.shadow:
+                light.set_state_shadowmap(shader)
+                shader['shadowmap_light'] = i
+                #scene._batch.draw()
+
+        self.unset_state(shader, width, height)
+
+    def set_state(self, shader):
+        
+        glViewport(0, 0, self.width, self.height)
+        glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
+        glClear(GL_DEPTH_BUFFER_BIT)
+        
+    def unset_state(self, shader, width, height):
+        
+        shader['shadowmap_light'] = -1
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glViewport(0, 0, width, height)
+    
 
 def fix_pyglet_image_decoders():
     
@@ -313,9 +404,6 @@ class Material(Object):
 
     def set_state(self, shader):
             
-        self.active_texture_orig = ctypes.c_int()
-        glGetIntegerv(GL_ACTIVE_TEXTURE, self.active_texture_orig)
-
         if isinstance(self.color, pyglet.image.Texture):
             
             glActiveTexture(GL_TEXTURE1)
@@ -365,8 +453,7 @@ class Material(Object):
         shader['material.specular'] = self.specular
         
     def unset_state(self):
-
-        glActiveTexture(self.active_texture_orig.value)
+        pass
         
 
 def compute_matrix(angle=0, axis=(0., 1., 0.), scale=1., xyz=(0., 0., 0.), matrix=glm.mat4(1.)):
@@ -530,7 +617,9 @@ def load_blender_gltf_light(g0, n0):
     qq = glm.quat_cast(m1 * m0)
 
     attenuation = {
-        'point': 1/4
+        'spot': 1 / 6,
+        'point': 1 / 4,
+        'directional': 2,
     }
 
     light = Light(
@@ -580,9 +669,17 @@ class Light(Node):
         self.color = [round(c, 3) for c in color]
         self.intensity = round(intensity, 3)
 
+        self.swidth = 32.
+        self.snear = 0.01
+        self.sfar = 100.
+
     def set_index(self, index):  
         self.index = index
         
+    @property
+    def shadow(self):
+        return self.type != 'point'
+
     def get_uniform_name(self, key):
         return 'lights[%s].%s' % (self.index, key)
     
@@ -595,9 +692,38 @@ class Light(Node):
         shader[prefix + 'intensity'] = self.intensity
         
         shader[prefix + 'position'] = self.position
-        shader[prefix + 'direction'] = -self.front
+        shader[prefix + 'direction'] = self.front
         
+        if self.type == 'spot':
+            shader[prefix + 'inner_cone'] = math.cos(self.spot['innerConeAngle'])
+            shader[prefix + 'outer_cone'] = math.cos(self.spot['outerConeAngle'])
+
+    def set_state_shadowmap(self, shader):
         
+        view = glm.lookAt(self.position, self.position - self.front, self.up)
+
+        if self.type == 'directional':
+            projection = glm.ortho(
+                -self.swidth / 2, 
+                self.swidth / 2, 
+                -self.swidth / 2, 
+                self.swidth / 2, 
+                self.snear, 
+                self.sfar
+            )
+        
+        else:
+            projection = glm.perspective(
+                math.pi / 2, 
+                1., 
+                self.snear, 
+                self.sfar
+            )
+        
+        prefix = self.get_uniform_name('')
+
+        shader[prefix + 'shadowmap_projection'] = flatten(projection * view)
+
 
 def is_blender_gltf_camera(g0, n0):
     
@@ -658,10 +784,9 @@ class Camera(Node):
         self.xmag=round(xmag, 3)
         self.ymag=round(ymag, 3)
         
-    def set_state(self, shader):
+    def set_state(self, shader, width, height):
 
-        x0, y0, w0, h0 = pyglet.image.get_buffer_manager().get_viewport()
-        aspect = w0 / h0
+        aspect = width / height
                     
         shader['view'] = flatten(glm.lookAt(self.position, self.position - self.front, self.up))
         shader['projection'] = flatten(glm.perspective(
@@ -671,8 +796,6 @@ class Camera(Node):
             self.zfar
         ))
         shader['camera.position'] = self.position
-
-
 
 
 def is_blender_gltf_mesh(g0, n0):
@@ -896,7 +1019,17 @@ class CubeMap(object):
             b0 = im.tobytes("raw", "RGB", 0, -1)
             w0, h0 = im.size
             
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_RGB, w0, h0, 0, GL_RGB, GL_UNSIGNED_BYTE, b0)
+            glTexImage2D(
+                GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 
+                0, 
+                GL_RGB, 
+                w0, 
+                h0, 
+                0, 
+                GL_RGB, 
+                GL_UNSIGNED_BYTE, 
+                b0
+            )
     
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)

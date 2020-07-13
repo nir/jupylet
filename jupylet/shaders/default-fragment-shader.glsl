@@ -64,10 +64,18 @@ struct Light {
 
     vec3 color;
     float intensity;
+
+    float inner_cone;
+    float outer_cone;
+
+    sampler2D shadowmap;
+    int shadowmap_compute;
+    mat4 shadowmap_projection;
 };  
 
 uniform Light lights[16];
 uniform int nlights;
+uniform int shadowmap_light;
 
 
 //
@@ -129,11 +137,27 @@ vec3 compute_light(Light light) {
     vec3 light_direction;
 
     if (light.type == DIRECTIONAL_LIGHT) {
-        light_direction = -normalize(light.direction);
+        light_direction = normalize(light.direction);
     } 
     else {
         light_direction = normalize(light.position - frag_position);
         light_distance = length(light.position - frag_position);
+    }
+
+    //
+    // https://nicedoc.io/KhronosGroup/glTF/extensions/2.0/Khronos/KHR_lights_punctual
+    //
+
+    float cone_attenuation = 1.0;
+
+    if (light.type == SPOT_LIGHT) {
+        
+        float scale = 1.0 / max(light.inner_cone - light.outer_cone, 0.0001);
+        float offset = -light.outer_cone * scale;
+        float cd = dot(light_direction, normalize(light.direction));
+        
+        cone_attenuation = clamp(cd * scale + offset, 0.0, 1.0);
+        cone_attenuation *- cone_attenuation;
     }
 
     vec3 view_direction = normalize(camera.position - frag_position);
@@ -186,7 +210,7 @@ vec3 compute_light(Light light) {
     vec3 ks = f;
     vec3 kd = (vec3(1.0) - ks) * (1.0 - metallic);
 
-    vec3 radiance = light.intensity * pow(light.color, vec3(2.2));
+    vec3 radiance = cone_attenuation * light.intensity * pow(light.color, vec3(2.2));
     radiance = radiance / (light_distance * light_distance);
 
     vec3 fcooktor = d * g * f / (4 * nv * nl + eps);
@@ -200,6 +224,10 @@ vec3 compute_light(Light light) {
 
 void main() {
 
+    if (shadowmap_light >= 0) {
+        return;
+    }
+    
     //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
     //return;
 

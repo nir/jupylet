@@ -31,8 +31,41 @@ struct Camera {
 uniform Camera camera;
 
 
+#define DIRECTIONAL_LIGHT 0
+#define POINT_LIGHT 1
+#define SPOT_LIGHT 2
+
+struct Light { 
+
+    int type;
+
+    vec3 position;
+    vec3 direction;   
+
+    vec3 color;
+    float intensity;
+
+    float inner_cone;
+    float outer_cone;
+ 
+    sampler2D shadowmap;
+    int shadowmap_compute;
+    mat4 shadowmap_projection;
+};  
+
+uniform Light lights[16];
+uniform int nlights;
+uniform int shadowmap_light;
+
+
 void main()
 {
+    if (shadowmap_light >= 0) {
+        mat4 projection = lights[shadowmap_light].shadowmap_projection;
+        gl_Position =  projection * model * vec4(position, 1.0);
+        return;
+    }
+
     if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
         
         mat4 model = mat4(1.0);
