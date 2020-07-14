@@ -84,10 +84,74 @@ def union(d0, d1):
         
     return d0 or {}
 
+
+class LRU(object):
+    
+    def __init__(self, max_items):
+        
+        self.step = max_items
+        self.items = {i: [i, i, i, 0] for i in range(max_items)}
+        
+    def allocate(self, lid=None):
+        
+        self.step += 1
+        
+        if lid is None:
+            lid = self.step
+            
+        r = self.items.get(lid)
+        
+        if r is None:
+            
+            lid0, slot = min(self.items.values())[1:3]
+            self.items.pop(lid0)
+            self.items[lid] = [self.step, lid, slot, 0]
+            
+            return self.step, lid, slot, 1
+            
+        r[0] = self.step
+
+        return r
+
+
+_MIN_TEXTURES = 4
+_MAX_TEXTURES = 32
+_lru_textures = LRU(_MAX_TEXTURES - _MIN_TEXTURES)
+
+_MAX_MATERIALS = 32
+_lru_materials = LRU(_MAX_MATERIALS)
+
+
 class Object(object):
     
+    def __init__(self, dirty=True):
+        
+        self._items = {}
+        self._dirty = set([True]) if dirty else set()
+
+    def __dir__(self):
+        return list(self._items.keys()) + super().__dir__()
+    
+    def __getattr__(self, k):
+        
+        if k not in self._items:
+            raise AttributeError(k)
+            
+        return self._items[k]
+    
+    def __setattr__(self, k, v):
+        
+        if k == '_items' or k not in self._items:
+            return super(Object, self).__setattr__(k, v)
+        
+        self._items[k] = v
+        self._dirty.add(k)
+
     def __repr__(self):    
-        return '%s(%s)' % (type(self).__name__, ', '.join('%s=%s' % i for i in self.__dict__.items() if i[0][0] != '_'))
+        return '%s(%s)' % (type(self).__name__, ', '.join(
+            '%s=%s' % i for i in list(self.__dict__.items()) + list(self._items.items()) if i[0][0] != '_'
+        ))
+
 
 class Group(pyglet.graphics.Group):
 
@@ -97,6 +161,14 @@ class Group(pyglet.graphics.Group):
         
         self._drawable = weakref.proxy(drawable)
   
+    def rbool(self, key):
+        
+        value = self._drawable.__dict__.get(key)
+        if bool(value):
+            return value
+        
+        return self.parent and self.parent.rbool(key)
+    
     def rget(self, key):
         
         value = self._drawable.__dict__.get(key)
@@ -148,8 +220,10 @@ def load_blender_gltf(path):
 
 class Scene(Object):
     
-    def __init__(self, name):
+    def __init__(self, name, shadows=False):
         
+        super(Scene, self).__init__()
+
         self.name = name
         
         self.meshes = {}
@@ -157,7 +231,9 @@ class Scene(Object):
         self.cameras = {}
         self.materials = {}
         
-        self.shadowmap = ShadowMap()
+        self.shadows = True
+        #self.shadowmap = ShadowMap()
+
         self.cubemap = None
         self.hdri = None
                 
@@ -220,8 +296,11 @@ class Scene(Object):
         with self._shader:
 
             self._shader['nlights'] = len(self.lights)
+            self._shader['shadowmap_light'] = -1
+            self._shader['material'] = 0
             
-            self.shadowmap.draw(self, self._shader, self._width, self._height)
+            #if self.shadows:
+            #    self.shadowmap.draw(self, self._shader, self._width, self._height)
 
             for light in self.lights.values():
                 light.set_state(self._shader)
@@ -248,58 +327,35 @@ class ShadowMap(object):
         self.height = height
         
         self.fbo = GLuint()
-        self.depthmap = GLuint()
-        
         glGenFramebuffers(1, ctypes.byref(self.fbo))        
-        glGenTextures(1, ctypes.byref(self.depthmap))
-        glBindTexture(GL_TEXTURE_2D, self.depthmap)
-        
-        blank = (GLubyte * (self.width * self.height * 4))()
-        glTexImage2D(
-            GL_TEXTURE_2D, 
-            0, 
-            GL_DEPTH_COMPONENT, 
-            self.width, self.height, 
-            0, 
-            GL_DEPTH_COMPONENT, 
-            GL_FLOAT, 
-            blank
-        )
-        
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-                
-        glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.depthmap, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        
+              
     def draw(self, scene, shader, width, height):
 
-        if not any(light.shadow for light in scene.lights.values()):
+        if not any(light.shadows for light in scene.lights.values()):
             return
 
-        self.set_state(shader)
-
-        for i, light in enumerate(scene.lights.values()):
-            if light.shadow:
-                light.set_state_shadowmap(shader)
-                shader['shadowmap_light'] = i
-                #scene._batch.draw()
-
-        self.unset_state(shader, width, height)
-
-    def set_state(self, shader):
-        
         glViewport(0, 0, self.width, self.height)
         glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
-        glClear(GL_DEPTH_BUFFER_BIT)
         
-    def unset_state(self, shader, width, height):
-        
+        for i, light in enumerate(scene.lights.values()):
+            if light.shadows:
+
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, 
+                    GL_DEPTH_ATTACHMENT, 
+                    GL_TEXTURE_2D, 
+                    light.shadowmap, 
+                    0
+                )
+
+                glDrawBuffer(GL_NONE)
+                glReadBuffer(GL_NONE)
+                glClear(GL_DEPTH_BUFFER_BIT)
+ 
+                light.set_state_shadowmap(shader)
+                shader['shadowmap_light'] = i
+                scene._batch.draw()
+
         shader['shadowmap_light'] = -1
         
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
@@ -377,20 +433,35 @@ class Material(Object):
         emissive=[0, 0, 0],
         occlusion=None,
         normals=None,
-        normals_scale=1
+        normals_scale=1,
     ):
         
-        self.name = name
+        super(Material, self).__init__()
         
-        self.color = color
-        self.metallic = metallic
-        self.roughness = roughness     
-        self.specular = specular     
-        self.emissive = emissive
-        self.occlusion = occlusion
-        self.normals = normals
-        self.normals_scale = normals_scale or 1
-        self.normals_gamma = self.compute_normals_gamma(normals)
+        self.name = name
+
+        self._items = dict(
+            color = color,
+            metallic = metallic,
+            roughness = roughness,     
+            specular = specular,     
+            emissive = emissive,
+            occlusion = occlusion,
+            normals = normals,
+            normals_scale = normals_scale or 1,
+            normals_gamma = self.compute_normals_gamma(normals),
+        )
+
+        self._mlid, self._mslot = _lru_materials.allocate()[1:3]
+        self._clid, self._cslot = self.allocate_texture(self._items['color'])[1:3]
+        self._nlid, self._nslot = self.allocate_texture(self._items['normals'])[1:3]
+        self._elid, self._eslot = self.allocate_texture(self._items['emissive'])[1:3]
+        self._rlid, self._rslot = self.allocate_texture(self._items['roughness'])[1:3]
+        
+    def allocate_texture(self, t, lid=None):
+        if isinstance(t, pyglet.image.Texture):
+            return _lru_textures.allocate(lid)
+        return None, None, None, None
 
     def compute_normals_gamma(self, normals):
 
@@ -404,54 +475,71 @@ class Material(Object):
 
     def set_state(self, shader):
             
-        if isinstance(self.color, pyglet.image.Texture):
-            
-            glActiveTexture(GL_TEXTURE1)
-            glBindTexture(self.color.target, self.color.id) 
-            
-            shader['material.color_texture'] = 1
-            shader['material.color_texture_exists'] = True
-        else:
-            shader['material.color_texture_exists'] = False
-            shader['material.color'] = self.color
-                   
-        if isinstance(self.normals, pyglet.image.Texture):
-            
-            glActiveTexture(GL_TEXTURE2)
-            glBindTexture(self.normals.target, self.normals.id) 
-            
-            shader['material.normals_scale'] = self.normals_scale
-            shader['material.normals_gamma'] = self.normals_gamma
-            shader['material.normals_texture'] = 2
-            shader['material.normals_texture_exists'] = True
-        else:
-            shader['material.normals_texture_exists'] = False
-                   
-        if isinstance(self.roughness, pyglet.image.Texture):
-            
-            glActiveTexture(GL_TEXTURE3)
-            glBindTexture(self.roughness.target, self.roughness.id) 
-            
-            shader['material.roughness_texture'] = 3
-            shader['material.roughness_texture_exists'] = True
-        else:
-            shader['material.roughness_texture_exists'] = False
-            shader['material.roughness'] = self.roughness
-            shader['material.metallic'] = self.metallic
-                   
-        if isinstance(self.emissive, pyglet.image.Texture):
-            
-            glActiveTexture(GL_TEXTURE4)
-            glBindTexture(self.emissive.target, self.emissive.id) 
-            
-            shader['material.emissive_texture'] = 4
-            shader['material.emissive_texture_exists'] = True
-        else:
-            shader['material.emissive_texture_exists'] = False
-            shader['material.emissive'] = self.emissive                   
+        shader['material'] = self._mslot
 
-        shader['material.specular'] = self.specular
-        
+        _, _, self._mslot, mnew = _lru_materials.allocate(self._mlid)
+        _, _, self._cslot, cnew = self.allocate_texture(self._items['color'], self._clid)
+        _, _, self._nslot, nnew = self.allocate_texture(self._items['normals'], self._nlid)
+        _, _, self._eslot, enew = self.allocate_texture(self._items['emissive'], self._elid)
+        _, _, self._rslot, rnew = self.allocate_texture(self._items['roughness'], self._rlid)
+
+        dirty = self._dirty or mnew or cnew or nnew or enew or rnew
+
+        if dirty:
+
+            self._dirty.clear()
+
+            material = 'materials[%s].' % self._mslot
+
+            if isinstance(self.color, pyglet.image.Texture):
+                
+                glActiveTexture(GL_TEXTURE0 + self._cslot + _MIN_TEXTURES)
+                glBindTexture(self.color.target, self.color.id) 
+                
+                shader['textures[%s].t' % self._cslot] = self._cslot + _MIN_TEXTURES
+                shader[material + 'color_texture'] = self._cslot
+            else:
+                shader[material + 'color_texture'] = -1
+                shader[material + 'color'] = self.color
+                    
+            if isinstance(self.normals, pyglet.image.Texture):
+                
+                shader[material + 'normals_scale'] = self.normals_scale
+                shader[material + 'normals_gamma'] = self.normals_gamma
+
+                glActiveTexture(GL_TEXTURE0 + self._nslot + _MIN_TEXTURES)
+                glBindTexture(self.normals.target, self.normals.id) 
+                
+                shader['textures[%s].t' % self._nslot] = self._nslot + _MIN_TEXTURES
+                shader[material + 'normals_texture'] = self._nslot
+            else:
+                shader[material + 'normals_texture'] = -1
+                    
+            if isinstance(self.emissive, pyglet.image.Texture):
+                
+                glActiveTexture(GL_TEXTURE0 + self._eslot + _MIN_TEXTURES)
+                glBindTexture(self.emissive.target, self.emissive.id) 
+
+                shader['textures[%s].t' % self._eslot] = self._eslot + _MIN_TEXTURES
+                shader[material + 'emissive_texture'] = self._eslot
+            else:
+                shader[material + 'emissive_texture'] = -1
+                shader[material + 'emissive'] = self.emissive                   
+
+            if isinstance(self.roughness, pyglet.image.Texture):
+                
+                glActiveTexture(GL_TEXTURE0 + self._rslot + _MIN_TEXTURES)
+                glBindTexture(self.roughness.target, self.roughness.id) 
+                
+                shader['textures[%s].t' % self._rslot] = self._rslot + _MIN_TEXTURES
+                shader[material + 'roughness_texture'] = self._rslot
+            else:
+                shader[material + 'roughness_texture'] = -1
+                shader[material + 'roughness'] = self.roughness
+                shader[material + 'metallic'] = self.metallic
+                    
+            shader[material + 'specular'] = self.specular
+                    
     def unset_state(self):
         pass
         
@@ -526,6 +614,8 @@ class Node(Object):
   
     def __init__(self, name, rotation=None, scale=None, translation=None):
         
+        super(Node, self).__init__()
+        
         self.name = name
         
         angle, axis = q2aa(rotation)
@@ -537,7 +627,8 @@ class Node(Object):
         return decompose(self._matrix, scale=glm.vec3())
         
     @scale.setter
-    def scale(self, scale):        
+    def scale(self, scale):
+        self._dirty.add('_matrix')
         self._matrix = glm.scale(self._matrix, glm.vec3(scale / self.scale))
         
     @property
@@ -546,22 +637,28 @@ class Node(Object):
     
     @position.setter
     def position(self, xyz):
+        self._dirty.add('_matrix')
         self._matrix[3].xyz = xyz
         
     def move_global(self, xyz):
+        self._dirty.add('_matrix')
         self.position += xyz
 
     def move_local(self, xyz):
+        self._dirty.add('_matrix')
         self._matrix = glm.translate(self._matrix, xyz)
         
     def set_rotation_global(self, angle, axis=(0., 1., 0.)):
+        self._dirty.add('_matrix')
         self._matrix = compute_matrix(self.scale, angle, axis, self.position)
         
     def rotate_local(self, angle, axis=(0., 1., 0.)):
+        self._dirty.add('_matrix')
         self._matrix = glm.rotate(self._matrix, angle, axis)
             
     def rotate_global(self, angle, axis=(0., 1., 0.)):
         
+        self._dirty.add('_matrix')
         pos = self.position
         self.position = 0, 0, 0
         self._matrix = glm.rotate(glm.mat4(), angle, axis) * self._matrix
@@ -617,9 +714,9 @@ def load_blender_gltf_light(g0, n0):
     qq = glm.quat_cast(m1 * m0)
 
     attenuation = {
-        'spot': 1 / 6,
-        'point': 1 / 4,
-        'directional': 2,
+        'spot': 1 / 10,
+        'point': 1 / 8,
+        'directional': 5 / 4,
     }
 
     light = Light(
@@ -630,7 +727,8 @@ def load_blender_gltf_light(g0, n0):
         l1['type'],
         l1['color'],
         l1['intensity'] * attenuation.get(l1['type'], 1.),
-        l1.get('spot')
+        l1.get('spot', {}).get('outerConeAngle', math.pi / 4),
+        l1.get('spot', {}).get('innerConeAngle', math.pi / 4 * 0.9),
     )
     light._source = n0
     
@@ -655,7 +753,9 @@ class Light(Node):
         type='point',
         color=glm.vec3(1.),
         intensity=500,
-        spot=None,
+        outer_cone=math.pi/4,
+        inner_cone=math.pi/4 * 0.9,
+        shadows=False,
         **kwargs
     ):
         
@@ -663,40 +763,75 @@ class Light(Node):
         
         self.index = -1
         
-        self.type = type
+        self._items = dict(
+
+            type = type,
+            
+            color = [round(c, 3) for c in color],
+            intensity = round(intensity, 3),
+
+            swidth = 32.,
+            snear = 0.01,
+            sfar = 100.,
+
+            outer_cone = outer_cone,
+            inner_cone = inner_cone,
+        )
+
+        #self.shadows = shadows
+        #self.shadowmap = self.create_shadowmap_texture()
+   
+    def create_shadowmap_texture(self, width=1024, height=1024):
+
+        shadowmap = GLuint()
         
-        self.spot = spot
-        self.color = [round(c, 3) for c in color]
-        self.intensity = round(intensity, 3)
+        glGenTextures(1, ctypes.byref(shadowmap))
+        glBindTexture(GL_TEXTURE_2D, shadowmap)
+        
+        blank = (GLubyte * (width * height * 4))()
+        glTexImage2D(
+            GL_TEXTURE_2D, 
+            0, 
+            GL_DEPTH_COMPONENT, 
+            width, height, 
+            0, 
+            GL_DEPTH_COMPONENT, 
+            GL_FLOAT, 
+            blank
+        )
+        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
 
-        self.swidth = 32.
-        self.snear = 0.01
-        self.sfar = 100.
-
+        return shadowmap
+ 
     def set_index(self, index):  
         self.index = index
-        
-    @property
-    def shadow(self):
-        return self.type != 'point'
 
     def get_uniform_name(self, key):
         return 'lights[%s].%s' % (self.index, key)
-    
+ 
     def set_state(self, shader):
         
-        prefix = self.get_uniform_name('')
-                        
-        shader[prefix + 'type'] = LIGHT_TYPE[self.type]
-        shader[prefix + 'color'] = self.color
-        shader[prefix + 'intensity'] = self.intensity
-        
-        shader[prefix + 'position'] = self.position
-        shader[prefix + 'direction'] = self.front
-        
-        if self.type == 'spot':
-            shader[prefix + 'inner_cone'] = math.cos(self.spot['innerConeAngle'])
-            shader[prefix + 'outer_cone'] = math.cos(self.spot['outerConeAngle'])
+        if self._dirty:
+
+            self._dirty.clear()
+
+            prefix = self.get_uniform_name('')
+                            
+            shader[prefix + 'type'] = LIGHT_TYPE[self.type]
+            shader[prefix + 'color'] = self.color
+            shader[prefix + 'intensity'] = self.intensity
+            
+            shader[prefix + 'position'] = self.position
+            shader[prefix + 'direction'] = self.front
+            
+            shader[prefix + 'inner_cone'] = math.cos(self.inner_cone)
+            shader[prefix + 'outer_cone'] = math.cos(self.outer_cone)
+
+        #self.set_state_shadowmap(shader)
 
     def set_state_shadowmap(self, shader):
         
@@ -712,9 +847,17 @@ class Light(Node):
                 self.sfar
             )
         
-        else:
+        elif self.type == 'point':
             projection = glm.perspective(
                 math.pi / 2, 
+                1., 
+                self.snear, 
+                self.sfar
+            )
+
+        else:
+            projection = glm.perspective(
+                2 * self.outer_cone, 
                 1., 
                 self.snear, 
                 self.sfar
@@ -776,26 +919,34 @@ class Camera(Node):
         
         super(Camera, self).__init__(name, rotation, scale, translation)
         
-        self.type=type
-        
-        self.znear=round(znear, 3)
-        self.zfar=round(zfar, 3)
-        self.yfov=round(yfov, 3)
-        self.xmag=round(xmag, 3)
-        self.ymag=round(ymag, 3)
-        
+        self._items = dict(
+            type = type,
+            znear = round(znear, 3),
+            zfar = round(zfar, 3),
+            yfov = round(yfov, 3),
+            xmag = round(xmag, 3),
+            ymag = round(ymag, 3),
+        )
+
+        self._aspect = 0
+
     def set_state(self, shader, width, height):
 
-        aspect = width / height
+        dirty = self._aspect != width / height
+        self._aspect = width / height
                     
-        shader['view'] = flatten(glm.lookAt(self.position, self.position - self.front, self.up))
-        shader['projection'] = flatten(glm.perspective(
-            self.yfov, 
-            aspect, 
-            self.znear, 
-            self.zfar
-        ))
-        shader['camera.position'] = self.position
+        if dirty or self._dirty:
+
+            shader['view'] = flatten(glm.lookAt(self.position, self.position - self.front, self.up))
+            shader['projection'] = flatten(glm.perspective(
+                self.yfov, 
+                self._aspect, 
+                self.znear, 
+                self.zfar
+            ))
+            shader['camera.position'] = self.position
+
+            self._dirty.clear()
 
 
 def is_blender_gltf_mesh(g0, n0):
@@ -862,13 +1013,13 @@ class Mesh(Node):
         if self._parent is None:
             return self._matrix
 
-        return self._matrix * self._parent.composed_matrix()
+        return self._parent.composed_matrix() * self._matrix 
 
     def set_state(self):
         self._group.shader['model'] = flatten(self.composed_matrix())
         
     def unset_state(self):
-        pass
+        self._dirty.clear()
 
 def load_blender_gltf_primitive(g0, p0, materials):
     
@@ -929,6 +1080,8 @@ class Primitive(Object):
     
     def __init__(self, material, indices, vertices, normals=None, coords=None):
         
+        super(Primitive, self).__init__()
+        
         self.material = material
 
         self._indices = indices
@@ -955,34 +1108,43 @@ class Primitive(Object):
         self.material.unset_state()
 
 
-class CubeMap(object):
+class CubeMap(Object):
     
     def __init__(self, path, intensity=1.0):
         
+        super(CubeMap, self).__init__()
+        
         scene = load_blender_gltf(abspath('./assets/cube.gltf'))
-        self.cube = scene.meshes['CubeMap']
 
+        self.cube = scene.meshes['CubeMap']
         self.path = path
-        self.intensity = intensity
-        self.texture_id = self.load_cubemap(path)
-                
+
+        self._items = dict(
+            intensity = intensity,
+            texture_id = self.load(path, False),
+        )
+
         self._group = Group(self)
         self.cube._group.parent = self._group
 
     def set_state(self):
                 
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_CUBE_MAP, self.texture_id)
-
         glCullFace(GL_FRONT)
         glDepthFunc(GL_LEQUAL)   
         
         shader = self._group.shader
-
-        shader['cubemap.intensity'] = self.intensity
-        shader['cubemap.texture_exists'] = True
-        shader['cubemap.texture'] = 0
         shader['cubemap.render_cubemap'] = True
+
+        if self._dirty:
+            
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(GL_TEXTURE_CUBE_MAP, self.texture_id)
+
+            shader['cubemap.intensity'] = self.intensity
+            shader['cubemap.texture_exists'] = True
+            shader['cubemap.texture'] = 0
+
+            self._dirty.clear()
 
     def unset_state(self):
 
@@ -991,7 +1153,7 @@ class CubeMap(object):
         glDepthFunc(GL_LESS)        
         glCullFace(GL_BACK) 
 
-    def load_cubemap(self, path):
+    def load(self, path, update_shader=True):
         
         paths = set(glob.glob(path))
 
@@ -1037,5 +1199,9 @@ class CubeMap(object):
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
         
+        if update_shader:
+            self.path = path
+            self.texture_id = tid
+
         return tid
 

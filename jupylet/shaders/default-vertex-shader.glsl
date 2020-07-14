@@ -30,7 +30,6 @@ struct Camera {
 
 uniform Camera camera;
 
-
 #define DIRECTIONAL_LIGHT 0
 #define POINT_LIGHT 1
 #define SPOT_LIGHT 2
@@ -48,21 +47,24 @@ struct Light {
     float inner_cone;
     float outer_cone;
  
-    sampler2D shadowmap;
-    int shadowmap_compute;
-    mat4 shadowmap_projection;
+    //sampler2D shadowmap;
+    //int shadowmap_compute;
+    //mat4 shadowmap_projection;
 };  
 
-uniform Light lights[16];
+#define MAX_LIGHTS 16
+
+uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
 uniform int shadowmap_light;
 
+//out vec4 light_frag_position[MAX_LIGHTS];
 
 void main()
 {
     if (shadowmap_light >= 0) {
-        mat4 projection = lights[shadowmap_light].shadowmap_projection;
-        gl_Position =  projection * model * vec4(position, 1.0);
+        //mat4 projection = lights[shadowmap_light].shadowmap_projection;
+        //gl_Position =  projection * model * vec4(position, 1.0);
         return;
     }
 
@@ -82,5 +84,9 @@ void main()
     frag_position = vec3(model * vec4(position, 1.0));
     frag_normal = mat3(transpose(inverse(model))) * normal;
     frag_uv = vec2(uv.x, 1.0 - uv.y);
+
+    //for (int i = 0; i < nlights; i++) {
+    //    light_frag_position[i] = lights[i].shadowmap_projection * vec4(frag_position, 1.0);
+    //}
 }
 
