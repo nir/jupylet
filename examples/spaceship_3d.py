@@ -1,5 +1,5 @@
 """
-    examples/hello-opengl.py
+    examples/spaceship_3d.py
     
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
@@ -54,6 +54,7 @@ scene = load_blender_gltf('./scenes/moon/alien-moon.gltf')
 scene.add_cubemap('./scenes/moon/nebula/nebula*.png', 2.)
 
 camera = scene.cameras['Camera']
+camera.zfar = 10000
 
 moon = scene.meshes['Moon']
 
@@ -174,8 +175,8 @@ def move_object(dt):
     if state.key_d:
         state.lv.x -= linear_acceleration * sign
         
-    state.lv = glm.clamp(state.lv, -10, 10)
-    state.av = glm.clamp(state.av, -10, 10)
+    state.lv = glm.clamp(state.lv, -64, 64)
+    state.av = glm.clamp(state.av, -64, 64)
     
     obj.move_local(dt * state.lv)
     
@@ -228,6 +229,15 @@ def on_draw():
 @app.schedule_interval(1/30)
 def spin(dt):
     scene.meshes['Alien'].rotate_local(-0.5 * dt, (0, 0, 1))
+
+
+moon.primitives[0].material.normals_scale = 0.33
+scene.lights['Light.Sun'].intensity = 8
+
+scene.meshes['Alien'].primitives[0].material.specular = 0.1
+
+scene.shadows = True
+scene.lights['Light.Sun'].shadows = True
 
 
 if __name__ == '__main__':

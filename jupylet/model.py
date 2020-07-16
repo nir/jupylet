@@ -231,8 +231,8 @@ class Scene(Object):
         self.cameras = {}
         self.materials = {}
         
-        self.shadows = True
-        #self.shadowmap = ShadowMap()
+        self.shadows = shadows
+        self.shadowmap = ShadowMap()
 
         self.cubemap = None
         self.hdri = None
@@ -296,11 +296,12 @@ class Scene(Object):
         with self._shader:
 
             self._shader['nlights'] = len(self.lights)
-            self._shader['shadowmap_light'] = -1
-            self._shader['material'] = 0
             
-            #if self.shadows:
-            #    self.shadowmap.draw(self, self._shader, self._width, self._height)
+            if self.shadows:
+                self.shadowmap.draw(self, self._shader, self._width, self._height)
+
+            # TODO: optimize with dirty mechanism.
+            self._shader['shadowmap_pass'] = 2 if self.shadows else 0
 
             for light in self.lights.values():
                 light.set_state(self._shader)
@@ -308,10 +309,26 @@ class Scene(Object):
             for camera in self.cameras.values():
                 camera.set_state(self._shader, self._width, self._height)
             
-            self._batch.draw()
+            self.batch_draw()
         
         glActiveTexture(self._active_texture_orig.value)
 
+    def batch_draw(self):
+        
+        if self._batch._draw_list_dirty:
+            self._batch._update_draw_list()
+
+        r0 = None
+        
+        for func in self._batch._draw_list:
+            
+            if r0 is None:
+                r0 = func()
+
+            elif getattr(func, '__self__', None) is r0:
+                r0 = None
+                func()
+                
     def set_state(self):
         pass
         
@@ -334,10 +351,22 @@ class ShadowMap(object):
         if not any(light.shadows for light in scene.lights.values()):
             return
 
+        if scene.cubemap:
+            scene.cubemap.hide = True
+            
         glViewport(0, 0, self.width, self.height)
         glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
-        
+        #glDisable(GL_CULL_FACE)
+        glCullFace(GL_FRONT)
+
+        glDrawBuffer(GL_NONE)
+        glReadBuffer(GL_NONE)
+
+        shader._extra['shadowmap_pass'] = 1
+        shader['shadowmap_pass'] = 1
+
         for i, light in enumerate(scene.lights.values()):
+
             if light.shadows:
 
                 glFramebufferTexture2D(
@@ -348,19 +377,22 @@ class ShadowMap(object):
                     0
                 )
 
-                glDrawBuffer(GL_NONE)
-                glReadBuffer(GL_NONE)
                 glClear(GL_DEPTH_BUFFER_BIT)
  
                 light.set_state_shadowmap(shader)
                 shader['shadowmap_light'] = i
-                scene._batch.draw()
-
-        shader['shadowmap_light'] = -1
+                scene.batch_draw()
         
+        shader._extra['shadowmap_pass'] = 0
+
+        #glEnable(GL_CULL_FACE)
+        glCullFace(GL_BACK)
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
         glViewport(0, 0, width, height)
     
+        if scene.cubemap:
+            scene.cubemap.hide = False
+            
 
 def fix_pyglet_image_decoders():
     
@@ -774,12 +806,18 @@ class Light(Node):
             snear = 0.01,
             sfar = 100.,
 
-            outer_cone = outer_cone,
             inner_cone = inner_cone,
+            outer_cone = outer_cone,
+
+            shadows = shadows
         )
 
-        #self.shadows = shadows
-        #self.shadowmap = self.create_shadowmap_texture()
+        size = 1024
+        self.shadowmap_size = size
+        self.shadowmap = self.create_shadowmap_texture(size, size)
+        
+        self._smslot = None
+        self._smlid = None
    
     def create_shadowmap_texture(self, width=1024, height=1024):
 
@@ -802,8 +840,11 @@ class Light(Node):
         
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
+
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, (GLfloat * 4)(1., 1., 1., 1.));  
 
         return shadowmap
  
@@ -815,11 +856,24 @@ class Light(Node):
  
     def set_state(self, shader):
         
+        prefix = self.get_uniform_name('')
+
+        if self.shadows:
+
+            _, self._smlid, self._smslot, smnew = _lru_textures.allocate(self._smlid)
+            
+            if smnew:
+
+                glActiveTexture(GL_TEXTURE0 + self._smslot + _MIN_TEXTURES)
+                glBindTexture(GL_TEXTURE_2D, self.shadowmap) 
+                
+                shader['textures[%s].t' % self._smslot] = self._smslot + _MIN_TEXTURES
+                shader[prefix + 'shadowmap_texture'] = self._smslot
+                shader[prefix + 'shadowmap_texture_size'] = self.shadowmap_size
+
         if self._dirty:
 
             self._dirty.clear()
-
-            prefix = self.get_uniform_name('')
                             
             shader[prefix + 'type'] = LIGHT_TYPE[self.type]
             shader[prefix + 'color'] = self.color
@@ -831,8 +885,8 @@ class Light(Node):
             shader[prefix + 'inner_cone'] = math.cos(self.inner_cone)
             shader[prefix + 'outer_cone'] = math.cos(self.outer_cone)
 
-        #self.set_state_shadowmap(shader)
-
+            shader[prefix + 'shadows'] = self.shadows
+                        
     def set_state_shadowmap(self, shader):
         
         view = glm.lookAt(self.position, self.position - self.front, self.up)
@@ -993,6 +1047,8 @@ class Mesh(Node):
         self.primitives = []
         self.children = {}
         
+        self.hide = False
+        
         self._parent = weakref.proxy(parent) if parent else None
         self._group = Group(self, parent._group if parent else None)
 
@@ -1016,9 +1072,17 @@ class Mesh(Node):
         return self._parent.composed_matrix() * self._matrix 
 
     def set_state(self):
+        
+        if self.hide:
+            return self._group
+
         self._group.shader['model'] = flatten(self.composed_matrix())
         
     def unset_state(self):
+
+        if self.hide:
+            return
+
         self._dirty.clear()
 
 def load_blender_gltf_primitive(g0, p0, materials):
@@ -1102,10 +1166,13 @@ class Primitive(Object):
         batch.add_indexed(self.nvertices, GL_TRIANGLES, self._group, self._indices, *vl)
         
     def set_state(self):
-        self.material.set_state(self._group.shader)
+        shader = self._group.shader
+        if shader._extra.get('shadowmap_pass') != 1:
+            self.material.set_state(shader)
         
     def unset_state(self):
-        self.material.unset_state()
+        if self._group.shader._extra.get('shadowmap_pass') != 1:
+            self.material.unset_state()
 
 
 class CubeMap(Object):
@@ -1118,6 +1185,7 @@ class CubeMap(Object):
 
         self.cube = scene.meshes['CubeMap']
         self.path = path
+        self.hide = False
 
         self._items = dict(
             intensity = intensity,
@@ -1129,12 +1197,16 @@ class CubeMap(Object):
 
     def set_state(self):
                 
+        if self.hide:
+            return self._group
+
+        shader = self._group.shader
+
+        shader['cubemap.render_cubemap'] = True
+
         glCullFace(GL_FRONT)
         glDepthFunc(GL_LEQUAL)   
         
-        shader = self._group.shader
-        shader['cubemap.render_cubemap'] = True
-
         if self._dirty:
             
             glActiveTexture(GL_TEXTURE0)
@@ -1147,6 +1219,9 @@ class CubeMap(Object):
             self._dirty.clear()
 
     def unset_state(self):
+
+        if self.hide:
+            return
 
         self._group.shader['cubemap.render_cubemap'] = False
 
@@ -1195,10 +1270,11 @@ class CubeMap(Object):
     
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
-        
+
         if update_shader:
             self.path = path
             self.texture_id = tid

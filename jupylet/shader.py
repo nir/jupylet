@@ -244,7 +244,7 @@ class Shader:
 class ShaderProgram:
     """OpenGL Shader Program"""
 
-    __slots__ = '_id', '_active', '_attributes', '_uniforms', '_uniform_blocks', '__weakref__'
+    __slots__ = '_id', '_active', '_extra', '_attributes', '_uniforms', '_uniform_blocks', '__weakref__'
 
     # Cache UBOs, and return the same object for any Shader that defines a UBO
     # with the same name. UBOs must be shared instead of recreated, or else
@@ -262,6 +262,7 @@ class ShaderProgram:
         self._id = self._link_program(shaders)
         self._active = False
 
+        self._extra = {}
         self._attributes = {}
         self._uniforms = {}
         self._uniform_blocks = {}

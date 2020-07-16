@@ -79,18 +79,20 @@ struct Light {
     float inner_cone;
     float outer_cone;
 
-    //sampler2D shadowmap;
-    //int shadowmap_compute;
-    //mat4 shadowmap_projection;
+    int shadows;
+    int shadowmap_texture;
+    int shadowmap_texture_size;
+    mat4 shadowmap_projection;
 };  
 
 #define MAX_LIGHTS 16
 
 uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
-uniform int shadowmap_light;
 
-//in vec4 light_frag_position[MAX_LIGHTS];
+uniform int shadowmap_pass;
+uniform int shadowmap_light;
+in vec4 shadowmap_frag_position[MAX_LIGHTS];
 
 //
 // https://gamedev.stackexchange.com/questions/68612/how-to-compute-tangent-and-bitangent-vectors
@@ -147,7 +149,26 @@ vec3 fschlick(float vh, vec3 f0) {
 
 float compute_shadow(int light_index) {
 
-    return 0;
+    float texture_size = lights[light_index].shadowmap_texture_size;
+    
+    vec4 frag_pos4 = shadowmap_frag_position[light_index];
+    vec3 frag_pos3 = (frag_pos4.xyz / frag_pos4.w) * 0.5 + 0.5;
+
+    float shadow = 0;
+
+    for (int i = -1; i <= 1; i++)   {
+        for (int j = -1; j <= 1; j++) {
+
+            float shadow_depth = texture(
+                textures[lights[light_index].shadowmap_texture].t, 
+                frag_pos3.xy + vec2(i, j) / texture_size
+            ).r;
+
+            shadow += (frag_pos3.z > shadow_depth && frag_pos3.z <= 1.0) ? 0.95 : 0.0;
+        }
+    }
+
+    return shadow / 9.0;
 } 
 
 
@@ -246,7 +267,7 @@ vec3 compute_light(int light_index) {
 
 void main() {
 
-    if (shadowmap_light >= 0) {
+    if (shadowmap_pass  == 1) {
         return;
     }
     
@@ -268,9 +289,7 @@ void main() {
     }
 
     for (int i = 0; i < nlights; i++) {
-
-        float shadow = compute_shadow(i);
-        color += compute_light(i) * (1.0 - shadow);
+        color += compute_light(i) * (1.0 - compute_shadow(i));
     }
    
     color = color / (color + vec3(1.0));

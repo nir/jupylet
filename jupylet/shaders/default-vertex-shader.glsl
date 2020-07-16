@@ -47,24 +47,27 @@ struct Light {
     float inner_cone;
     float outer_cone;
  
-    //sampler2D shadowmap;
-    //int shadowmap_compute;
-    //mat4 shadowmap_projection;
+    int shadows;
+    int shadowmap_texture;
+    int shadowmap_texture_size;
+    mat4 shadowmap_projection;
 };  
 
 #define MAX_LIGHTS 16
 
 uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
-uniform int shadowmap_light;
 
-//out vec4 light_frag_position[MAX_LIGHTS];
+uniform int shadowmap_pass;
+uniform int shadowmap_light;
+out vec4 shadowmap_frag_position[MAX_LIGHTS];
+
 
 void main()
 {
-    if (shadowmap_light >= 0) {
-        //mat4 projection = lights[shadowmap_light].shadowmap_projection;
-        //gl_Position =  projection * model * vec4(position, 1.0);
+    if (shadowmap_pass == 1) {
+        mat4 projection = lights[shadowmap_light].shadowmap_projection;
+        gl_Position =  projection * model * vec4(position, 1.0);
         return;
     }
 
@@ -85,8 +88,12 @@ void main()
     frag_normal = mat3(transpose(inverse(model))) * normal;
     frag_uv = vec2(uv.x, 1.0 - uv.y);
 
-    //for (int i = 0; i < nlights; i++) {
-    //    light_frag_position[i] = lights[i].shadowmap_projection * vec4(frag_position, 1.0);
-    //}
+    if (shadowmap_pass == 2) {
+        for (int i = 0; i < nlights; i++) {
+            if (lights[i].shadows == 1) {
+                shadowmap_frag_position[i] = lights[i].shadowmap_projection * vec4(frag_position, 1.0);
+            }
+        }
+    }
 }
 
