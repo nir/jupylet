@@ -23,9 +23,8 @@ It is used by professional machine learning scientists who come every day to
 play at work, so why not by kids?
 
 *Jupylet* is built on top of pyglet, a powerful game programming library. It is
-wonderfully easy to use for creating simple 2D games and since pyglet uses
-OpenGL you can use it to create 3D games if you really want to. The sky is the
-limit really.
+wonderfully easy to use for creating simple 2D games and Jupylet extends it to 
+3D gaming.
 
 By marrying Jupyter and pyglet, *Jupylet* lets you have the best of both
 worlds. Create games interactively and experimentally, change a variable or a
