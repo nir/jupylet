@@ -6,6 +6,14 @@ in a Jupyter notebook. It is intended for two types of audiences:
 * Kids and their parents interested in learning to program,
 * Researchers and students of deep reinforcement learning.
 
+## TL;DR
+
+Here are two examples of 2D and 3D games for the impatient. Their code is included in this repository:
+
+<p float="left">
+    <img src="https://raw.githubusercontent.com/nir/jupylet/master/docs/images/spaceship.gif" width="256" height="256" />
+    <img src="https://raw.githubusercontent.com/nir/jupylet/master/docs/images/spaceship-3d.jpg" width="384" height="256" />
+</p>
 
 ## Kids Learning to Program
 
