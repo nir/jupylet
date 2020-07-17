@@ -75,13 +75,16 @@ struct Light {
 
     vec3 color; // Expected as linear - physical.
     float intensity;
-
+    float ambient;
+    
     float inner_cone;
     float outer_cone;
 
     int shadows;
     int shadowmap_texture;
     int shadowmap_texture_size;
+
+    float shadowmap_bias;
     mat4 shadowmap_projection;
 };  
 
@@ -93,6 +96,7 @@ uniform int nlights;
 uniform int shadowmap_pass;
 uniform int shadowmap_light;
 in vec4 shadowmap_frag_position[MAX_LIGHTS];
+
 
 //
 // https://gamedev.stackexchange.com/questions/68612/how-to-compute-tangent-and-bitangent-vectors
@@ -149,6 +153,10 @@ vec3 fschlick(float vh, vec3 f0) {
 
 float compute_shadow(int light_index) {
 
+    if (shadowmap_pass != 2) {
+        return 0.0;
+    }
+
     float texture_size = lights[light_index].shadowmap_texture_size;
     
     vec4 frag_pos4 = shadowmap_frag_position[light_index];
@@ -164,11 +172,60 @@ float compute_shadow(int light_index) {
                 frag_pos3.xy + vec2(i, j) / texture_size
             ).r;
 
-            shadow += (frag_pos3.z > shadow_depth && frag_pos3.z <= 1.0) ? 0.95 : 0.0;
+            shadow += (frag_pos3.z >= shadow_depth && frag_pos3.z <= 1.0) ? 1.0 : 0.0;
         }
     }
 
     return shadow / 9.0;
+} 
+
+
+struct Light0 { 
+
+    vec3 view_direction;
+    vec3 normal;   
+    vec3 color; 
+
+    float roughness;
+    float metallic;
+};  
+
+Light0 l0;
+
+
+void compute_light0() {
+
+    int mi = material;
+
+    l0.view_direction = normalize(camera.position - frag_position);
+
+    l0.normal = normalize(frag_normal);
+    
+    if (materials[mi].normals_texture >= 0) {
+
+        mat3 TBN = cotangent_frame(frag_normal, -l0.view_direction, frag_uv); 
+       
+        l0.normal = texture(textures[materials[mi].normals_texture].t, frag_uv).rgb;
+        l0.normal = pow(l0.normal, vec3(materials[mi].normals_gamma)) * 2 - 1;
+        l0.normal.xy *= materials[mi].normals_scale;
+        l0.normal = normalize(TBN * normalize(l0.normal)); 
+    }
+
+    l0.color = materials[mi].color.xyz;
+
+    if (materials[mi].color_texture >= 0) {
+        l0.color = texture(textures[materials[mi].color_texture].t, frag_uv).xyz;
+        l0.color = pow(l0.color, vec3(2.2));
+    }
+
+    l0.metallic = materials[mi].metallic;
+    l0.roughness = materials[mi].roughness;
+
+    if (materials[mi].roughness_texture >= 0) {
+        vec4 r4 = texture(textures[materials[mi].roughness_texture].t, frag_uv);
+        l0.roughness = r4.y;
+        l0.metallic = 1.0 - r4.w;
+    }
 } 
 
 
@@ -178,6 +235,7 @@ vec3 compute_light(int light_index) {
     int mi = material;
 
     float light_distance = 1.0;
+
     vec3 light_direction;
 
     if (lights[li].type == DIRECTIONAL_LIGHT) {
@@ -204,44 +262,14 @@ vec3 compute_light(int light_index) {
         cone_attenuation *- cone_attenuation;
     }
 
-    vec3 view_direction = normalize(camera.position - frag_position);
+    vec3 halfway_direction = normalize(light_direction + l0.view_direction);
 
-    vec3 normal = normalize(frag_normal);
-    
-    if (materials[mi].normals_texture >= 0) {
+    float nv = max(dot(l0.normal, l0.view_direction), 0);
+    float nl = max(dot(l0.normal, light_direction), 0);
+    float nh = max(dot(l0.normal, halfway_direction), 0);
+    float vh = max(dot(l0.view_direction, halfway_direction), 0);
 
-        mat3 TBN = cotangent_frame(frag_normal, -view_direction, frag_uv); 
-       
-        normal = texture(textures[materials[mi].normals_texture].t, frag_uv).rgb;
-        normal = pow(normal, vec3(materials[mi].normals_gamma)) * 2 - 1;
-        normal.xy *= materials[mi].normals_scale;
-        normal = normalize(TBN * normalize(normal)); 
-    }
-
-    vec3 halfway_direction = normalize(light_direction + view_direction);
-
-    float nv = max(dot(normal, view_direction), 0);
-    float nl = max(dot(normal, light_direction), 0);
-    float nh = max(dot(normal, halfway_direction), 0);
-    float vh = max(dot(view_direction, halfway_direction), 0);
-
-    vec3 color = materials[mi].color.xyz;
-
-    if (materials[mi].color_texture >= 0) {
-        color = texture(textures[materials[mi].color_texture].t, frag_uv).xyz;
-        color = pow(color, vec3(2.2));
-    }
-
-    float metallic = materials[mi].metallic;
-    float roughness = materials[mi].roughness;
-
-    if (materials[mi].roughness_texture >= 0) {
-        vec4 r4 = texture(textures[materials[mi].roughness_texture].t, frag_uv);
-        roughness = r4.y;
-        metallic = 1.0 - r4.w;
-    }
-
-    vec3 f0 = mix(color * materials[mi].specular, color, metallic);
+    vec3 f0 = mix(l0.color * materials[mi].specular, l0.color, l0.metallic);
     vec3 f = fschlick(vh, f0);
 
     float r = materials[mi].roughness;
@@ -251,17 +279,20 @@ vec3 compute_light(int light_index) {
     float g = gsmith(nv, nl, k);
 
     vec3 ks = f;
-    vec3 kd = (vec3(1.0) - ks) * (1.0 - metallic);
+    vec3 kd = (vec3(1.0) - ks) * (1.0 - l0.metallic);
 
     vec3 radiance = cone_attenuation * lights[li].intensity * lights[li].color;
     radiance = radiance / (light_distance * light_distance);
 
     vec3 fcooktor = d * g * f / (4 * nv * nl + eps);
-    vec3 flambert = color / pi;
+    vec3 flambert = l0.color / pi;
 
     vec3 fr = kd * flambert + fcooktor;
 
-    return fr * radiance * nl;
+    float shadow = compute_shadow(light_index);
+    vec3 ambient = lights[li].ambient * l0.color;
+
+    return ambient * radiance + (1.0 - shadow) * fr * radiance * nl;
 } 
 
 
@@ -288,8 +319,10 @@ void main() {
         color = pow(color, vec3(2.2));
     }
 
+    compute_light0();
+
     for (int i = 0; i < nlights; i++) {
-        color += compute_light(i) * (1.0 - compute_shadow(i));
+        color += compute_light(i);
     }
    
     color = color / (color + vec3(1.0));

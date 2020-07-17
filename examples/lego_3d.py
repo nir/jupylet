@@ -1,5 +1,5 @@
 """
-    examples/spaceship_3d.py
+    examples/lego-3d.py
     
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
@@ -42,21 +42,13 @@ from jupylet.app import App, State
 from jupylet.model import load_blender_gltf
 
 
-if __name__ == '__main__':
-    mode = 'window'
-else:
-    mode = 'hidden'
+app = App(768, 512)
 
-app = App(768, 512, mode=mode)
-
-scene = load_blender_gltf('./scenes/moon/alien-moon.gltf')
-
-scene.add_cubemap('./scenes/moon/nebula/nebula*.png', 2.)
+scene = load_blender_gltf('./scenes/lego/lego.gltf')
 
 camera = scene.cameras['Camera']
-camera.zfar = 10000
 
-moon = scene.meshes['Moon']
+brick = scene.meshes['brick.green']
 
 
 state = State(
@@ -126,7 +118,7 @@ def on_key(symbol, modifiers, value):
         state.key_d = value
 
 
-obj = moon if state.capslock else camera
+obj = brick if state.capslock else camera
 
 linear_acceleration = 1 / 2
 angular_acceleration = 1 / 24
@@ -136,7 +128,7 @@ def move_object(dt):
         
     global obj
     
-    obj = moon if state.capslock else camera
+    obj = brick if state.capslock else camera
     sign = -1 if obj is camera else 1
     
     if state.right and state.shift:
@@ -175,8 +167,8 @@ def move_object(dt):
     if state.key_d:
         state.lv.x -= linear_acceleration * sign
         
-    state.lv = glm.clamp(state.lv, -64, 64)
-    state.av = glm.clamp(state.av, -64, 64)
+    state.lv = glm.clamp(state.lv, -10, 10)
+    state.av = glm.clamp(state.av, -10, 10)
     
     obj.move_local(dt * state.lv)
     
@@ -226,12 +218,15 @@ def on_draw():
     hello_world.draw()
 
 
-@app.schedule_interval(1/30)
-def spin(dt):
-    scene.meshes['Alien'].rotate_local(-0.5 * dt, (0, 0, 1))
-
+scene.lights['Light.Sun'].intensity = 0.5
+scene.lights['Light.Spot'].intensity = 60
+scene.lights['Light.Point'].intensity = 80
 
 scene.shadows = True
+
+scene.lights['Light.Point'].shadows = True
+scene.lights['Light.Spot'].shadows = True
+scene.lights['Light.Sun'].shadows = True
 
 
 if __name__ == '__main__':

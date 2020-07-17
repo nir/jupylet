@@ -304,7 +304,7 @@ class Scene(Object):
             self._shader['shadowmap_pass'] = 2 if self.shadows else 0
 
             for light in self.lights.values():
-                light.set_state(self._shader)
+                light.set_state(self._shader, self.shadows)
             
             for camera in self.cameras.values():
                 camera.set_state(self._shader, self._width, self._height)
@@ -356,8 +356,8 @@ class ShadowMap(object):
             
         glViewport(0, 0, self.width, self.height)
         glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
-        #glDisable(GL_CULL_FACE)
-        glCullFace(GL_FRONT)
+        glDisable(GL_CULL_FACE)
+        #glCullFace(GL_FRONT)
 
         glDrawBuffer(GL_NONE)
         glReadBuffer(GL_NONE)
@@ -385,8 +385,8 @@ class ShadowMap(object):
         
         shader._extra['shadowmap_pass'] = 0
 
-        #glEnable(GL_CULL_FACE)
-        glCullFace(GL_BACK)
+        glEnable(GL_CULL_FACE)
+        #glCullFace(GL_BACK)
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
         glViewport(0, 0, width, height)
     
@@ -747,9 +747,11 @@ def load_blender_gltf_light(g0, n0):
 
     attenuation = {
         'spot': 1 / 10,
-        'point': 1 / 8,
+        'point': 1 / 10,
         'directional': 5 / 4,
     }
+
+    ambient = 0.001
 
     light = Light(
         n0.name, 
@@ -759,6 +761,7 @@ def load_blender_gltf_light(g0, n0):
         l1['type'],
         l1['color'],
         l1['intensity'] * attenuation.get(l1['type'], 1.),
+        ambient,
         l1.get('spot', {}).get('outerConeAngle', math.pi / 4),
         l1.get('spot', {}).get('innerConeAngle', math.pi / 4 * 0.9),
     )
@@ -785,9 +788,10 @@ class Light(Node):
         type='point',
         color=glm.vec3(1.),
         intensity=500,
+        ambient=0.001,
         outer_cone=math.pi/4,
         inner_cone=math.pi/4 * 0.9,
-        shadows=False,
+        shadows=True,
         **kwargs
     ):
         
@@ -801,6 +805,7 @@ class Light(Node):
             
             color = [round(c, 3) for c in color],
             intensity = round(intensity, 3),
+            ambient = ambient,
 
             swidth = 32.,
             snear = 0.01,
@@ -809,6 +814,7 @@ class Light(Node):
             inner_cone = inner_cone,
             outer_cone = outer_cone,
 
+            bias = 0.005 if type == 'directional' else 0.0005,
             shadows = shadows
         )
 
@@ -854,11 +860,11 @@ class Light(Node):
     def get_uniform_name(self, key):
         return 'lights[%s].%s' % (self.index, key)
  
-    def set_state(self, shader):
+    def set_state(self, shader, shadows):
         
         prefix = self.get_uniform_name('')
 
-        if self.shadows:
+        if shadows and self.shadows:
 
             _, self._smlid, self._smslot, smnew = _lru_textures.allocate(self._smlid)
             
@@ -878,6 +884,7 @@ class Light(Node):
             shader[prefix + 'type'] = LIGHT_TYPE[self.type]
             shader[prefix + 'color'] = self.color
             shader[prefix + 'intensity'] = self.intensity
+            shader[prefix + 'ambient'] = self.ambient
             
             shader[prefix + 'position'] = self.position
             shader[prefix + 'direction'] = self.front
@@ -886,6 +893,7 @@ class Light(Node):
             shader[prefix + 'outer_cone'] = math.cos(self.outer_cone)
 
             shader[prefix + 'shadows'] = self.shadows
+            shader[prefix + 'shadowmap_bias'] = self.bias
                         
     def set_state_shadowmap(self, shader):
         

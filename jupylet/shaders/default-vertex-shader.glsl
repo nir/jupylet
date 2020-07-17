@@ -43,6 +43,7 @@ struct Light {
 
     vec3 color;
     float intensity;
+    float ambient;
 
     float inner_cone;
     float outer_cone;
@@ -50,6 +51,8 @@ struct Light {
     int shadows;
     int shadowmap_texture;
     int shadowmap_texture_size;
+
+    float shadowmap_bias;
     mat4 shadowmap_projection;
 };  
 
@@ -66,8 +69,16 @@ out vec4 shadowmap_frag_position[MAX_LIGHTS];
 void main()
 {
     if (shadowmap_pass == 1) {
-        mat4 projection = lights[shadowmap_light].shadowmap_projection;
-        gl_Position =  projection * model * vec4(position, 1.0);
+
+        mat4 projection = lights[shadowmap_light].shadowmap_projection * model;
+        vec3 frag_normal = mat3(transpose(inverse(projection))) * normal;
+
+        gl_Position =  projection * vec4(position, 1.0);
+
+        if (frag_normal.z < 0) {
+            gl_Position.z += lights[shadowmap_light].shadowmap_bias;
+        }
+
         return;
     }
 

@@ -18,19 +18,9 @@
                         0.9996947050094604,
                         0.7534114122390747
                     ],
-                    "intensity" : 4,
+                    "intensity" : 6,
                     "type" : "directional",
                     "name" : "Light.003"
-                },
-                {
-                    "color" : [
-                        1,
-                        0.9712693095207214,
-                        0.7142898440361023
-                    ],
-                    "intensity" : 80,
-                    "type" : "point",
-                    "name" : "Point"
                 }
             ]
         }
@@ -54,10 +44,9 @@
             "name" : "Scene",
             "nodes" : [
                 1,
-                3,
-                5,
-                6,
-                9
+                2,
+                4,
+                7
             ]
         }
     ],
@@ -90,6 +79,15 @@
             ]
         },
         {
+            "mesh" : 0,
+            "name" : "Moon",
+            "translation" : [
+                -19.300857543945312,
+                -21.403621673583984,
+                -91.70156860351562
+            ]
+        },
+        {
             "extensions" : {
                 "KHR_lights_punctual" : {
                     "light" : 0
@@ -105,7 +103,7 @@
         },
         {
             "children" : [
-                2
+                3
             ],
             "name" : "Light.Sun",
             "rotation" : [
@@ -121,40 +119,6 @@
             ]
         },
         {
-            "extensions" : {
-                "KHR_lights_punctual" : {
-                    "light" : 1
-                }
-            },
-            "name" : "Point_Orientation",
-            "rotation" : [
-                -0.7071067690849304,
-                0,
-                0,
-                0.7071067690849304
-            ]
-        },
-        {
-            "children" : [
-                4
-            ],
-            "name" : "Point",
-            "translation" : [
-                -12.996612548828125,
-                6.367466926574707,
-                8.722558975219727
-            ]
-        },
-        {
-            "mesh" : 0,
-            "name" : "Moon",
-            "translation" : [
-                -19.300857543945312,
-                -21.403621673583984,
-                -91.70156860351562
-            ]
-        },
-        {
             "mesh" : 1,
             "name" : "Eyeball"
         },
@@ -164,8 +128,8 @@
         },
         {
             "children" : [
-                7,
-                8
+                5,
+                6
             ],
             "mesh" : 3,
             "name" : "Alien"
@@ -230,6 +194,10 @@
                 0
             ],
             "name" : "eye.lids",
+            "normalTexture" : {
+                "index" : 3,
+                "texCoord" : 0
+            },
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     0,
@@ -250,17 +218,17 @@
             ],
             "name" : "Skin",
             "normalTexture" : {
-                "index" : 3,
+                "index" : 4,
                 "texCoord" : 0
             },
             "pbrMetallicRoughness" : {
                 "baseColorTexture" : {
-                    "index" : 4,
+                    "index" : 5,
                     "texCoord" : 0
                 },
                 "metallicFactor" : 0,
                 "metallicRoughnessTexture" : {
-                    "index" : 5,
+                    "index" : 6,
                     "texCoord" : 0
                 }
             }
@@ -333,6 +301,9 @@
         },
         {
             "source" : 2
+        },
+        {
+            "source" : 3
         },
         {
             "source" : 3
@@ -448,7 +419,7 @@
         {
             "bufferView" : 8,
             "componentType" : 5126,
-            "count" : 1752,
+            "count" : 1742,
             "max" : [
                 0.9694007635116577,
                 2.7387948036193848,
@@ -464,13 +435,13 @@
         {
             "bufferView" : 9,
             "componentType" : 5126,
-            "count" : 1752,
+            "count" : 1742,
             "type" : "VEC3"
         },
         {
             "bufferView" : 10,
             "componentType" : 5126,
-            "count" : 1752,
+            "count" : 1742,
             "type" : "VEC2"
         },
         {
@@ -557,48 +528,48 @@
         },
         {
             "buffer" : 0,
-            "byteLength" : 21024,
+            "byteLength" : 20904,
             "byteOffset" : 482808
         },
         {
             "buffer" : 0,
-            "byteLength" : 21024,
-            "byteOffset" : 503832
+            "byteLength" : 20904,
+            "byteOffset" : 503712
         },
         {
             "buffer" : 0,
-            "byteLength" : 14016,
-            "byteOffset" : 524856
+            "byteLength" : 13936,
+            "byteOffset" : 524616
         },
         {
             "buffer" : 0,
             "byteLength" : 13824,
-            "byteOffset" : 538872
+            "byteOffset" : 538552
         },
         {
             "buffer" : 0,
             "byteLength" : 132396,
-            "byteOffset" : 552696
+            "byteOffset" : 552376
         },
         {
             "buffer" : 0,
             "byteLength" : 132396,
-            "byteOffset" : 685092
+            "byteOffset" : 684772
         },
         {
             "buffer" : 0,
             "byteLength" : 88264,
-            "byteOffset" : 817488
+            "byteOffset" : 817168
         },
         {
             "buffer" : 0,
             "byteLength" : 110088,
-            "byteOffset" : 905752
+            "byteOffset" : 905432
         }
     ],
     "buffers" : [
         {
-            "byteLength" : 1015840,
+            "byteLength" : 1015520,
             "uri" : "alien-moon.bin"
         }
     ]
