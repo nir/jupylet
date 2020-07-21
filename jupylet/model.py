@@ -232,7 +232,7 @@ class Scene(Object):
         self.materials = {}
         
         self.shadows = shadows
-        self.shadowmap = ShadowMap()
+        self.shadowmap_renderer = ShadowMapRenderer()
 
         self.cubemap = None
         self.hdri = None
@@ -298,7 +298,7 @@ class Scene(Object):
             self._shader['nlights'] = len(self.lights)
             
             if self.shadows:
-                self.shadowmap.draw(self, self._shader, self._width, self._height)
+                self.shadowmap_renderer.draw(self, self._shader, self._width, self._height)
 
             # TODO: optimize with dirty mechanism.
             self._shader['shadowmap_pass'] = 2 if self.shadows else 0
@@ -336,7 +336,7 @@ class Scene(Object):
         pass
 
 
-class ShadowMap(object):
+class ShadowMapRenderer(object):
 
     def __init__(self, width=1024, height=1024):
         
@@ -365,23 +365,42 @@ class ShadowMap(object):
         shader._extra['shadowmap_pass'] = 1
         shader['shadowmap_pass'] = 1
 
+        camera = list(scene.cameras.values())[0]
+        camera_position = glm.vec4(camera.position, 1.0)
+
+        zfar = camera.zfar
+        yfov = math.cos(camera.yfov) * zfar
+        xfov = yfov * width / height
+
+        camera_screen = camera._matrix * glm.mat4(
+            xfov, yfov, -zfar, 1., 
+            -xfov, yfov, -zfar, 1., 
+            -xfov, -yfov, -zfar, 1., 
+            xfov, -yfov, -zfar, 1.
+        )
+
         for i, light in enumerate(scene.lights.values()):
 
             if light.shadows:
-
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, 
-                    GL_DEPTH_ATTACHMENT, 
-                    GL_TEXTURE_2D, 
-                    light.shadowmap, 
-                    0
-                )
-
-                glClear(GL_DEPTH_BUFFER_BIT)
- 
-                light.set_state_shadowmap(shader)
+    
                 shader['shadowmap_light'] = i
-                scene.batch_draw()
+
+                for j in range(light.shadowmaps_count):
+
+                    shadowmap = light.set_state_shadowmap(
+                        j, shader, camera_position, camera_screen
+                    )
+
+                    glFramebufferTexture2D(
+                        GL_FRAMEBUFFER, 
+                        GL_DEPTH_ATTACHMENT, 
+                        GL_TEXTURE_2D, 
+                        shadowmap, 
+                        0
+                    )
+
+                    glClear(GL_DEPTH_BUFFER_BIT)
+                    scene.batch_draw()
         
         shader._extra['shadowmap_pass'] = 0
 
@@ -814,17 +833,26 @@ class Light(Node):
             inner_cone = inner_cone,
             outer_cone = outer_cone,
 
-            bias = 0.005 if type == 'directional' else 0.0005,
-            shadows = shadows
+            pcf = 3,
+            bias = 0.005,
+            shadows = shadows,
         )
 
         size = 1024
-        self.shadowmap_size = size
-        self.shadowmap = self.create_shadowmap_texture(size, size)
-        
-        self._smslot = None
-        self._smlid = None
-   
+        self.shadowmaps_size = size
+
+        self.shadowmaps_depths = [1.0, 0.6, 0.3, 0.1, 0.]
+
+        self.shadowmaps = [dict(
+            t = self.create_shadowmap_texture(size, size),
+            lid = None,
+            slot = None,
+        ) for _ in self.shadowmaps_depths[:-1]]
+    
+    @property
+    def shadowmaps_count(self):
+        return len(self.shadowmaps_depths) - 1 if self._items['type'] == 'directional' else 1
+
     def create_shadowmap_texture(self, width=1024, height=1024):
 
         shadowmap = GLuint()
@@ -866,16 +894,19 @@ class Light(Node):
 
         if shadows and self.shadows:
 
-            _, self._smlid, self._smslot, smnew = _lru_textures.allocate(self._smlid)
-            
-            if smnew:
+            for i in range(self.shadowmaps_count):
 
-                glActiveTexture(GL_TEXTURE0 + self._smslot + _MIN_TEXTURES)
-                glBindTexture(GL_TEXTURE_2D, self.shadowmap) 
+                sm = self.shadowmaps[i]
+
+                _, sm['lid'], sm['slot'], smnew = _lru_textures.allocate(sm['lid'])
                 
-                shader['textures[%s].t' % self._smslot] = self._smslot + _MIN_TEXTURES
-                shader[prefix + 'shadowmap_texture'] = self._smslot
-                shader[prefix + 'shadowmap_texture_size'] = self.shadowmap_size
+                if smnew:
+
+                    glActiveTexture(GL_TEXTURE0 + sm['slot'] + _MIN_TEXTURES)
+                    glBindTexture(GL_TEXTURE_2D, sm['t']) 
+                    
+                    shader['textures[%s].t' % sm['slot']] = sm['slot'] + _MIN_TEXTURES
+                    shader[prefix + 'shadowmap_textures[%s].t' % i] = sm['slot']
 
         if self._dirty:
 
@@ -892,23 +923,50 @@ class Light(Node):
             shader[prefix + 'inner_cone'] = math.cos(self.inner_cone)
             shader[prefix + 'outer_cone'] = math.cos(self.outer_cone)
 
+            shader[prefix + 'snear'] = self.snear
+
             shader[prefix + 'shadows'] = self.shadows
+
+            shader[prefix + 'shadowmap_pcf'] = self.pcf
             shader[prefix + 'shadowmap_bias'] = self.bias
+            shader[prefix + 'shadowmap_textures_count'] = self.shadowmaps_count
+            shader[prefix + 'shadowmap_textures_size'] = self.shadowmaps_size
                         
-    def set_state_shadowmap(self, shader):
+    def set_state_shadowmap(self, shadowmap_index, shader, camera_position, camera_screen):
         
+        si = shadowmap_index
+
+        prefix = self.get_uniform_name('')
+
         view = glm.lookAt(self.position, self.position - self.front, self.up)
 
         if self.type == 'directional':
+            
+            position = view * camera_position
+            screen = view * camera_screen
+
+            min0, max0 = compute_plane_minmax(
+                position, screen, self.shadowmaps_depths[si]
+            )
+
+            min1, max1 = compute_plane_minmax(
+                position, screen, self.shadowmaps_depths[si+1]
+            )
+
+            min2 = glm.min(min0, min1)
+            max2 = glm.max(max0, max1)
+
             projection = glm.ortho(
-                -self.swidth / 2, 
-                self.swidth / 2, 
-                -self.swidth / 2, 
-                self.swidth / 2, 
+                round(min2.x), 
+                round(max2.x), 
+                round(min2.y), 
+                round(max2.y), 
                 self.snear, 
                 self.sfar
             )
-        
+            
+            shader[prefix + 'scale'] = max(max2.x - min2.x, max2.y - min2.y)
+
         elif self.type == 'point':
             projection = glm.perspective(
                 math.pi / 2, 
@@ -925,9 +983,27 @@ class Light(Node):
                 self.sfar
             )
         
-        prefix = self.get_uniform_name('')
+        self._view = view
+        self._proj = projection
+        
+        projection = flatten(projection * view)
 
-        shader[prefix + 'shadowmap_projection'] = flatten(projection * view)
+        shader[prefix + 'shadowmap_textures[%s].depth' % si] = self.shadowmaps_depths[si]
+        shader[prefix + 'shadowmap_textures[%s].projection' % si] = projection
+        shader[prefix + 'shadowmap_projection'] = projection
+
+        return self.shadowmaps[si]['t']
+
+
+def compute_plane_minmax(position, far_screen, split):
+    
+    pm = glm.mat4(position, position, position, position)
+    s0 = (far_screen - pm) * split + pm
+    
+    min0 = glm.min(s0[0], s0[1], s0[2], s0[3])
+    max0 = glm.max(s0[0], s0[1], s0[2], s0[3])
+    
+    return min0, max0
 
 
 def is_blender_gltf_camera(g0, n0):
@@ -999,14 +1075,18 @@ class Camera(Node):
                     
         if dirty or self._dirty:
 
-            shader['view'] = flatten(glm.lookAt(self.position, self.position - self.front, self.up))
-            shader['projection'] = flatten(glm.perspective(
+            self._view0 = glm.lookAt(self.position, self.position - self.front, self.up)
+            self._proj0 = glm.perspective(
                 self.yfov, 
                 self._aspect, 
                 self.znear, 
                 self.zfar
-            ))
+            )
+
+            shader['view'] = flatten(self._view0)
+            shader['projection'] = flatten(self._proj0)
             shader['camera.position'] = self.position
+            shader['camera.zfar'] = self.zfar
 
             self._dirty.clear()
 
@@ -1055,6 +1135,7 @@ class Mesh(Node):
         self.primitives = []
         self.children = {}
         
+        self.shadow_bias = 0
         self.hide = False
         
         self._parent = weakref.proxy(parent) if parent else None
@@ -1084,7 +1165,13 @@ class Mesh(Node):
         if self.hide:
             return self._group
 
-        self._group.shader['model'] = flatten(self.composed_matrix())
+        shader = self._group.shader
+
+        if shader._extra.get('shadow_bias') != self.shadow_bias:
+            shader._extra['shadow_bias'] = self.shadow_bias
+            shader['shadow_bias'] = self.shadow_bias
+            
+        shader['model'] = flatten(self.composed_matrix())
         
     def unset_state(self):
 

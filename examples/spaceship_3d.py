@@ -53,10 +53,16 @@ scene = load_blender_gltf('./scenes/moon/alien-moon.gltf')
 
 scene.add_cubemap('./scenes/moon/nebula/nebula*.png', 2.)
 
-camera = scene.cameras['Camera']
-camera.zfar = 10000
+scene.shadows = True
+
+
+sun = scene.lights['Light.Sun']
+sun.shadowmaps_depths = [1., 0.12, 0.04, 0.015, 0.0]
 
 moon = scene.meshes['Moon']
+moon.shadow_bias = 0.2
+
+camera = scene.cameras['Camera']
 
 
 state = State(
@@ -94,6 +100,10 @@ def on_key(symbol, modifiers, value):
     
     if symbol == key.CAPSLOCK and value:
         state.capslock = not state.capslock
+        
+    if symbol == key.SPACE:
+        state.lv *= 0.
+        state.av *= 0.
         
     if symbol == key.LALT:
         state.alt = value
@@ -229,9 +239,6 @@ def on_draw():
 @app.schedule_interval(1/30)
 def spin(dt):
     scene.meshes['Alien'].rotate_local(-0.5 * dt, (0, 0, 1))
-
-
-scene.shadows = True
 
 
 if __name__ == '__main__':

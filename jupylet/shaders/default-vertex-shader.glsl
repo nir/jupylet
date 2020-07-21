@@ -8,6 +8,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+out vec4 frag_view;
 out vec3 vert_position;
 out vec3 frag_position;
 out vec3 frag_normal;
@@ -26,6 +27,7 @@ uniform Cubemap cubemap;
 struct Camera { 
 
     vec3 position;
+    float zfar;
 };  
 
 uniform Camera camera;
@@ -33,6 +35,14 @@ uniform Camera camera;
 #define DIRECTIONAL_LIGHT 0
 #define POINT_LIGHT 1
 #define SPOT_LIGHT 2
+
+#define MAX_CASCADES 5
+
+struct ShadowmapTexture {
+    int t;
+    float depth;
+    mat4 projection;
+};
 
 struct Light { 
 
@@ -47,11 +57,18 @@ struct Light {
 
     float inner_cone;
     float outer_cone;
+
+    float scale;
+    float snear;
  
     int shadows;
-    int shadowmap_texture;
-    int shadowmap_texture_size;
 
+    ShadowmapTexture shadowmap_textures[MAX_CASCADES];
+    
+    int shadowmap_textures_count;
+    int shadowmap_textures_size;
+
+    int shadowmap_pcf;
     float shadowmap_bias;
     mat4 shadowmap_projection;
 };  
@@ -63,22 +80,49 @@ uniform int nlights;
 
 uniform int shadowmap_pass;
 uniform int shadowmap_light;
-out vec4 shadowmap_frag_position[MAX_LIGHTS];
+
+//out vec4 shadowmap_frag_position[MAX_LIGHTS];
 
 
 void main()
 {
     if (shadowmap_pass == 1) {
+        
+        int li = shadowmap_light;
+        
+        gl_Position = lights[li].shadowmap_projection * model * vec4(position, 1.0);
 
-        mat4 projection = lights[shadowmap_light].shadowmap_projection * model;
-        vec3 frag_normal = mat3(transpose(inverse(projection))) * normal;
+        vec3 light_direction;
 
-        gl_Position =  projection * vec4(position, 1.0);
-
-        if (frag_normal.z < 0) {
-            gl_Position.z += lights[shadowmap_light].shadowmap_bias;
+        if (lights[li].type == DIRECTIONAL_LIGHT) {
+            light_direction = normalize(lights[li].direction);
+        } 
+        else {
+            frag_position = vec3(model * vec4(position, 1.0));
+            light_direction = normalize(lights[li].position - frag_position);
         }
 
+        frag_normal = normalize(mat3(transpose(inverse(model))) * normal);
+
+        float nl = dot(frag_normal, light_direction);
+        if (nl < 0.001) {
+            return;
+        }
+
+        float bias = lights[li].shadowmap_bias / nl;
+
+        if (lights[li].type == DIRECTIONAL_LIGHT) {
+            gl_Position.z += bias * lights[li].scale / 100;
+            return;
+        }
+
+
+        float d0 = length(frag_position - lights[li].position);
+
+        bias *= 2 * lights[li].snear / d0;
+
+        gl_Position.z += bias * gl_Position.w;
+        
         return;
     }
 
@@ -94,17 +138,18 @@ void main()
         gl_Position = projection * view * model * vec4(position, 1.0);
     }
     
+    frag_view = view * model * vec4(position, 1.0);
     vert_position = position;
     frag_position = vec3(model * vec4(position, 1.0));
     frag_normal = mat3(transpose(inverse(model))) * normal;
     frag_uv = vec2(uv.x, 1.0 - uv.y);
 
-    if (shadowmap_pass == 2) {
-        for (int i = 0; i < nlights; i++) {
-            if (lights[i].shadows == 1) {
-                shadowmap_frag_position[i] = lights[i].shadowmap_projection * vec4(frag_position, 1.0);
-            }
-        }
-    }
+    //if (shadowmap_pass == 2) {
+    //    for (int i = 0; i < nlights; i++) {
+    //        if (lights[i].shadows == 1) {
+    //            shadowmap_frag_position[i] = lights[i].shadowmap_projection * vec4(frag_position, 1.0);
+    //        }
+    //    }
+    //}
 }
 

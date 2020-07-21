@@ -84,6 +84,10 @@ def on_key_release(symbol, modifiers):
 
 def on_key(symbol, modifiers, value):
     
+    if symbol == key.SPACE:
+        state.lv *= 0
+        state.av *= 0
+
     if symbol == key.CAPSLOCK and value:
         state.capslock = not state.capslock
         

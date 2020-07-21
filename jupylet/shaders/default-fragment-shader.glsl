@@ -2,8 +2,11 @@
 
 out vec4 FragColor;
 
+uniform float shadow_bias;
+
 uniform mat4 model;
 
+in vec4 frag_view;
 in vec3 vert_position;
 in vec3 frag_position;
 in vec3 frag_normal;
@@ -58,6 +61,7 @@ uniform int material;
 struct Camera { 
 
     vec3 position;
+    float zfar;
 };  
 
 uniform Camera camera;
@@ -65,6 +69,14 @@ uniform Camera camera;
 #define DIRECTIONAL_LIGHT 0
 #define POINT_LIGHT 1
 #define SPOT_LIGHT 2
+
+#define MAX_CASCADES 5
+
+struct ShadowmapTexture {
+    int t;
+    float depth;
+    mat4 projection;
+};
 
 struct Light { 
 
@@ -80,10 +92,17 @@ struct Light {
     float inner_cone;
     float outer_cone;
 
-    int shadows;
-    int shadowmap_texture;
-    int shadowmap_texture_size;
+    float scale;
+    float snear;
 
+    int shadows;
+
+    ShadowmapTexture shadowmap_textures[MAX_CASCADES];
+
+    int shadowmap_textures_count;
+    int shadowmap_textures_size;
+
+    int shadowmap_pcf;
     float shadowmap_bias;
     mat4 shadowmap_projection;
 };  
@@ -95,7 +114,8 @@ uniform int nlights;
 
 uniform int shadowmap_pass;
 uniform int shadowmap_light;
-in vec4 shadowmap_frag_position[MAX_LIGHTS];
+
+//in vec4 shadowmap_frag_position[MAX_LIGHTS];
 
 
 //
@@ -153,30 +173,44 @@ vec3 fschlick(float vh, vec3 f0) {
 
 float compute_shadow(int light_index) {
 
-    if (shadowmap_pass != 2) {
+    if (shadowmap_pass != 2 || lights[light_index].shadows != 1) {
         return 0.0;
     }
 
-    float texture_size = lights[light_index].shadowmap_texture_size;
-    
-    vec4 frag_pos4 = shadowmap_frag_position[light_index];
-    vec3 frag_pos3 = (frag_pos4.xyz / frag_pos4.w) * 0.5 + 0.5;
+    float texture_size = lights[light_index].shadowmap_textures_size;
+    float depth = -frag_view.z / camera.zfar;
 
-    float shadow = 0;
+    for (int n = lights[light_index].shadowmap_textures_count - 1; n >= 0; n--) {
 
-    for (int i = -1; i <= 1; i++)   {
-        for (int j = -1; j <= 1; j++) {
+        if (depth <= lights[light_index].shadowmap_textures[n].depth) {
 
-            float shadow_depth = texture(
-                textures[lights[light_index].shadowmap_texture].t, 
-                frag_pos3.xy + vec2(i, j) / texture_size
-            ).r;
+            vec4 frag_pos4 = lights[light_index].shadowmap_textures[n].projection * vec4(frag_position, 1.0);
+            vec3 frag_pos3 = (frag_pos4.xyz / frag_pos4.w) * 0.5 + 0.5;
 
-            shadow += (frag_pos3.z >= shadow_depth && frag_pos3.z <= 1.0) ? 1.0 : 0.0;
+            int texture0 = lights[light_index].shadowmap_textures[n].t;
+            float shadow = 0;
+
+            int n = 0;
+            int pcf = lights[light_index].shadowmap_pcf / 2;
+
+            for (int i = -pcf; i <= pcf; i++)   {
+                for (int j = -pcf; j <= pcf; j++) {
+
+                    float shadow_depth = texture(
+                        textures[texture0].t, 
+                        frag_pos3.xy + vec2(i, j) / texture_size
+                    ).r;
+
+                    shadow += (frag_pos3.z - shadow_bias >= shadow_depth && frag_pos3.z <= 1.0) ? 1.0 : 0.0;
+                    n++;
+                }
+            }
+
+            return shadow / n;
         }
     }
 
-    return shadow / 9.0;
+    return 0.0;
 } 
 
 
@@ -299,6 +333,14 @@ vec3 compute_light(int light_index) {
 void main() {
 
     if (shadowmap_pass  == 1) {
+
+        //if (lights[shadowmap_light].type == DIRECTIONAL_LIGHT) {
+        //    light_direction = normalize(lights[shadowmap_light].direction);
+        //} 
+        //else {
+        //    light_direction = normalize(lights[shadowmap_light].position - frag_position);
+        //}
+
         return;
     }
     
