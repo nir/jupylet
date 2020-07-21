@@ -281,6 +281,11 @@ class ShaderProgram:
         if _debug_gl_shaders:
             print(self._get_program_log())
 
+    def set(self, key, value, foo=None):
+        if self._extra.get(key) != value:
+            self._extra[key] = value
+            self[key] = foo(value) if foo else value
+
     @property
     def id(self):
         return self._id

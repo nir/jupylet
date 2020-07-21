@@ -86,11 +86,13 @@ uniform int shadowmap_light;
 
 void main()
 {
+    vec4 mp4 = model * vec4(position, 1.0);
+
     if (shadowmap_pass == 1) {
         
         int li = shadowmap_light;
         
-        gl_Position = lights[li].shadowmap_projection * model * vec4(position, 1.0);
+        gl_Position = lights[li].shadowmap_projection * mp4;
 
         vec3 light_direction;
 
@@ -98,7 +100,7 @@ void main()
             light_direction = normalize(lights[li].direction);
         } 
         else {
-            frag_position = vec3(model * vec4(position, 1.0));
+            frag_position = vec3(mp4);
             light_direction = normalize(lights[li].position - frag_position);
         }
 
@@ -126,6 +128,8 @@ void main()
         return;
     }
 
+    frag_view = view * mp4;
+
     if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
         
         mat4 model = mat4(1.0);
@@ -135,12 +139,11 @@ void main()
         gl_Position = gl_Position.xyww;
     }
     else {
-        gl_Position = projection * view * model * vec4(position, 1.0);
+        gl_Position = projection * frag_view;
     }
     
-    frag_view = view * model * vec4(position, 1.0);
     vert_position = position;
-    frag_position = vec3(model * vec4(position, 1.0));
+    frag_position = vec3(mp4);
     frag_normal = mat3(transpose(inverse(model))) * normal;
     frag_uv = vec2(uv.x, 1.0 - uv.y);
 

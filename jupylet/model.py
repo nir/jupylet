@@ -295,13 +295,12 @@ class Scene(Object):
             
         with self._shader:
 
-            self._shader['nlights'] = len(self.lights)
+            self._shader.set('nlights', len(self.lights))
             
             if self.shadows:
                 self.shadowmap_renderer.draw(self, self._shader, self._width, self._height)
 
-            # TODO: optimize with dirty mechanism.
-            self._shader['shadowmap_pass'] = 2 if self.shadows else 0
+            self._shader.set('shadowmap_pass', 2 if self.shadows else 0)
 
             for light in self.lights.values():
                 light.set_state(self._shader, self.shadows)
@@ -383,7 +382,7 @@ class ShadowMapRenderer(object):
 
             if light.shadows:
     
-                shader['shadowmap_light'] = i
+                shader.set('shadowmap_light', i)
 
                 for j in range(light.shadowmaps_count):
 
@@ -526,7 +525,7 @@ class Material(Object):
 
     def set_state(self, shader):
             
-        shader['material'] = self._mslot
+        shader.set('material', self._mslot)
 
         _, _, self._mslot, mnew = _lru_materials.allocate(self._mlid)
         _, _, self._cslot, cnew = self.allocate_texture(self._items['color'], self._clid)
@@ -965,7 +964,8 @@ class Light(Node):
                 self.sfar
             )
             
-            shader[prefix + 'scale'] = max(max2.x - min2.x, max2.y - min2.y)
+            scale = max(max2.x - min2.x, max2.y - min2.y)
+            shader.set(prefix + 'scale', scale)
 
         elif self.type == 'point':
             projection = glm.perspective(
@@ -986,11 +986,11 @@ class Light(Node):
         self._view = view
         self._proj = projection
         
-        projection = flatten(projection * view)
+        pv = projection * view
 
-        shader[prefix + 'shadowmap_textures[%s].depth' % si] = self.shadowmaps_depths[si]
-        shader[prefix + 'shadowmap_textures[%s].projection' % si] = projection
-        shader[prefix + 'shadowmap_projection'] = projection
+        shader.set(prefix + 'shadowmap_textures[%s].depth' % si, self.shadowmaps_depths[si])
+        shader.set(prefix + 'shadowmap_textures[%s].projection' % si, pv, flatten)
+        shader.set(prefix + 'shadowmap_projection', pv, flatten)
 
         return self.shadowmaps[si]['t']
 
@@ -1084,9 +1084,10 @@ class Camera(Node):
             )
 
             shader['view'] = flatten(self._view0)
-            shader['projection'] = flatten(self._proj0)
             shader['camera.position'] = self.position
-            shader['camera.zfar'] = self.zfar
+
+            shader.set('projection', self._proj0, flatten)
+            shader.set('camera.zfar', self.zfar)
 
             self._dirty.clear()
 
@@ -1167,11 +1168,8 @@ class Mesh(Node):
 
         shader = self._group.shader
 
-        if shader._extra.get('shadow_bias') != self.shadow_bias:
-            shader._extra['shadow_bias'] = self.shadow_bias
-            shader['shadow_bias'] = self.shadow_bias
-            
-        shader['model'] = flatten(self.composed_matrix())
+        shader.set('shadow_bias', self.shadow_bias)
+        shader.set('model', self.composed_matrix(), flatten)
         
     def unset_state(self):
 
