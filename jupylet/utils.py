@@ -25,6 +25,7 @@
 """
 
 
+import hashlib
 import os
 
 
@@ -36,4 +37,25 @@ def abspath(path):
 
 def auto_read(s):
     return s if '\n' in s else open(s).read()
+
+
+def o2h(o, n=12):
+    return hashlib.sha256(pickle.dumps(o)).hexdigest()[:n]
+
+
+class Dict(dict):
+    
+    def __dir__(self):
+        return list(self.keys()) + super().__dir__()
+
+    def __getattr__(self, k):
+        
+        if k not in self:
+            raise AttributeError(k)
+            
+        return self[k]
+    
+    def __setattr__(self, k, v):
+        self[k] = v
+
 

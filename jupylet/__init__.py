@@ -25,18 +25,5 @@
 """
 
 
-import platform
-
-from .env import is_remote, start_xvfb, has_display
-
-
-VERSION = '0.7.0.dev'
-
-
-# Start virtual frame buffer if running in headless remote server.
-if is_remote():
-   start_xvfb()
-
-elif platform.system() == 'Linux' and not has_display():
-   start_xvfb()
+VERSION = '0.8.0.dev'
 
