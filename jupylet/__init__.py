@@ -25,5 +25,16 @@
 """
 
 
+import platform
+import sys
+
+from .env import is_remote, start_xvfb, has_display
+
+
 VERSION = '0.8.0.dev'
 
+
+if platform.system() == 'Linux' and not has_display():
+    setattr(sys, 'is_pyglet_doc_run', True)
+    
+    

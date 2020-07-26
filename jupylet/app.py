@@ -151,54 +151,6 @@ def async_thread(foo, *args, **kwargs):
     return asyncio.wrap_future(future)
 
 
-class EventLoop(object):
-
-    def __init__(self, scheduler):
-        
-        self.sched = scheduler
-        self.ndraw = 0
-
-        self.is_running = False
-        self.has_exit = False        
-
-    def start(self):
-
-        self.has_exit = False        
-        self.is_running = True
-
-    def run(self):
-                
-        loop = asyncio.get_event_loop()
-        task = loop.create_task(self._run())
-
-        if not loop.is_running():
-            loop.run_until_complete(task)
-
-        return task
-        
-    async def _run(self):
-        
-        while not self.has_exit:
-            
-            self.ndraw += 1
-            dt = self.sched.call()
-            await asyncio.sleep(dt - 0.0005)
-            
-        self.is_running = False
-
-    def step(self, fake_time):
-        
-        ndraw = self.ndraw
-
-        while self.is_running and not self.has_exit and ndraw == self.ndraw:
-            
-            dt = self.idle() or 1.
-            fake_time.sleep(dt)
-            
-        if self.has_exit:
-            self.is_running = False
-        
-
 def in_python_script():
 
     f0 = inspect.currentframe()
@@ -279,8 +231,6 @@ class App(EventLeg, ClockLeg):
         )
 
         self.window.config = self
-
-        self.event_loop = EventLoop(self.scheduler)
         
         self.buffer = buffer or mode == 'hidden'
         self.mode = mode
@@ -298,6 +248,9 @@ class App(EventLeg, ClockLeg):
             self.window._watch_canvas(self.canvas)
 
         self._run_timestamp = None
+
+        self.is_running = False
+        self.ndraws = 0
 
     @property
     def width(self):
@@ -322,12 +275,31 @@ class App(EventLeg, ClockLeg):
 
         self.set_redraw_interval(interval)
 
-        if not self.event_loop.is_running:
-            self.event_loop.start()
-            self.event_loop.run()
-            
+        if not self.is_running:
+
+            self.is_running = True
+            self._exit = False        
+
+            loop = asyncio.get_event_loop()
+            task = loop.create_task(self._run())
+
+            if not loop.is_running():
+                loop.run_until_complete(task)
+
         return self.canvas
         
+    async def _run(self):
+        
+        while not self._exit:
+            
+            t0 = time.time()
+            dt = self.scheduler.call()
+            t1 = time.time()
+            await asyncio.sleep(max(0, dt - 0.0005))
+            #logger.info('%.2fms, %.2fms, %.2fms', 1000 * (t1 - t0), 1000 * dt, 1000 * (time.time() - t1))
+
+        self.is_running = False
+
     def start(self, interval=1/48):
         
         assert self.mode == 'hidden', 'start() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
@@ -337,8 +309,9 @@ class App(EventLeg, ClockLeg):
 
         self.set_redraw_interval(interval)
 
-        if not self.event_loop.is_running:
-            self.event_loop.start()
+        if not self.is_running:
+            self.is_running = True
+            self._exit = False        
             
         return self.canvas
        
@@ -346,9 +319,16 @@ class App(EventLeg, ClockLeg):
 
         assert self.mode == 'hidden', 'step() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
         
-        for i in range(n):
-            self.event_loop.step(self.fake_time)
-        
+        ndraws = self.ndraws
+
+        while self.is_running and not self._exit and self.ndraws < ndraws + n:
+            
+            dt = self.scheduler.call()
+            fake_time.sleep(dt)
+            
+        if self._exit:
+            self.is_running = False
+
         return self.array0
 
     def stop(self):
@@ -357,11 +337,11 @@ class App(EventLeg, ClockLeg):
             sys.stderr.write('Ignoring call to stop() since it appears to have been done accidentally.')
             return
 
-        if self.event_loop.is_running:
-            self.event_loop.exit()
+        if self.is_running:
             self.scheduler.unschedule(self._redraw_windows)
 
     def set_redraw_interval(self, interval):
+
         self.scheduler.unschedule(self._redraw_windows)
         self.scheduler.schedule_interval_soft(self._redraw_windows, interval)
 
@@ -389,8 +369,9 @@ class App(EventLeg, ClockLeg):
             w, h = self.window.ctx.fbo.size
             buffer = buffer or self.window.ctx.fbo.read(components=3)
             self.array0 = np.frombuffer(buffer, dtype='uint8').reshape(h, w, -1)
-            self.event_loop.ndraw += 1
         
+        self.ndraws += 1
+
     def _get_buffer(self):
         """Return buffer as upside-down-flipped numpy array."""
 
@@ -408,7 +389,7 @@ class App(EventLeg, ClockLeg):
         This is useful for RL applications since smaller windows render faster.
         """
         assert self.mode not in ['jupyter'], 'Cannot rescale window in Jupyter mode.'
-        assert self.event_loop.is_running, 'Window can only be scaled once app has been started.'
+        assert self.is_running, 'Window can only be scaled once app has been started.'
 
         width0 = self.window.width
         height0 = self.window.height
@@ -434,8 +415,9 @@ class App(EventLeg, ClockLeg):
         
         self.scheduler.schedule_once(lambda dt: player.pause(), sound.duration)
 
+    # TODO: change ctx.clear(*color)
     def set_window_color(self, color):
-        pyglet.gl.glClearColor(*color2rgb(color, zero2one=True)) # TODO: change ctx.clear(*color)
+        pyglet.gl.glClearColor(*color2rgb(color, zero2one=True)) 
 
     def save_state(self, name, path, *args):
         

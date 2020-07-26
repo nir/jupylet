@@ -329,15 +329,15 @@ class JupyterWindow(Window):
         self.dispatch_event('on_mouse_scroll', x, y, delta_x, delta_y)
 
     def _dom_on_mousedown(self, x, y, button, ctrl_key, alt_key, shift_key):
-        logger.debug('Enter _dom_on_mousedown(%r)', (x, y, button, ctrl_key, alt_key, shift_key))
+        logger.debug('Enter JupyterWindow._dom_on_mousedown(%r)', (x, y, button, ctrl_key, alt_key, shift_key))
         self._on_mouse('on_mouse_press', x, y, button, ctrl_key, alt_key, shift_key)
 
     def _dom_on_mouseup(self, x, y, button, ctrl_key, alt_key, shift_key):
-        logger.debug('Enter _dom_on_mouseup(%r)', (x, y, button, ctrl_key, alt_key, shift_key))
+        logger.debug('Enter JupyterWindow._dom_on_mouseup(%r)', (x, y, button, ctrl_key, alt_key, shift_key))
         self._on_mouse('on_mouse_release', x, y, button, ctrl_key, alt_key, shift_key)
         
     def _on_mouse(self, event_type, x, y, button, ctrl_key, alt_key, shift_key):
-        logger.debug('Enter _on_mouse(%r).', (event_type, x, y, button, ctrl_key, alt_key, shift_key))
+        logger.debug('Enter JupyterWindow._on_mouse(%r).', (event_type, x, y, button, ctrl_key, alt_key, shift_key))
 
         # Map from https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
         # to https://pyglet.readthedocs.io/en/latest/programming_guide/mouse.html
@@ -372,31 +372,40 @@ def nop(self, *args, **kwargs):
 
 class EventLeg(mglw.WindowConfig):
 
-    window = 'pyglet'
     log_level = logging.WARNING
+
+    window = 'pyglet'
+
+    vsync = False
 
     def __init__(self, *args, **kwargs):
         
         super(EventLeg, self).__init__(*args, **kwargs)
 
         self._event_handlers = {}
+        self._exit = False
 
     def mouse_position_event(self, x, y, dx, dy):
-        logger.debug('Enter mouse_position_event(%r, %r, %r, %r).', x, y, dx, dy)
+        logger.debug('Enter EventLeg.mouse_position_event(%r, %r, %r, %r).', x, y, dx, dy)
         self.dispatch_event('mouse_position_event', x, y, dx, dy)
 
     def mouse_press_event(self, x, y, button):
-        logger.debug('Enter mouse_press_event(%r, %r, %r).', x, y, button)
+        logger.debug('Enter EventLeg.mouse_press_event(%r, %r, %r).', x, y, button)
         self.dispatch_event('mouse_press_event', x, y, button)
 
     def mouse_release_event(self, x, y, button):
-        logger.debug('Enter mouse_release_event(%r, %r, %r).', x, y, button)
+        logger.debug('Enter EventLeg.mouse_release_event(%r, %r, %r).', x, y, button)
         self.dispatch_event('mouse_release_event', x, y, button)
 
     def render(self, current_time: float, delta: float):
-        logger.debug('Enter render(%r, %r).', current_time, delta)
+        logger.debug('Enter EventLeg.render(%r, %r).', current_time, delta)
         self.dispatch_event('render', current_time, delta)
-    
+
+    def close(self):
+        logger.info('Enter EventLeg.close().')
+        self._exit = True
+        self.dispatch_event('close')
+       
     def dispatch_event(self, event, *args, **kwargs):
         foo = self._event_handlers.get(event)
         if foo:
@@ -413,6 +422,8 @@ class EventLeg(mglw.WindowConfig):
             def foo(self, width, height):
                 # ...
         """
+        logger.info('Enter EventLeg.event(*args=%r).', args) 
+
         if len(args) == 0:                      # @window.event()
             def decorator(func):
                 name = func.__name__

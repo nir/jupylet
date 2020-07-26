@@ -72,19 +72,19 @@ class Scheduler(object):
         self._sched = {}
         
     def schedule_once(self, foo, delay, *args, **kwargs):
-        logger.debug('Enter schedule_once(foo=%r, delay=%r, *args=%r, **kwargs=%r).', foo, delay, args, kwargs) 
+        logger.info('Enter Scheduler.schedule_once(foo=%r, delay=%r, *args=%r, **kwargs=%r).', foo, delay, args, kwargs) 
 
         self.unschedule(foo)
         self._sched[self._timer.time + delay, foo] = ('once', self._timer.time, None, args, kwargs)
         
     def schedule_interval(self, foo, interval, *args, **kwargs):
-        logger.debug('Enter schedule_interval(foo=%r, interval=%r, *args=%r, **kwargs=%r).', foo, interval, args, kwargs) 
+        logger.info('Enter Scheduler.schedule_interval(foo=%r, interval=%r, *args=%r, **kwargs=%r).', foo, interval, args, kwargs) 
         
         self.unschedule(foo)
         self._sched[self._timer.time + interval, foo] = ('interval', self._timer.time, interval, args, kwargs)  
         
     def schedule_interval_soft(self, foo, interval, *args, **kwargs):     
-        logger.debug('Enter schedule_interval_soft(foo=%r, interval=%r, *args=%r, **kwargs=%r).', foo, interval, args, kwargs) 
+        logger.info('Enter Scheduler.schedule_interval_soft(foo=%r, interval=%r, *args=%r, **kwargs=%r).', foo, interval, args, kwargs) 
 
         self.unschedule(foo)
         self._sched[self._timer.time + interval, foo] = ('soft', self._timer.time, interval, args, kwargs)
@@ -208,7 +208,7 @@ class ClockLeg(object):
             `interval` : float
                 The number of seconds to wait between each call.
         """
-        logger.info('Enter schedule_interval(interval=%r, *args=%r, **kwargs=%r).', interval, args, kwargs) 
+        logger.info('Enter ClockLeg.schedule_interval(interval=%r, *args=%r, **kwargs=%r).', interval, args, kwargs) 
 
         def schedule0(foo):
 
