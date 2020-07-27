@@ -25,11 +25,82 @@
 """
 
 
+import functools
 import webcolors
 import pyglet
+import math
+import os
+
+import PIL.Image
+import PIL.ImageDraw
+import PIL.ImageFont
+
+import numpy as np
 
 from .color import color2rgb
 from .state import State
+
+
+def rtl(s):
+    return str(s[::-1])
+
+
+@functools.lru_cache(maxsize=32)
+def load_font(path, size):
+    return PIL.ImageFont.truetype(path, size)
+
+
+@functools.lru_cache(maxsize=2048)
+def draw_chr(c, path, size):
+    
+    font = load_font(path, size)
+    w, h = font.getsize(c)
+    
+    im = PIL.Image.new('L', (w, h))
+    di = PIL.ImageDraw.Draw(im)
+    di.text((0, 0), c, fill='white', font=font)
+    
+    return np.array(im)
+
+
+def draw_str(s, path, size, line_height=1.2):
+    
+    al = []
+
+    lh = math.ceil(size * line_height)
+
+    hh = 0
+    ww = 0
+    
+    mh = 0
+    mw = 0
+    
+    for c in s.rstrip():
+        if c == '\n':
+            hh += lh
+            mw = max(mw, ww)
+            ww = 0
+            mh = 0
+            continue
+            
+        a = draw_chr(c, path, size)
+        al.append((a, (hh, ww)))
+        
+        h, w = a.shape
+        
+        mh = max(mh, h)
+        ww += w
+        
+    mh = hh + mh
+    mw = max(mw, ww)
+    a0 = np.zeros((mh, mw), dtype='uint8')
+
+    for a, (hh, ww) in al:
+        
+        h, w = a.shape
+        a0[hh:hh+h, ww:ww+w] = a
+        
+    return a0
 
 
 class Label(pyglet.text.Label):
