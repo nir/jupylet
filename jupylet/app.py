@@ -266,16 +266,15 @@ class App(EventLeg, ClockLeg):
 
         hasattr(self, '_show_remote_warning') and sys.stderr.write(REMOTE_WARNING + '\n')
 
-        self._run_timestamp = time.time()
-
-        self.timer.start()
-
         if self.canvas:
             interval = max(interval, self.canvas_interval)
 
         self.set_redraw_interval(interval)
 
         if not self.is_running:
+
+            self._run_timestamp = time.time()
+            self.timer.start()
 
             self.is_running = True
             self._exit = False        
@@ -290,15 +289,12 @@ class App(EventLeg, ClockLeg):
         
     async def _run(self):
         
-        while not self._exit:
-            
-            t0 = time.time()
+        while not self._exit:            
             dt = self.scheduler.call()
-            t1 = time.time()
             await asyncio.sleep(max(0, dt - 0.0005))
-            #logger.info('%.2fms, %.2fms, %.2fms', 1000 * (t1 - t0), 1000 * dt, 1000 * (time.time() - t1))
 
         self.is_running = False
+        self.timer.pause()
 
     def start(self, interval=1/48):
         
@@ -339,6 +335,7 @@ class App(EventLeg, ClockLeg):
 
         if self.is_running:
             self.scheduler.unschedule(self._redraw_windows)
+            self._exit = True
 
     def set_redraw_interval(self, interval):
 

@@ -25,161 +25,63 @@
 """
 
 
-import pyglet
+import moderngl
+import pathlib
+import io
 
 import PIL.Image
 
 import numpy as np
 
-from pyglet.image.codecs import ImageDecodeException
+import moderngl_window as mglw
+
+from moderngl_window.meta import TextureDescription, DataDescription
 
 
-__all__ = ['image_from', 'image', 'pil_open', 'pil_autocrop', 'pil_resize_to']
+def register_dir(path):
+    mglw.resources.register_dir(pathlib.Path(path).absolute())
 
 
-def image_from(o, autocrop=False):
+def texture_load(
+    o, 
+    anisotropy=8.0, 
+    autocrop=False,
+    mipmap=True, 
+    flip=False, 
+):
     
     if type(o) is str:
-        return image_from_resource(o, autocrop)
-    
+        d0 = mglw.resources.data.load(DataDescription(path=o, kind='binary'))
+        im = PIL.Image.open(io.BytesIO(d0))
+        im.load()
+
     if isinstance(o, np.ndarray):
-        return image_from_array(o)
-   
+        im = PIL.Image.fromarray(array.astype('uint8'))
+
     if isinstance(o, PIL.Image.Image):
-        return image_from_pil(o)
+        im = o
     
-    return o
+    if autocrop:
+        pil_autocrop(im)
+
+    return mglw.resources.textures.load(
+        TextureDescription(
+            path=None, 
+            flip=flip, 
+            mipmap=mipmap, 
+            anisotropy=anisotropy, 
+            image=im
+        )
+    )
 
     
-def image_from_resource(name, autocrop=False):
-    
-    try:
-        return image(name, autocrop=autocrop)
+def pil_from_texture(t):
 
-    except pyglet.resource.ResourceNotFoundException:
-        _loader.reindex()
-        return image(name, autocrop=autocrop)
-
-    
-def image_from_array(array):
-    
-    array = array.astype('uint8')
-
-    height, width = array.shape[:2]
-    
-    if len(array.shape) == 2:
-        channels = 1
-    else:
-        channels = array.shape[-1]
-        
-    mode = ['L', None, 'RGB', 'RGBA'][channels-1]
-        
-    return pyglet.image.ImageData(width, height, mode, array.reshape(-1).tobytes(), -width*channels)
-
-
-def image_from_pil(image):
-    
-    width, height = image.size 
-    channels = {'L': 1, 'RGB': 3, 'RGBA': 4}[image.mode]
-        
-    return pyglet.image.ImageData(width, height, image.mode, image.tobytes(), -width*channels)
-
-
-def image(name, flip_x=False, flip_y=False, rotate=0, atlas=True, autocrop=False):
-    """Load an image with optional transformation.
-
-    This is similar to `texture`, except the resulting image will be
-    packed into a :py:class:`~pyglet.image.atlas.TextureBin` if it is an appropriate size for packing.
-    This is more efficient than loading images into separate textures.
-
-    :Parameters:
-        `name` : str
-            Filename of the image source to load.
-        `flip_x` : bool
-            If True, the returned image will be flipped horizontally.
-        `flip_y` : bool
-            If True, the returned image will be flipped vertically.
-        `rotate` : int
-            The returned image will be rotated clockwise by the given
-            number of degrees (a multiple of 90).
-        `atlas` : bool
-            If True, the image will be loaded into an atlas managed by
-            pyglet. If atlas loading is not appropriate for specific
-            texturing reasons (e.g. border control is required) then set
-            this argument to False.
-
-    :rtype: `Texture`
-    :return: A complete texture if the image is large or not in an atlas,
-        otherwise a :py:class:`~pyglet.image.TextureRegion` of a texture atlas.
-    """
-    _loader._require_index()
-
-    name0 = name + '-autocrop' if autocrop else name
-
-    if name0 in _loader._cached_images:
-        identity = _loader._cached_images[name0]
-    else:
-        identity = _loader._cached_images[name0] = _alloc_image(name, atlas=atlas, autocrop=autocrop)
-
-    if not rotate and not flip_x and not flip_y:
-        return identity
-
-    return identity.get_transform(flip_x, flip_y, rotate)
-
-
-def _alloc_image(name, atlas=True, autocrop=False):
-
-    img = _loader_pil_load(name, autocrop=autocrop)
-
-    if not atlas:
-        return img.get_texture(True)
-
-    # find an atlas suitable for the image
-    bin = _loader._get_texture_atlas_bin(img.width, img.height)
-    if bin is None:
-        return img.get_texture(True)
-
-    return bin.add(img)
-
-
-def _loader_pil_load(filename, autocrop=False):
-
-    image = pil_open(filename, autocrop)
-        
-    try:
-        image = image.transpose(PIL.Image.FLIP_TOP_BOTTOM)
-    except Exception as e:
-        raise ImageDecodeException('PIL failed to transpose %r: %s' % (filename or file, e))
-
-    # Convert bitmap and palette images to component
-    if image.mode in ('1', 'P'):
-        image = image.convert()
-
-    if image.mode not in ('L', 'LA', 'RGB', 'RGBA'):
-        raise ImageDecodeException('Unsupported mode "%s"' % image.mode)
-
-    width, height = image.size
-
-    # tostring is deprecated, replaced by tobytes in Pillow (PIL fork)
-    # (1.1.7) PIL still uses it
-    image_data_fn = getattr(image, "tobytes", getattr(image, "tostring"))
-    return pyglet.image.ImageData(width, height, image.mode, image_data_fn())
-
-
-def pil_open(filename, autocrop=False):
-
-    with _loader.file(filename) as file:
-        try:
-            image = PIL.Image.open(file)
-            if autocrop:
-                return pil_autocrop(image)
-
-            image.load()
-            return image
-
-        except Exception as e:
-            raise ImageDecodeException(
-                'PIL cannot read %r: %s' % (filename or file, e))
+    return PIL.Image.frombuffer(
+        {1: 'L', 3: 'RGB', 4: 'RGBA'}[t.components], 
+        (t.width, t.height), 
+        t.read()
+    )
 
 
 def pil_autocrop(im):
@@ -196,7 +98,4 @@ def pil_resize_to(im, size=128, resample=PIL.Image.BILINEAR):
     h1 = round(sr * h0)
 
     return im.resize((w1, h1), resample=resample)
-
-
-_loader = pyglet.resource._default_loader
 

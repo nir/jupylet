@@ -39,6 +39,8 @@ from .resource import pil_resize_to
 MAP_SIZE = 128
 
 
+# TODO: Switch to glm for performance.
+
 def affine(a=0, s=1, ax=0, ay=0, dx=0, dy=0):
     
     r = math.radians(a)

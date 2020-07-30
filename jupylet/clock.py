@@ -90,7 +90,9 @@ class Scheduler(object):
         self._sched[self._timer.time + interval, foo] = ('soft', self._timer.time, interval, args, kwargs)
         
     def unschedule(self, foo):
-        self._sched = {k: v for k, v in self._sched.items() if k[1] is not foo}
+        # Python functions should not be compared for equality, not for identity:
+        # https://stackoverflow.com/questions/18216597/how-should-functions-be-tested-for-equality-or-identity
+        self._sched = {k: v for k, v in self._sched.items() if k[1] != foo}
         
     def call(self):
         

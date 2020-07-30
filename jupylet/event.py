@@ -137,6 +137,10 @@ class JupyterWindow(Window):
         """Destroy the context"""
         self._ctx.release()
 
+    def close(self) -> None:
+        """Signal for the window to close"""
+        self._close = True
+
     @property
     def size(self) -> Tuple[int, int]:
         """Tuple[int, int]: current window size.

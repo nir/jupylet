@@ -25,73 +25,144 @@
 """
 
 
-import pyglet
+import moderngl
+import pathlib
 import math
+import glm
 
 import PIL.Image
 
+import moderngl_window as mglw
 import numpy as np
 
+from moderngl_window.meta import TextureDescription
+
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
-from .resource import image_from, pil_open
+from .resource import texture_load, pil_from_texture
 from .state import State
+from .node import Node, aa2q, q2aa
 
 
 _empty_array = np.array([])
 
 
-class Sprite(pyglet.sprite.Sprite):
+class Sprite(Node):
     
     def __init__(self,
-                 img, x=0, y=0,
-                 blend_src=pyglet.gl.GL_SRC_ALPHA,
-                 blend_dest=pyglet.gl.GL_ONE_MINUS_SRC_ALPHA,
-                 batch=None,
-                 group=None,
-                 usage='dynamic',
-                 subpixel=True,
-                 autocrop=False,
-                 width=None,
-                 height=None,
-                 anchor_x='center',
-                 anchor_y='center',
-                 scale=1.0):
+        img, 
+        x=0, 
+        y=0,
+        scale=1.0,
+        angle=0.0,
+        anchor_x='center',
+        anchor_y='center',
+        flip=True, 
+        mipmap=True, 
+        autocrop=False,
+        anisotropy=8.0, 
+        height=None,
+        width=None,
+        name=None
+    ):
 
+        super(Sprite, self).__init__(
+            name,
+            rotation=aa2q(glm.radians(angle)),
+            scale=scale,
+            position=glm.vec3(x, y, 0),
+        )
+
+        #self._items = dict(
+        #)
+
+        self.flip = flip
+        self.mipmap = mipmap 
         self.autocrop = autocrop
+        self.anisotropy = anisotropy
         
-        if type(img) is str:
-            im = pil_open(img, self.autocrop)
-            self.hitmap, self.outline = hitmap_and_outline_from_alpha(im)
-        else:
-            self.hitmap = None
-            self.outline = None
+        self.geometry = mglw.geometry.quad_2d(
+            size=(1.0, 1.0), 
+            pos=(0.5, 0.5)
+        )
 
-        img = image_from(img, autocrop=self.autocrop)
-            
-        super(Sprite, self).__init__(img, x, y,
-                 blend_src,
-                 blend_dest,
-                 batch,
-                 group,
-                 usage,
-                 subpixel)
+        self.texture = texture_load(
+            img,
+            anisotropy=anisotropy, 
+            autocrop=autocrop,
+            mipmap=mipmap, 
+            flip=flip, 
+        )
 
-        self.scale = scale
+        self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
+
+        self.scale *= glm.vec3(
+            glm.vec2(self.texture.size) / max(*self.texture.size), 1
+        )
 
         if width:
             self.width = width
-
+        
         elif height:
             self.height = height
 
-        self.anchor_x = anchor_x
-        self.anchor_y = anchor_y        
+        self.set_anchor(anchor_x, anchor_y)
 
-        self._update_position()
+    def render(self, shader):
+        
+        shader['model'].write(self.matrix)
+        shader['texture_id'] = 0 
+
+        self.texture.use(location=0)
+        self.geometry.render(shader)
+
+    @property
+    def angle(self):
+        angle, axis = q2aa(self.rotation)
+        return round(glm.degrees(angle * glm.sign(axis.z)), 4)
+
+    @angle.setter
+    def angle(self, angle):
+        self.rotation = aa2q(glm.radians(angle))
+
+    def set_anchor(self, ax=None, ay=None):
+
+        if ax == 'left':
+            self.anchor.x = 0
+        elif ax == 'center':
+            self.anchor.x = 0.5
+        elif ax == 'right':
+            self.anchor.x = 1.
+        elif type(ax) in (int, float):
+            self.anchor.x = ax / self.width
+
+        if ay == 'bottom':
+            self.anchor.y = 0
+        elif ay == 'center':
+            self.anchor.y = 0.5
+        elif ay == 'top':
+            self.anchor.y = 1.
+        elif type(ay) in (int, float):
+            self.anchor.y = ay / self.width
+
+    @property
+    def width(self):
+        return self.scale.x * max(self.texture.size)
+
+    @width.setter
+    def width(self, width):
+        self.scale *= width / self.texture.width / self.scale.x
+
+    @property
+    def height(self):
+        return self.scale.y * max(self.texture.size)
+
+    @height.setter
+    def height(self, height):
+        self.scale *= height / self.texture.height / self.scale.y
 
     @property
     def image(self):
-        return pyglet.sprite.Sprite.image.fget(self)
+        return pil_from_texture(self.texture)
     
     @image.setter
     def image(self, img):
@@ -99,35 +170,26 @@ class Sprite(pyglet.sprite.Sprite):
         width = self.width
         height = self.height
 
-        anchor_x = self.anchor_x / self.width
-        anchor_y = self.anchor_y / self.height
+        self.texture = texture_load(
+            img,
+            anisotropy=self.anisotropy, 
+            autocrop=self.autocrop,
+            mipmap=self.mipmap, 
+            flip=self.flip, 
+        )
 
-        if type(img) is str:
-            im = pil_open(img, self.autocrop)
-            self.hitmap, self.outline = hitmap_and_outline_from_alpha(im)
-        else:
-            self.hitmap = None
-            self.outline = None
-
-        img = image_from(img, autocrop=self.autocrop)
-            
-        pyglet.sprite.Sprite.image.fset(self, img)
+        self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
 
         if width != self.width and height != self.height:
             self.width = width 
-
-        self.anchor_x = anchor_x
-        self.anchor_y = anchor_y
-
-        self._update_position()
 
     def collisions_with(self, o, debug=False):
         
         #if self.distance_to(o) > self.radius + o.radius:
         #    return
 
-        x0, y0 = self.x, self.y
-        x1, y1 = o.x, o.y
+        x0, y0 = self.position.x, self.position.y
+        x1, y1 = o.position.x, o.position.y
 
         t0, r0, b0, l0 = self._trbl()
         t1, r1, b1, l1 = o._trbl()
@@ -140,16 +202,16 @@ class Sprite(pyglet.sprite.Sprite):
         
         return compute_collisions(o, self, debug=debug)
 
-    def distance_to(self, o, pos=None):
+    def distance_to(self, o=None, pos=None):
 
-        x, y = pos or (o.x, o.y)
+        x, y = pos or (o.position.x, o.position.y)
         
-        dx = x - self.x
-        dy = y - self.y
+        dx = x - self.position.x
+        dy = y - self.position.y
 
         return (dx ** 2 + dy ** 2) ** 0.5
     
-    def angle_to(self, o, pos=None):
+    def angle_to(self, o=None, pos=None):
         
         qd = {
             (True, True): 0,
@@ -158,88 +220,34 @@ class Sprite(pyglet.sprite.Sprite):
             (False, True): 360,
         }
         
-        x, y = pos or (o.x, o.y)
+        x, y = pos or (o.position.x, o.position.y)
         
-        dx = x - self.x
-        dy = y - self.y
+        dx = x - self.position.x
+        dy = y - self.position.y
 
         a0 = math.atan(dy / (dx or 1e-7)) / math.pi * 180 + qd[(dy >= 0, dx >= 0)]
 
         return -a0
 
     @property
-    def anchor_x(self):
-        """Scaled anchor_x of the sprite."""
-        return self._texture.anchor_x / self._texture.width * self.width
-
-    @anchor_x.setter
-    def anchor_x(self, anchor):
-
-        if anchor == 'left':
-            anchor = 0
-        elif anchor == 'center':
-            anchor = 0.5
-        elif anchor == 'right':
-            anchor = 1.
-        elif type(anchor) in (int, float) and not -1 <= anchor <= 1:
-            anchor = anchor / self.width
-
-        self._texture.anchor_x = anchor * self._texture.width
-
-    @property
-    def anchor_y(self):
-        """Scaled anchor_y of the sprite."""
-        return self._texture.anchor_y / self._texture.height * self.height
-        
-    @anchor_y.setter
-    def anchor_y(self, anchor):
-
-        if anchor == 'bottom':
-            anchor = 0
-        elif anchor == 'center':
-            anchor = 0.5
-        elif anchor == 'top':
-            anchor = 1.
-        elif type(anchor) in (int, float) and not -1 <= anchor <= 1:
-            anchor = anchor / self.height
-
-        self._texture.anchor_y = anchor * self._texture.height
-
-    @property
-    def width(self):
-        return pyglet.sprite.Sprite.width.fget(self)
-
-    @width.setter
-    def width(self, width):
-        self.scale = self.scale * width / self.width
-
-    @property
-    def height(self):
-        return pyglet.sprite.Sprite.height.fget(self)
-
-    @height.setter
-    def height(self, height):
-        self.scale = self.scale * height / self.height
-
-    @property
     def top(self):
         t, r, b, l = self._trbl()
-        return self._y + t
+        return self.position.y + t
         
     @property
     def right(self):
         t, r, b, l = self._trbl()
-        return self._x + r
+        return self.position.x + r
         
     @property
     def bottom(self):
         t, r, b, l = self._trbl()
-        return self._y + b
+        return self.position.y + b
         
     @property
     def left(self):
         t, r, b, l = self._trbl()
-        return self._x + l
+        return self.position.x + l
         
     @property
     def radius(self):
@@ -248,55 +256,40 @@ class Sprite(pyglet.sprite.Sprite):
         return rs ** .5
         
     def _trbl(self):
-        tx = self._texture
+        tx = self.texture
         return trbl(
             tx.width, 
             tx.height, 
-            tx.anchor_x, 
-            tx.anchor_y, 
-            self._rotation,
-            self._scale
+            self.anchor_x, 
+            self.anchor_y, 
+            self.angle,
+            self.scale
         )
 
     def wrap_position(self, width, height, margin=50):
-        self.x = (self.x + margin) % (width + 2 * margin) - margin
-        self.y = (self.y + margin) % (height + 2 * margin) - margin
+        self.position.x = (self.position.x + margin) % (width + 2 * margin) - margin
+        self.position.y = (self.position.y + margin) % (height + 2 * margin) - margin
 
     def clip_position(self, width, height, margin=0):
-        self.x = max(-margin, min(margin + width, self.x))
-        self.y = max(-margin, min(margin + height, self.y))
-
-    def show(self):
-        id0 = self._texture.get_image_data()
-        id1 = id0.get_data('RGBA', pitch=-id0.width*4)
-        im0 = PIL.Image.frombytes('RGBA', (id0.width, id0.height), id1)
-        return im0
+        self.position.x = max(-margin, min(margin + width, self.position.x))
+        self.position.y = max(-margin, min(margin + height, self.position.y))
 
     def get_state(self):
 
         return State(
-            x = self.x,
-            y = self.y,
-            scale = self.scale,
-            opacity = self.opacity,
-            rotation = self.rotation,
-            anchor_x = self.anchor_x,
-            anchor_y = self.anchor_y,
+            _items = self._items,
+            #opacity = self.opacity,
         )
 
     def set_state(self, s):
         
-        self.x = s.x
-        self.y = s.y
-        self.scale = s.scale
-        self.opacity = s.opacity
-        self.rotation = s.rotation
-        self.anchor_x = s.anchor_x
-        self.anchor_y = s.anchor_y
-
-        self._update_position()
+        for k, v in s._items.items():
+            setattr(k, v)
+        
+        #self.opacity = s.opacity
 
 
+"""
 def canvas2sprite(c):
     
     a = c.get_image_data()
@@ -306,4 +299,5 @@ def canvas2sprite(c):
     s = Sprite(d)
     
     return s
+"""
 
