@@ -25,6 +25,7 @@
 """
 
 
+import webcolors
 import moderngl
 import pathlib
 import math
@@ -39,6 +40,7 @@ from moderngl_window.meta import TextureDescription
 
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
 from .resource import texture_load, pil_from_texture
+from .color import c2v
 from .state import State
 from .node import Node, aa2q, q2aa
 
@@ -48,7 +50,8 @@ _empty_array = np.array([])
 
 class Sprite(Node):
     
-    def __init__(self,
+    def __init__(
+        self,
         img, 
         x=0, 
         y=0,
@@ -62,7 +65,8 @@ class Sprite(Node):
         anisotropy=8.0, 
         height=None,
         width=None,
-        name=None
+        name=None,
+        collisions=True,
     ):
 
         super(Sprite, self).__init__(
@@ -72,10 +76,6 @@ class Sprite(Node):
             position=glm.vec3(x, y, 0),
         )
 
-        #self._items = dict(
-        #)
-
-        self.flip = flip
         self.mipmap = mipmap 
         self.autocrop = autocrop
         self.anisotropy = anisotropy
@@ -90,11 +90,18 @@ class Sprite(Node):
             anisotropy=anisotropy, 
             autocrop=autocrop,
             mipmap=mipmap, 
-            flip=flip, 
+            flip=False, 
         )
 
-        self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
+        self.components = self.texture.components
+        self.color4 = glm.vec4(1., 1., 1., 1.)
+        self.flip = flip
 
+        self._collisions = collisions
+
+        if self._collisions:
+            self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
+        
         self.scale *= glm.vec3(
             glm.vec2(self.texture.size) / max(*self.texture.size), 1
         )
@@ -107,8 +114,18 @@ class Sprite(Node):
 
         self.set_anchor(anchor_x, anchor_y)
 
+    def update(self, shader):
+        pass
+
     def render(self, shader):
         
+        if self._dirty:
+            self.update(shader)
+
+        shader['components'] = self.components
+        shader['color'].write(self.color4)
+        shader['flip'] = self.flip
+
         shader['model'].write(self.matrix)
         shader['texture_id'] = 0 
 
@@ -167,21 +184,21 @@ class Sprite(Node):
     @image.setter
     def image(self, img):
         
-        width = self.width
-        height = self.height
+        width = self.texture.width
 
+        self.texture.release()
         self.texture = texture_load(
             img,
             anisotropy=self.anisotropy, 
             autocrop=self.autocrop,
             mipmap=self.mipmap, 
-            flip=self.flip, 
+            flip=False, 
         )
 
-        self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
+        self.scale *= self.texture.width / width
 
-        if width != self.width and height != self.height:
-            self.width = width 
+        if self._collisions:
+            self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
 
     def collisions_with(self, o, debug=False):
         
@@ -274,6 +291,22 @@ class Sprite(Node):
         self.position.x = max(-margin, min(margin + width, self.position.x))
         self.position.y = max(-margin, min(margin + height, self.position.y))
 
+    @property
+    def opacity(self):
+        return self.color4.a
+
+    @opacity.setter
+    def opacity(self, opacity):
+        self.color4.a = opacity
+        
+    @property
+    def color(self):
+        return self.color4
+
+    @color.setter
+    def color(self, color):        
+        self.color4 = c2v(color, self.color4.a)
+
     def get_state(self):
 
         return State(
@@ -287,17 +320,4 @@ class Sprite(Node):
             setattr(k, v)
         
         #self.opacity = s.opacity
-
-
-"""
-def canvas2sprite(c):
-    
-    a = c.get_image_data()
-    b = a.tostring()
-    x = ctypes.string_at(id(b)+20, len(b))
-    d = pyglet.image.ImageData(a.shape[1], a.shape[0], 'RGBA', x)
-    s = Sprite(d)
-    
-    return s
-"""
 

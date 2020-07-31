@@ -25,6 +25,8 @@
 """
 
 
+# Search pattern for gl instances: \bgl(?!m\b|tf|sl|int|uint|obal)
+
 import gltflib
 import logging
 import weakref

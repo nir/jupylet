@@ -62,41 +62,6 @@ class Object(object):
         return '%s(%s)' % (type(self).__name__, ', '.join(
             '%s=%s' % i for i in list(self.__dict__.items()) + list(self._items.items()) if i[0][0] != '_'
         ))
-        
-
-def compute_matrix(angle=0, axis=(0., 0., 1.), scale=1., xyz=(0., 0., 0.), matrix=glm.mat4(1.)):
-    
-    if xyz is not None and xyz != (0, 0, 0):
-        matrix = glm.translate(matrix, xyz)
-        
-    if scale is not None and scale != 1.:
-        matrix = glm.scale(matrix, glm.vec3(scale))
-        
-    if angle:
-        matrix = glm.rotate(matrix, angle, axis)
-
-    return matrix
-
-
-def decompose(
-    matrix,
-    scale=None,
-    rotation=None,
-    translation=None,
-    skew=None,
-    perspective=None,
-    ):
-    
-    status = glm.decompose(
-        matrix, 
-        scale or glm.vec3(), 
-        rotation or glm.quat(), 
-        translation or glm.vec3(), 
-        skew or glm.vec3(), 
-        perspective or glm.vec4()
-    )
-    
-    return scale or rotation or translation or skew or perspective
 
 
 def q2aa(rotation, deg=False):
@@ -139,24 +104,32 @@ class Node(Object):
         
         super(Node, self).__init__()
         
-        self._itemz = None
-        self._items = dict(
-            anchor = glm.vec3(0.),
-            scale = scale or glm.vec3(1.),
-            rotation = rotation or glm.quat(1., 0., 0., 0.),
-            position = position or glm.vec3(0.),
-        )
-
         self.name = name
+
+        self.anchor = glm.vec3(0.)
+        self.scale = scale or glm.vec3(1.)
+        self.rotation = rotation or glm.quat(1., 0., 0., 0.)
+        self.position = position or glm.vec3(0.)
+
+        self._itemz = copy.deepcopy([
+            self.anchor, 
+            self.scale, 
+            self.rotation, 
+            self.position
+        ])
 
         self._matrix = glm.mat4(1.)
 
     @property
     def matrix(self):
         
-        if self._itemz != self._items:
-            self._itemz = copy.deepcopy(self._items)
-            self._dirty.clear()
+        if self._itemz != [self.anchor, self.scale, self.rotation, self.position]:
+            self._itemz = copy.deepcopy([
+                self.anchor, 
+                self.scale, 
+                self.rotation, 
+                self.position
+            ])
 
             t0 = glm.translate(_i4, self.position)
             r0 = t0 * glm.mat4_cast(self.rotation)

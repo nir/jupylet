@@ -26,7 +26,6 @@
 
 
 import functools
-import webcolors
 import pyglet
 import math
 import os
@@ -37,7 +36,7 @@ import PIL.ImageFont
 
 import numpy as np
 
-from .color import color2rgb
+from .sprite import Sprite
 from .state import State
 
 
@@ -103,56 +102,57 @@ def draw_str(s, path, size, line_height=1.2):
     return a0
 
 
-class Label(pyglet.text.Label):
+class Label(Sprite):
     
-    def __init__(self, text='',
-                 font_name=None, font_size=16, bold=False, italic=False,
-                 color='white',
-                 x=10, y=10, width=None, height=None,
-                 anchor_x='left', anchor_y='baseline',
-                 align='left',
-                 multiline=False, dpi=None, batch=None, group=None):
+    def __init__(
+        self, 
+        text='',
+        font_name=None, 
+        font_size=16,
+        line_height=1.2,
+        bold=False, 
+        italic=False,
+        color='white',
+        x=0, 
+        y=0, 
+        width=None, 
+        height=None,
+        anchor_x='left', 
+        anchor_y='bottom',
+        align='left'
+    ):
                 
-        if type(color) == str:
-            color = color2rgb(color)
-                    
-        super(Label, self).__init__(text,
-                 font_name, font_size, bold, italic,
-                 color,
-                 x, y, width, height,
-                 anchor_x, anchor_y,
-                 align,
-                 multiline, dpi, batch, group)
-        
-    @property
-    def alpha(self):
-        return self.color[-1]
-        
-    @alpha.setter
-    def alpha(self, alpha):
-        self.color = self.color[:3] + (alpha,)
-        
-    @property
-    def color_name(self):
-        return webcolors.rgb_to_name(self.color[:3])
+        img = draw_str(text, font_name, font_size, line_height)
 
-    @property
-    def color(self):
-        """Text color.
-        Color is a 4-tuple of RGBA components, each in range [0, 255].
-        :type: (int, int, int, int)
-        """
-        return self.document.get_style('color')
+        super(Label, self).__init__(
+            img,
+            x, 
+            y, 
+            anchor_x=anchor_x,
+            anchor_y=anchor_y,
+            height=height,
+            width=width,
+            collisions=False,
+        )
 
-    @color.setter
-    def color(self, color):
-        
-        if type(color) == str:
-            color = color2rgb(color)
-        else:
-            color = tuple(int(v) for v in color)
+        self._items = dict(
+            text = text,
+            font_name = font_name,
+            font_size = font_size,
+            line_height = line_height,
+        )
 
-        self.document.set_style(0, len(self.document.text), {'color': color})
+    def update(self, *args):
+
+        if self._dirty:
+            self._dirty.clear()
+            
+            self.image = draw_str(
+                self.text, 
+                self.font_name, 
+                self.font_size, 
+                self.line_height
+            )
 
     def get_state(self):
         

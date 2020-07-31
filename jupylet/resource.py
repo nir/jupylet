@@ -56,7 +56,7 @@ def texture_load(
         im.load()
 
     if isinstance(o, np.ndarray):
-        im = PIL.Image.fromarray(array.astype('uint8'))
+        im = PIL.Image.fromarray(o.astype('uint8'))
 
     if isinstance(o, PIL.Image.Image):
         im = o

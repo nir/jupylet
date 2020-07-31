@@ -45,7 +45,7 @@ import moderngl
 import moderngl_window as mglw
 
 from .env import is_remote
-from .color import color2rgb
+from .color import c2v
 from .clock import ClockLeg, Timer
 from .event import EventLeg, JupyterWindow
 from .utils import Dict
@@ -414,7 +414,7 @@ class App(EventLeg, ClockLeg):
 
     # TODO: change ctx.clear(*color)
     def set_window_color(self, color):
-        pyglet.gl.glClearColor(*color2rgb(color, zero2one=True)) 
+        pyglet.gl.glClearColor(*c2v(color)) 
 
     def save_state(self, name, path, *args):
         

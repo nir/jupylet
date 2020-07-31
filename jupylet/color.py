@@ -26,17 +26,24 @@
 
 
 import webcolors
+import glm
 
 
-def color2rgb(color, zero2one=False):
+def parse_webcolor(color):
     
-    try:
-        rgb = webcolors.name_to_rgb(color) + (255,)
-    except:
-        rgb = webcolors.hex_to_rgb(color) + (255,)
+    if color[0] == '#':
+        return glm.vec3(webcolors.hex_to_rgb(color)) / 255
+    
+    return glm.vec3(webcolors.name_to_rgb(color)) / 255
+
+
+def c2v(color, alpha=1.):
+    
+    if type(color) is str:
+        color = parse_webcolor(color)
+
+    if len(color) == 3:
+        color = glm.vec4(color, alpha)
         
-    if zero2one:
-        return tuple(v / 255 for v in rgb)
-    
-    return rgb
+    return glm.vec4(color)
 
