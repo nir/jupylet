@@ -28,13 +28,17 @@
 import functools
 import pyglet
 import math
+import io
 import os
 
 import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont
 
+import moderngl_window as mglw
 import numpy as np
+
+from moderngl_window.meta import DataDescription
 
 from .sprite import Sprite
 from .state import State
@@ -46,7 +50,9 @@ def rtl(s):
 
 @functools.lru_cache(maxsize=32)
 def load_font(path, size):
-    return PIL.ImageFont.truetype(path, size)
+
+    ff = mglw.resources.data.load(DataDescription(path=path, kind='binary'))
+    return PIL.ImageFont.truetype(io.BytesIO(ff), size)
 
 
 @functools.lru_cache(maxsize=2048)
@@ -67,6 +73,7 @@ def draw_str(s, path, size, line_height=1.2):
     al = []
 
     lh = math.ceil(size * line_height)
+    bl = draw_chr('a', path, size).shape[0]
 
     hh = 0
     ww = 0
@@ -89,7 +96,8 @@ def draw_str(s, path, size, line_height=1.2):
         
         mh = max(mh, h)
         ww += w
-        
+
+    bl = mh - bl  
     mh = hh + mh
     mw = max(mw, ww)
     a0 = np.zeros((mh, mw), dtype='uint8')
@@ -99,7 +107,7 @@ def draw_str(s, path, size, line_height=1.2):
         h, w = a.shape
         a0[hh:hh+h, ww:ww+w] = a
         
-    return a0
+    return a0, bl
 
 
 class Label(Sprite):
@@ -107,7 +115,7 @@ class Label(Sprite):
     def __init__(
         self, 
         text='',
-        font_name=None, 
+        font_path='fonts/SourceSerifPro-Bold.otf', 
         font_size=16,
         line_height=1.2,
         bold=False, 
@@ -118,14 +126,14 @@ class Label(Sprite):
         width=None, 
         height=None,
         anchor_x='left', 
-        anchor_y='bottom',
+        anchor_y='baseline',
         align='left'
     ):
                 
-        img = draw_str(text, font_name, font_size, line_height)
+        image, baseline = draw_str(text, font_path, font_size, line_height)
 
         super(Label, self).__init__(
-            img,
+            image,
             x, 
             y, 
             anchor_x=anchor_x,
@@ -137,22 +145,28 @@ class Label(Sprite):
 
         self._items = dict(
             text = text,
-            font_name = font_name,
+            font_path = font_path,
             font_size = font_size,
             line_height = line_height,
         )
 
-    def update(self, *args):
+        self.baseline = baseline / self.texture.height
+
+        self.color = color
+
+    def update(self, shader):
 
         if self._dirty:
             self._dirty.clear()
             
-            self.image = draw_str(
+            self.image, baseline = draw_str(
                 self.text, 
-                self.font_name, 
+                self.font_path, 
                 self.font_size, 
                 self.line_height
             )
+
+            self.baseline = baseline / self.texture.height
 
     def get_state(self):
         

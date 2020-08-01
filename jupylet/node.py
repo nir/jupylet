@@ -107,13 +107,13 @@ class Node(Object):
         self.name = name
 
         self.anchor = glm.vec3(0.)
-        self.scale = scale or glm.vec3(1.)
+        self.scale0 = scale or glm.vec3(1.)
         self.rotation = rotation or glm.quat(1., 0., 0., 0.)
         self.position = position or glm.vec3(0.)
 
         self._itemz = copy.deepcopy([
             self.anchor, 
-            self.scale, 
+            self.scale0, 
             self.rotation, 
             self.position
         ])
@@ -121,19 +121,27 @@ class Node(Object):
         self._matrix = glm.mat4(1.)
 
     @property
+    def scale(self):
+        return self.scale0
+
+    @scale.setter
+    def scale(self, value):
+        self.scale0 = value
+
+    @property
     def matrix(self):
         
-        if self._itemz != [self.anchor, self.scale, self.rotation, self.position]:
+        if self._itemz != [self.anchor, self.scale0, self.rotation, self.position]:
             self._itemz = copy.deepcopy([
                 self.anchor, 
-                self.scale, 
+                self.scale0, 
                 self.rotation, 
                 self.position
             ])
 
             t0 = glm.translate(_i4, self.position)
             r0 = t0 * glm.mat4_cast(self.rotation)
-            s0 = glm.scale(r0, self.scale)
+            s0 = glm.scale(r0, self.scale0)
             a0 = glm.translate(s0, -self.anchor)
 
             self._matrix = a0

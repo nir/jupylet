@@ -38,6 +38,21 @@ import moderngl_window as mglw
 from moderngl_window.meta import TextureDescription, DataDescription
 
 
+SHADER_2D = 'shader_2d'
+SHADER_3D = 'shader_3d'
+
+_shaders = {}
+
+
+def set_shader_2d(shader):
+    _shaders[SHADER_2D] = shader
+    return shader
+    
+
+def get_shader_2d():
+    return _shaders[SHADER_2D]
+
+
 def register_dir(path):
     mglw.resources.register_dir(pathlib.Path(path).absolute())
 

@@ -33,6 +33,7 @@ import pickle
 import pyglet
 import random
 import time
+import glm
 import sys
 import io
 
@@ -44,11 +45,12 @@ import numpy as np
 import moderngl
 import moderngl_window as mglw
 
+from .resource import register_dir, set_shader_2d
 from .env import is_remote
 from .color import c2v
 from .clock import ClockLeg, Timer
 from .event import EventLeg, JupyterWindow
-from .utils import Dict
+from .utils import Dict, o2h, abspath
 
 
 __all__ = ['App']
@@ -179,7 +181,7 @@ class App(EventLeg, ClockLeg):
         height=512, 
         mode='auto', 
         buffer=False, 
-        resource_dir='./resources', 
+        resource_dir='.', 
         quality=None,
         **kwargs
     ):
@@ -251,6 +253,16 @@ class App(EventLeg, ClockLeg):
 
         self.is_running = False
         self.ndraws = 0
+
+        register_dir(resource_dir)
+        register_dir(abspath('assets')) 
+
+        shader = set_shader_2d(self.load_program('shaders/sprite.glsl'))
+        shader['projection'].write(glm.ortho(
+            0, width, 0, height, -1, 1
+        ))
+
+        self.ctx.enable(moderngl.BLEND)
 
     @property
     def width(self):
@@ -419,7 +431,7 @@ class App(EventLeg, ClockLeg):
     def save_state(self, name, path, *args):
         
         if not path:
-            path = '%s-%s.state' % (name, utils.o2h(random.random()))
+            path = '%s-%s.state' % (name, o2h(random.random()))
 
         with open(path, 'wb') as f:
             sl = [o.get_state() for o in args]

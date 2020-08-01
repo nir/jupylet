@@ -261,10 +261,10 @@ class JupyterWindow(Window):
 
         if 'x' in e:
             e['x'] = e['x'] + 1
-            e['y'] = event['boundingRectHeight'] - e['y']
+            e['y'] = e['y'] #event['boundingRectHeight'] - e['y']
             
         if 'dy' in e:
-            e['dy'] = -e['dy']
+            e['dy'] = e['dy'] #-e['dy']
 
         if 't' in e:
             e['t'] = round(e['t'] / 1000, 3)
@@ -382,6 +382,8 @@ class EventLeg(mglw.WindowConfig):
 
     vsync = False
 
+    aspect_ratio = None
+
     def __init__(self, *args, **kwargs):
         
         super(EventLeg, self).__init__(*args, **kwargs)
@@ -389,6 +391,10 @@ class EventLeg(mglw.WindowConfig):
         self._event_handlers = {}
         self._exit = False
 
+    def key_event(self, key, action, modifiers):
+        logger.debug('Enter EventLeg.key_event(%r, %r, %r).', key, action, modifiers)
+        self.dispatch_event('key_event', key, action, modifiers)
+        
     def mouse_position_event(self, x, y, dx, dy):
         logger.debug('Enter EventLeg.mouse_position_event(%r, %r, %r, %r).', x, y, dx, dy)
         self.dispatch_event('mouse_position_event', x, y, dx, dy)
@@ -402,7 +408,7 @@ class EventLeg(mglw.WindowConfig):
         self.dispatch_event('mouse_release_event', x, y, button)
 
     def render(self, current_time: float, delta: float):
-        logger.debug('Enter EventLeg.render(%r, %r).', current_time, delta)
+        #logger.debug('Enter EventLeg.render(%r, %r).', current_time, delta)
         self.dispatch_event('render', current_time, delta)
 
     def close(self):

@@ -36,10 +36,8 @@ import PIL.Image
 import moderngl_window as mglw
 import numpy as np
 
-from moderngl_window.meta import TextureDescription
-
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
-from .resource import texture_load, pil_from_texture
+from .resource import texture_load, pil_from_texture, get_shader_2d
 from .color import c2v
 from .state import State
 from .node import Node, aa2q, q2aa
@@ -72,7 +70,7 @@ class Sprite(Node):
         super(Sprite, self).__init__(
             name,
             rotation=aa2q(glm.radians(angle)),
-            scale=scale,
+            scale=None,
             position=glm.vec3(x, y, 0),
         )
 
@@ -92,7 +90,10 @@ class Sprite(Node):
             mipmap=mipmap, 
             flip=False, 
         )
+        self.texture.repeat_x = False
+        self.texture.repeat_y = False
 
+        self.baseline = 0
         self.components = self.texture.components
         self.color4 = glm.vec4(1., 1., 1., 1.)
         self.flip = flip
@@ -102,9 +103,7 @@ class Sprite(Node):
         if self._collisions:
             self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
         
-        self.scale *= glm.vec3(
-            glm.vec2(self.texture.size) / max(*self.texture.size), 1
-        )
+        self.scale = scale
 
         if width:
             self.width = width
@@ -117,7 +116,9 @@ class Sprite(Node):
     def update(self, shader):
         pass
 
-    def render(self, shader):
+    def render(self, shader=None):
+        
+        shader = shader or get_shader_2d()
         
         if self._dirty:
             self.update(shader)
@@ -133,6 +134,30 @@ class Sprite(Node):
         self.geometry.render(shader)
 
     @property
+    def scale(self):
+        return self.scale0.x / self.texture.width
+
+    @scale.setter
+    def scale(self, scale):        
+        self.scale0 = scale * glm.vec3(self.texture.width, self.texture.height, 1)
+
+    @property
+    def x(self):
+        return self.position.x
+        
+    @x.setter
+    def x(self, value):
+        self.position.x = value
+        
+    @property
+    def y(self):
+        return self.position.y
+        
+    @y.setter
+    def y(self, value):
+        self.position.y = value
+        
+    @property
     def angle(self):
         angle, axis = q2aa(self.rotation)
         return round(glm.degrees(angle * glm.sign(axis.z)), 4)
@@ -142,6 +167,9 @@ class Sprite(Node):
         self.rotation = aa2q(glm.radians(angle))
 
     def set_anchor(self, ax=None, ay=None):
+
+        self._ax = ax
+        self._ay = ay
 
         if ax == 'left':
             self.anchor.x = 0
@@ -154,6 +182,8 @@ class Sprite(Node):
 
         if ay == 'bottom':
             self.anchor.y = 0
+        if ay == 'baseline':
+            self.anchor.y = self.baseline
         elif ay == 'center':
             self.anchor.y = 0.5
         elif ay == 'top':
@@ -163,19 +193,19 @@ class Sprite(Node):
 
     @property
     def width(self):
-        return self.scale.x * max(self.texture.size)
+        return self.scale0.x
 
     @width.setter
     def width(self, width):
-        self.scale *= width / self.texture.width / self.scale.x
+        self.scale0 = glm.vec3(self.texture.width, self.texture.height, 1) * width / self.texture.width
 
     @property
     def height(self):
-        return self.scale.y * max(self.texture.size)
+        return self.scale0.y
 
     @height.setter
     def height(self, height):
-        self.scale *= height / self.texture.height / self.scale.y
+        self.scale0 = glm.vec3(self.texture.width, self.texture.height, 1) * height / self.texture.height
 
     @property
     def image(self):
@@ -184,7 +214,7 @@ class Sprite(Node):
     @image.setter
     def image(self, img):
         
-        width = self.texture.width
+        scale = self.scale
 
         self.texture.release()
         self.texture = texture_load(
@@ -194,8 +224,10 @@ class Sprite(Node):
             mipmap=self.mipmap, 
             flip=False, 
         )
+        self.texture.repeat_x = False
+        self.texture.repeat_y = False
 
-        self.scale *= self.texture.width / width
+        self.scale = scale
 
         if self._collisions:
             self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)

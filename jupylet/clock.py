@@ -148,7 +148,7 @@ class ClockLeg(object):
     def run_me_once(self, delay, *args, **kwargs):
         return self.schedule_once(delay, *args, **kwargs)
     
-    def run_me_again_and_again(self, interval, *args, **kwargs):
+    def run_me_many(self, interval, *args, **kwargs):
         return self.schedule_interval(interval, *args, **kwargs)
     
     def run_me_no_more(self, foo=None):
