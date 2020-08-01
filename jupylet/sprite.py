@@ -237,8 +237,8 @@ class Sprite(Node):
         #if self.distance_to(o) > self.radius + o.radius:
         #    return
 
-        x0, y0 = self.position.x, self.position.y
-        x1, y1 = o.position.x, o.position.y
+        x0, y0 = self.position.xy
+        x1, y1 = o.position.xy
 
         t0, r0, b0, l0 = self._trbl()
         t1, r1, b1, l1 = o._trbl()
@@ -309,8 +309,8 @@ class Sprite(Node):
         return trbl(
             tx.width, 
             tx.height, 
-            self.anchor_x, 
-            self.anchor_y, 
+            self.anchor.x * tx.width, 
+            self.anchor.y * tx.height, 
             self.angle,
             self.scale
         )
