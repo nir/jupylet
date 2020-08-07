@@ -48,6 +48,10 @@ def rtl(s):
     return str(s[::-1])
 
 
+#
+# Note: Find free fonts at www.fontsquirrel.com
+#
+
 @functools.lru_cache(maxsize=32)
 def load_font(path, size):
 
@@ -169,18 +173,19 @@ class Label(Sprite):
             self.baseline = baseline / self.texture.height
 
     def get_state(self):
-        
-        return State(
-            x = self.x,
-            y = self.y,
+        return dict(
             text = self.text,
-            color = self.color,
+            font_path = self.font_path,
+            font_size = self.font_size,
+            line_height = self.line_height,
+            sprite = super(Label, self).get_state(),
         )
 
     def set_state(self, s):
         
-        self.x = s.x
-        self.y = s.y
-        self.text = s.text
-        self.color = s.color
+        for k, v in s.items():
+            if k == 'sprite':
+                super(Label, self).set_state(v)
+            else:
+                setattr(self, k, v)
 

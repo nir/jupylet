@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 #
 # JupyterWindow inherits the pyglet Window to take advantage of 
 # working logic translating from ipywidgets to pyglet events that was 
-# working just fine in the previous versions of jupylet.
+# working just fine in previous versions of jupylet.
 #
 
 _events = []
@@ -99,11 +99,22 @@ class JupyterWindow(Window):
                 require=self.gl_version_code
             )
 
+        self.create_framebuffer(*self.size)
+
+    def create_framebuffer(self, w, h):
+
+        w = int(w)
+        h = int(h)
+        
+        if self._fbo is not None:
+            self._fbo.release()
+
         self._fbo = self.ctx.framebuffer(
-            color_attachments=self.ctx.texture(self.size, 4, samples=self._samples),
-            depth_attachment=self.ctx.depth_texture(self.size, samples=self._samples),
+            color_attachments=self.ctx.texture((w, h), 4, samples=self._samples),
+            depth_attachment=self.ctx.depth_texture((w, h), samples=self._samples),
         )
-        self.use()
+
+        self.use()        
 
     def use(self):
         """Bind the window's framebuffer"""
@@ -122,7 +133,7 @@ class JupyterWindow(Window):
             viewport (tuple): The viewport
         """
         self.use()
-        self._ctx.clear(red=red, green=green, blue=blue, alpha=alpha, depth=depth, viewport=viewport)
+        self.ctx.clear(red=red, green=green, blue=blue, alpha=alpha, depth=depth, viewport=viewport)
 
     def swap_buffers(self) -> None:
         """
@@ -131,11 +142,11 @@ class JupyterWindow(Window):
         """
         # NOTE: No double buffering currently
         self._frames += 1
-        self._ctx.finish()
+        self.ctx.finish()
 
     def destroy(self) -> None:
         """Destroy the context"""
-        self._ctx.release()
+        self.ctx.release()
 
     def close(self) -> None:
         """Signal for the window to close"""
@@ -261,10 +272,10 @@ class JupyterWindow(Window):
 
         if 'x' in e:
             e['x'] = e['x'] + 1
-            e['y'] = e['y'] #event['boundingRectHeight'] - e['y']
+            e['y'] = event['boundingRectHeight'] - e['y']
             
         if 'dy' in e:
-            e['dy'] = e['dy'] #-e['dy']
+            e['dy'] = -e['dy']
 
         if 't' in e:
             e['t'] = round(e['t'] / 1000, 3)
@@ -384,29 +395,46 @@ class EventLeg(mglw.WindowConfig):
 
     aspect_ratio = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ctx, wnd, timer):
         
-        super(EventLeg, self).__init__(*args, **kwargs)
+        super(EventLeg, self).__init__(ctx, wnd, timer)
 
         self._event_handlers = {}
         self._exit = False
 
-    def key_event(self, key, action, modifiers):
-        logger.debug('Enter EventLeg.key_event(%r, %r, %r).', key, action, modifiers)
-        self.dispatch_event('key_event', key, action, modifiers)
+        self.wnd.config = self
+
+        self.wnd.mouse_position_event_func = self.mouse_position_event_ul
+        self.wnd.mouse_press_event_func = self.mouse_press_event_ul
+        self.wnd.mouse_release_event_func = self.mouse_release_event_ul
+        #self.wnd.mouse_drag_event_func = self.mouse_drag_event
+        #self.wnd.mouse_scroll_event_func = self.mouse_scroll_event
         
+    def mouse_position_event_ul(self, x, y, dx, dy):
+        return self.mouse_position_event(x, self.wnd.height - y, dx, -dy)
+
     def mouse_position_event(self, x, y, dx, dy):
         logger.debug('Enter EventLeg.mouse_position_event(%r, %r, %r, %r).', x, y, dx, dy)
         self.dispatch_event('mouse_position_event', x, y, dx, dy)
+
+    def mouse_press_event_ul(self, x, y, button):
+        return self.mouse_press_event(x, self.wnd.height - y, button)
 
     def mouse_press_event(self, x, y, button):
         logger.debug('Enter EventLeg.mouse_press_event(%r, %r, %r).', x, y, button)
         self.dispatch_event('mouse_press_event', x, y, button)
 
+    def mouse_release_event_ul(self, x, y, button):
+        return self.mouse_release_event(x, self.wnd.height - y, button)
+
     def mouse_release_event(self, x, y, button):
         logger.debug('Enter EventLeg.mouse_release_event(%r, %r, %r).', x, y, button)
         self.dispatch_event('mouse_release_event', x, y, button)
 
+    def key_event(self, key, action, modifiers):
+        logger.debug('Enter EventLeg.key_event(%r, %r, %r).', key, action, modifiers)
+        self.dispatch_event('key_event', key, action, modifiers)
+        
     def render(self, current_time: float, delta: float):
         #logger.debug('Enter EventLeg.render(%r, %r).', current_time, delta)
         self.dispatch_event('render', current_time, delta)

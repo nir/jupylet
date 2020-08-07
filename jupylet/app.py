@@ -27,7 +27,6 @@
 
 import ipywidgets
 import asyncio
-import inspect
 import logging
 import pickle
 import pyglet
@@ -46,14 +45,14 @@ import moderngl
 import moderngl_window as mglw
 
 from .resource import register_dir, set_shader_2d
-from .env import is_remote
+from .env import is_remote, set_app_mode, in_python_script
 from .color import c2v
-from .clock import ClockLeg, Timer
+from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
-from .utils import Dict, o2h, abspath
+from .utils import Dict, o2h, abspath, patch_method
 
 
-__all__ = ['App']
+#__all__ = ['App']
 
 
 logger = logging.getLogger(__name__)
@@ -139,38 +138,29 @@ def setup_basic_logging(level: int):
 REMOTE_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote server. This is expected. If you install Jupylet on your computer video quality will be high.'
 
 
-_thread_pool = None
-
-
-def async_thread(foo, *args, **kwargs):
-
-    global _thread_pool
-
-    if _thread_pool is None:
-        _thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
-        
-    future = _thread_pool.submit(foo, *args, **kwargs)
-    return asyncio.wrap_future(future)
-
-
-def in_python_script():
-
-    f0 = inspect.currentframe()
-    
-    while f0:
-        if not f0.f_back and f0.f_globals.get('__name__') == '__main__':
-            return True
-        
-        f0 = f0.f_back
-        
-    return False
-
-
 def get_config_dict(config_cls):
     return {
         k: getattr(config_cls, k) for k in dir(config_cls) 
         if k[0] != '_' and not callable(getattr(config_cls, k))
     }
+
+
+def _clear(
+    self, 
+    red=0.0, 
+    green=0.0, 
+    blue=0.0, 
+    alpha=1.0, 
+    depth=1.0, 
+    viewport=None, 
+    color=None, 
+    foo=None
+):
+
+    if color:
+        return foo(*c2v(color, alpha).rgba)
+
+    return foo(red, green, blue, alpha, depth, viewport)
 
 
 class App(EventLeg, ClockLeg):
@@ -180,7 +170,6 @@ class App(EventLeg, ClockLeg):
         width=512, 
         height=512, 
         mode='auto', 
-        buffer=False, 
         resource_dir='.', 
         quality=None,
         **kwargs
@@ -218,9 +207,13 @@ class App(EventLeg, ClockLeg):
         self.window = window_cls(size=(width, height), **conf)
         self.window.print_context_info()
 
+        patch_method(self.window, 'clear', _clear)
+
         mglw.activate_context(window=self.window)
 
-        # TODO: support fake time.
+        if mode == 'hidden':
+            self.fake_time = setup_fake_time()
+
         self.timer = Timer()
 
         ClockLeg.__init__(self, timer=self.timer)
@@ -231,18 +224,16 @@ class App(EventLeg, ClockLeg):
             wnd=self.window, 
             timer=self.timer
         )
-
-        self.window.config = self
         
-        self.buffer = buffer or mode == 'hidden'
         self.mode = mode
-                
-        self.array0 = np.zeros((height, width, 3), dtype='uint8')
-        self.canvas = None
+        set_app_mode(mode)
 
+        self.buffer = b''
+        self.canvas = None
+        
         if mode == 'jupyter':
 
-            empty = _ime(PIL.Image.fromarray(self.array0))
+            empty = _ime(PIL.Image.new('RGB', (width, height)))
             self.canvas = ipywidgets.Image(value=empty, format='JPEG')
             self.canvas_quality = quality or 85
             self.canvas_interval = 1 / 24 if self.canvas_quality > 50 else 1 / 12
@@ -263,6 +254,15 @@ class App(EventLeg, ClockLeg):
         ))
 
         self.ctx.enable(moderngl.BLEND)
+
+        self._use_shm = False
+        self._shm = None
+
+    def __del__(self):
+
+        if self._shm is not None:
+            self._shm.close()
+            self._shm.unlink()
 
     @property
     def width(self):
@@ -308,7 +308,7 @@ class App(EventLeg, ClockLeg):
         self.is_running = False
         self.timer.pause()
 
-    def start(self, interval=1/48):
+    def start(self, interval=1/24):
         
         assert self.mode == 'hidden', 'start() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
         
@@ -318,9 +318,12 @@ class App(EventLeg, ClockLeg):
         self.set_redraw_interval(interval)
 
         if not self.is_running:
+
+            self.timer.start()
+
             self.is_running = True
             self._exit = False        
-            
+           
         return self.canvas
        
     def step(self, n=1):
@@ -332,12 +335,10 @@ class App(EventLeg, ClockLeg):
         while self.is_running and not self._exit and self.ndraws < ndraws + n:
             
             dt = self.scheduler.call()
-            fake_time.sleep(dt)
+            self.fake_time.sleep(dt + 1e-4)
             
         if self._exit:
             self.is_running = False
-
-        return self.array0
 
     def stop(self):
 
@@ -356,16 +357,17 @@ class App(EventLeg, ClockLeg):
 
     def _redraw_windows(self, ct, dt):
         
-        #self.window.switch_to()
         self.window.render(ct, dt)
-        self.window.swap_buffers()
-        
-        buffer = None
-        
-        if self.canvas is not None:
 
-            buffer = buffer or self.window.ctx.fbo.read(components=3)
-            im0 = _b2i(buffer, self.window.ctx.fbo.size)
+        if self.mode == 'window':
+            self.window.swap_buffers()
+        
+        else:
+            self.buffer = self.window.fbo.read(components=4)
+        
+        if self.mode == 'jupyter':
+
+            im0 = _b2i(self.buffer, self.window.fbo.size, 'RGBA').convert('RGB')
 
             self.canvas.value = _ime(
                 im0, 
@@ -373,22 +375,49 @@ class App(EventLeg, ClockLeg):
                 quality=self.canvas_quality
             )
             
-        if self.buffer:
-
-            w, h = self.window.ctx.fbo.size
-            buffer = buffer or self.window.ctx.fbo.read(components=3)
-            self.array0 = np.frombuffer(buffer, dtype='uint8').reshape(h, w, -1)
-        
         self.ndraws += 1
 
-    def _get_buffer(self):
+    def observe(self):
         """Return buffer as upside-down-flipped numpy array."""
 
-        w, h = self.window.ctx.fbo.size
-        d = self.window.ctx.fbo.read(components=3)
-        a = np.frombuffer(d, dtype='uint8').reshape(h, w, -1)
+        w, h = self.window.fbo.size
+        b = self.get_buffer() 
 
-        return a
+        if self._use_shm:
+            shm = self.get_shared_memory()
+            shm.buf[:] = b
+            return ('__ndarray__', (w, h, 4), 'uint8', shm.name)
+
+        return np.frombuffer(b, dtype='uint8').reshape(h, w, -1)
+
+    def get_buffer(self):
+
+        w, h = self.window.fbo.size
+        if w * h * 4 != len(self.buffer):
+            self.buffer = self.window.fbo.read(components=4)
+
+        return self.buffer
+
+    def use_shared_memory(self):
+        self._use_shm = True
+
+    def get_shared_memory(self):
+
+        w, h = self.window.fbo.size
+        size = w * h * 4
+
+        if self._shm is not None and self._shm.size != size:
+        
+            self._shm.close()
+            self._shm.unlink
+            self._shm = None
+
+        if self._shm is None:
+
+            from multiprocessing import shared_memory
+            self._shm = shared_memory.SharedMemory(create=True, size=size)
+
+        return self._shm
 
     # TODO: check if this still works
     def scale_window_to(self, px):
@@ -397,36 +426,14 @@ class App(EventLeg, ClockLeg):
 
         This is useful for RL applications since smaller windows render faster.
         """
-        assert self.mode not in ['jupyter'], 'Cannot rescale window in Jupyter mode.'
+
+        #assert self.mode == 'hidden', 'Can only scale hidden window.'
         assert self.is_running, 'Window can only be scaled once app has been started.'
 
-        width0 = self.window.width
-        height0 = self.window.height
-        
-        scale = px / max(width0, height0)
+        w, h = self.window.fbo.size 
+        s = px / max(w, h)
 
-        self.window.width = round(scale * width0)
-        self.window.height = round(scale * height0)
-
-        sx = self.window.width / width0
-        sy = self.window.height / height0
-
-        pyglet.gl.glScalef(sx, sy, scale) 
-
-    def play_once(self, sound):
-        
-        if self.mode == 'hidden':
-            return
-            
-        player = pyglet.media.Player()
-        player.queue(sound)
-        player.play()
-        
-        self.scheduler.schedule_once(lambda dt: player.pause(), sound.duration)
-
-    # TODO: change ctx.clear(*color)
-    def set_window_color(self, color):
-        pyglet.gl.glClearColor(*c2v(color)) 
+        self.window.create_framebuffer(s * w, s * h)
 
     def save_state(self, name, path, *args):
         
@@ -446,10 +453,9 @@ class App(EventLeg, ClockLeg):
             for o, s in zip(args, sl):
                 o.set_state(s)
 
-        self._redraw_windows()
-        #self._redraw_windows() # TODO: check if still required
+        self._redraw_windows(0, 0)
 
-        return self.array0
+        return self.observe()
 
     def get_logging_widget(self, height='256px', quiet_default_logger=True):
         return get_logging_widget(height, quiet_default_logger)
@@ -467,7 +473,7 @@ class App(EventLeg, ClockLeg):
     """
 
 
-def _b2i(buffer, size, format='RGB'):
+def _b2i(buffer, size, format='RGBA'):
     """Convert bytes buffer to PIL image."""
     return PIL.Image.frombytes(format, size, buffer, 'raw', format, 0, -1)
 

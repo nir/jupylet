@@ -25,10 +25,12 @@
 """
 
 
+import functools
 import webcolors
 import glm
 
 
+@functools.lru_cache(maxsize=1024)
 def parse_webcolor(color):
     
     if color[0] == '#':

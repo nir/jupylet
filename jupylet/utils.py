@@ -25,7 +25,11 @@
 """
 
 
+import functools
 import hashlib
+import pickle
+import types
+import glm
 import os
 
 
@@ -59,3 +63,35 @@ class Dict(dict):
         self[k] = v
 
 
+def patch_method(obj, key, method):
+    
+    foo = getattr(obj, key)
+    
+    if isinstance(foo.__func__, functools.partial):
+        return foo
+    
+    par = functools.partial(method, foo=foo)
+    bar = types.MethodType(par, obj)
+    bar.__func__.__name__ = foo.__func__.__name__
+    
+    setattr(obj, key, bar)
+    
+    return bar
+
+
+def glm_dumps(o):
+    
+    if "'glm." not in repr(o.__class__):
+        return o
+    
+    return ('__glm__', o.__class__.__name__, tuple(o))
+
+
+def glm_loads(o):
+    
+    if type(o) is not tuple or not o or o[0] != '__glm__':
+        return o
+    
+    return getattr(glm, o[1])(o[2])
+
+    

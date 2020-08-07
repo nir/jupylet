@@ -64,6 +64,16 @@ class FakeTime(object):
         self._time += dt
 
 
+def setup_fake_time():
+    
+    mglw.timers.clock.time = FakeTime()
+    return mglw.timers.clock.time
+
+
+def setup_real_time():
+    mglw.timers.clock.time = time
+
+
 class Scheduler(object):
     
     def __init__(self, timer):
@@ -170,28 +180,28 @@ class ClockLeg(object):
             self.unschedule(foo)
             
             @functools.wraps(foo)
-            def bar(dt, *args, **kwargs):
+            def bar(ct, dt, *args, **kwargs):
                 
                 if inspect.isgeneratorfunction(foo):
                     
                     goo = self.schedules[foo.__name__].get('gen')
                     if goo is None:
-                        goo = foo(dt, *args, **kwargs)
+                        goo = foo(ct, dt, *args, **kwargs)
                         self.schedules[foo.__name__]['gen'] = goo
                         delay = next(goo)
 
                     else:
-                        delay = goo.send(dt)
+                        delay = goo.send((ct, dt))
                     
                     if delay is not None:
                         self.scheduler.schedule_once(bar, delay, *args, **kwargs)
                         
                 elif inspect.iscoroutinefunction(foo):
-                    task = asyncio.create_task(foo(dt, *args, **kwargs))
+                    task = asyncio.create_task(foo(ct, dt, *args, **kwargs))
                     self.schedules[foo.__name__]['task'] = task
                     
                 else:
-                    foo(dt, *args, **kwargs)
+                    foo(ct, dt, *args, **kwargs)
                 
             self.schedules.setdefault(foo.__name__, {})['func'] = bar
             self.scheduler.schedule_once(bar, delay, *args, **kwargs)

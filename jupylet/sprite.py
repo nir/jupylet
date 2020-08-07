@@ -38,6 +38,7 @@ import numpy as np
 
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
 from .resource import texture_load, pil_from_texture, get_shader_2d
+from .utils import glm_dumps, glm_loads
 from .color import c2v
 from .state import State
 from .node import Node, aa2q, q2aa
@@ -57,6 +58,7 @@ class Sprite(Node):
         angle=0.0,
         anchor_x='center',
         anchor_y='center',
+        color='white',
         flip=True, 
         mipmap=True, 
         autocrop=False,
@@ -112,10 +114,14 @@ class Sprite(Node):
             self.height = height
 
         self.set_anchor(anchor_x, anchor_y)
+        self.color = color
 
     def update(self, shader):
         pass
 
+    def draw(self, shader=None):
+        return self.render(shader)
+        
     def render(self, shader=None):
         
         shader = shader or get_shader_2d()
@@ -340,16 +346,23 @@ class Sprite(Node):
         self.color4 = c2v(color, self.color4.a)
 
     def get_state(self):
-
-        return State(
-            _items = self._items,
-            #opacity = self.opacity,
+        return dict(
+            node = super(Sprite, self).get_state(),
+            color4 = glm_dumps(glm.vec4(self.color4)),
+            mipmap = self.mipmap,
+            autocrop = self.autocrop,
+            anisotropy = self.anisotropy,
+            baseline = self.baseline,
+            components = self.components,
+            flip = self.flip,
+            image = self.image,
         )
 
     def set_state(self, s):
         
-        for k, v in s._items.items():
-            setattr(k, v)
-        
-        #self.opacity = s.opacity
+        for k, v in s.items():
+            if k == 'node':
+                super(Sprite, self).set_state(v)
+            else:
+                setattr(self, k, glm_loads(v))
 

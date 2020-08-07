@@ -27,6 +27,7 @@
 
 import platform
 import sys
+import os
 
 from .env import is_remote, start_xvfb, has_display
 
@@ -37,4 +38,13 @@ VERSION = '0.8.0.dev'
 if platform.system() == 'Linux' and not has_display():
     setattr(sys, 'is_pyglet_doc_run', True)
     
-    
+
+#
+# Work around problem in pip install jupyter in python 3.8 as described in:
+# https://github.com/jupyter/notebook/issues/4980#issuecomment-600992296
+#
+if platform.system() == 'Windows' and sys.version_info >= (3, 8) and sys.argv:
+   if sys.argv[-1] == 'postinstall':
+      os.system('python %s\Scripts\pywin32_postinstall.py -install' % os.__file__.rsplit('\\', 2)[0])
+      sys.exit(0)
+

@@ -25,12 +25,11 @@
 """
 
 
-import pyglet
 import copy
 import math
 import glm
 
-from pyglet.graphics import *
+from .utils import glm_dumps, glm_loads
 
 
 class Object(object):
@@ -173,4 +172,16 @@ class Node(Object):
     def front(self):
         """Return the local front (+z) axis."""
         return (self.matrix * glm.vec4(0, 0, 1, 0)).xyz
+
+    def get_state(self):
+        return dict(
+            rotation = glm_dumps(glm.quat(self.rotation)), 
+            position = glm_dumps(glm.vec3(self.position)),
+            anchor = glm_dumps(glm.vec3(self.anchor)), 
+            scale0 = glm_dumps(glm.vec3(self.scale0)), 
+        )
+
+    def set_state(self, s):
+        for k, v in s.items():
+            setattr(self, k, glm_loads(v))
 
