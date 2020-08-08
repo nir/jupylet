@@ -174,11 +174,11 @@ class Label(Sprite):
 
     def get_state(self):
         return dict(
+            sprite = super(Label, self).get_state(),
             text = self.text,
             font_path = self.font_path,
             font_size = self.font_size,
             line_height = self.line_height,
-            sprite = super(Label, self).get_state(),
         )
 
     def set_state(self, s):

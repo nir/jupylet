@@ -38,10 +38,36 @@ import moderngl_window as mglw
 from moderngl_window.meta import TextureDescription, DataDescription
 
 
+_context = None
+
+
+def set_context(context):
+
+    global _context
+
+    _context = context
+
+
+def get_context():
+    return _context
+
+    
 SHADER_2D = 'shader_2d'
 SHADER_3D = 'shader_3d'
 
-_shaders = {}
+_shaders = {
+    SHADER_2D: None,
+    SHADER_3D: None,
+}
+
+
+def set_shader_3d(shader):
+    _shaders[SHADER_3D] = shader
+    return shader
+    
+
+def get_shader_3d():
+    return _shaders[SHADER_3D]
 
 
 def set_shader_2d(shader):
@@ -55,6 +81,15 @@ def get_shader_2d():
 
 def register_dir(path):
     mglw.resources.register_dir(pathlib.Path(path).absolute())
+
+
+def resolve_path(path):
+
+    dd = DataDescription(path=path, kind='binary')
+    mglw.resources.data.resolve_loader(dd)
+    pp = dd.loader_cls(dd).find_data(dd.path)
+    
+    return str(pp)
 
 
 def texture_load(

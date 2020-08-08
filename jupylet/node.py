@@ -105,10 +105,10 @@ class Node(Object):
         
         self.name = name
 
-        self.anchor = glm.vec3(0.)
-        self.scale0 = scale or glm.vec3(1.)
-        self.rotation = rotation or glm.quat(1., 0., 0., 0.)
-        self.position = position or glm.vec3(0.)
+        self.anchor = glm.vec3(anchor) if anchor else glm.vec3(0.)
+        self.scale0 = glm.vec3(scale) if scale else glm.vec3(1.)
+        self.rotation = glm.quat(rotation) if rotation else glm.quat(1., 0., 0., 0.)
+        self.position = glm.vec3(position) if position else glm.vec3(0.)
 
         self._itemz = copy.deepcopy([
             self.anchor, 

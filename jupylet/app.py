@@ -44,7 +44,7 @@ import numpy as np
 import moderngl
 import moderngl_window as mglw
 
-from .resource import register_dir, set_shader_2d
+from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
 from .env import is_remote, set_app_mode, in_python_script
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
@@ -248,12 +248,17 @@ class App(EventLeg, ClockLeg):
         register_dir(resource_dir)
         register_dir(abspath('assets')) 
 
+        set_shader_3d(self.load_program(
+            vertex_shader='shaders/default-vertex-shader.glsl',
+            fragment_shader='shaders/default-fragment-shader.glsl',
+        ))
         shader = set_shader_2d(self.load_program('shaders/sprite.glsl'))
         shader['projection'].write(glm.ortho(
             0, width, 0, height, -1, 1
         ))
 
         self.ctx.enable(moderngl.BLEND)
+        set_context(self.ctx)
 
         self._use_shm = False
         self._shm = None

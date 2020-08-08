@@ -39,7 +39,11 @@ import concurrent.futures
 
 import multiprocessing.process as process
 
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except:
+    sd = None
+
 import soundfile as sf
 
 import numpy as np
@@ -63,6 +67,9 @@ def submit(foo, *args, **kwargs):
 
     global _pool
 
+    if sd is None:
+        return Mock()
+        
     if _pool is None and getattr(process.current_process(), '_inheriting', False):
         return Mock()
 
