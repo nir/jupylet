@@ -257,11 +257,13 @@ class App(EventLeg, ClockLeg):
             0, width, 0, height, -1, 1
         ))
 
-        self.ctx.enable(moderngl.BLEND)
+        self.ctx.enable(moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.CULL_FACE)
         set_context(self.ctx)
 
         self._use_shm = False
         self._shm = None
+
+        self._time2draw = 0
 
     def __del__(self):
 
@@ -362,12 +364,14 @@ class App(EventLeg, ClockLeg):
 
     def _redraw_windows(self, ct, dt):
         
-        self.window.render(ct, dt)
-
-        if self.mode == 'window':
-            self.window.swap_buffers()
+        t0 = time.time()
         
-        else:
+        self.window.render(ct, dt)
+        self.window.swap_buffers()
+        
+        self._time2draw = time.time() - t0
+
+        if self.mode != 'window':
             self.buffer = self.window.fbo.read(components=4)
         
         if self.mode == 'jupyter':
@@ -464,18 +468,6 @@ class App(EventLeg, ClockLeg):
 
     def get_logging_widget(self, height='256px', quiet_default_logger=True):
         return get_logging_widget(height, quiet_default_logger)
-
-    """
-    def set2d(self):
-        self.window.projection = pyglet.window.Projection2D()
-
-    def set3d(self):
-
-        pyglet.gl.glEnable(pyglet.gl.GL_DEPTH_TEST)
-        pyglet.gl.glEnable(pyglet.gl.GL_CULL_FACE)
-        
-        self.window.projection = pyglet.window.Projection3D()
-    """
 
 
 def _b2i(buffer, size, format='RGBA'):

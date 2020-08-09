@@ -110,12 +110,7 @@ class Node(Object):
         self.rotation = glm.quat(rotation) if rotation else glm.quat(1., 0., 0., 0.)
         self.position = glm.vec3(position) if position else glm.vec3(0.)
 
-        self._itemz = copy.deepcopy([
-            self.anchor, 
-            self.scale0, 
-            self.rotation, 
-            self.position
-        ])
+        self._itemz = None
 
         self._matrix = glm.mat4(1.)
 
@@ -145,12 +140,14 @@ class Node(Object):
 
             self._matrix = a0
 
+            self._dirty.add('_matrix')
+
         return self._matrix
 
     def move_local(self, xyz):
 
         rxyz = glm.mat4_cast(self.rotation) * glm.vec4(xyz, 1.)
-        self.position += xyz1.xyz
+        self.position += rxyz.xyz
         
     def rotate_local(self, angle, axis=(0., 0., 1.)):
 

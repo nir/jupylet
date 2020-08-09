@@ -44,14 +44,15 @@ _context = None
 def set_context(context):
 
     global _context
-
     _context = context
 
 
 def get_context():
+
+    assert _context is not None, 'First, create an App() instance!'
     return _context
 
-    
+
 SHADER_2D = 'shader_2d'
 SHADER_3D = 'shader_3d'
 
@@ -89,7 +90,7 @@ def resolve_path(path):
     mglw.resources.data.resolve_loader(dd)
     pp = dd.loader_cls(dd).find_data(dd.path)
     
-    return str(pp)
+    return pp
 
 
 def texture_load(

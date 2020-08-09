@@ -172,6 +172,9 @@ class Label(Sprite):
 
             self.baseline = baseline / self.texture.height
 
+            if self._ay == 'baseline':
+                self.anchor.y = self.baseline
+
     def get_state(self):
         return dict(
             sprite = super(Label, self).get_state(),

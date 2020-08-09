@@ -32,12 +32,23 @@ import math
 import glm
 import os
 
+import numpy as np
+
 from .utils import abspath
 from .resource import texture_load, resolve_path
 from .model import Scene, Material, Light, Camera, Mesh, Primitive
 
 
 __all__ = ['load_blender_gltf']
+
+
+_cwds = set()
+
+
+def _relative(path):
+    for p in _cwds:
+        if path.startswith(p):
+            return path[len(p):].lstrip('\\')
 
 
 def load_blender_gltf(path):
@@ -52,7 +63,10 @@ def load_blender_gltf(path):
     Blender 2.83.
     """
 
-    g0 = gltflib.GLTF.load(resolve_path(path))
+    pp = resolve_path(path)
+    _cwds.add(str(pp.cwd()))
+
+    g0 = gltflib.GLTF.load(str(pp))
     s0 = g0.model.scenes[g0.model.scene]
     
     scene = Scene(s0.name)
@@ -109,7 +123,9 @@ def _load_blender_gltf_texture(g0, ti):
         i0 = g0.model.images[t0.source]
         r0 = [r for r in g0.resources if r._uri == i0.uri][0]
             
-        return texture_load(os.path.join(r0._basepath, r0.filename))
+        dirname = _relative(r0._basepath)
+
+        return texture_load(os.path.join(dirname, r0.filename))
 
 
 def _is_blender_gltf_light(g0, n0):
@@ -238,7 +254,7 @@ def _load_blender_gltf_primitive(g0, p0, materials):
     
     primitive = Primitive(
         material=materials[p0.material], 
-        indices=get_buffer0(g0, p0.indices, '')[-1],
+        indices=get_buffer0(g0, p0.indices)[0],
         vertices=get_buffer0(g0, p0.attributes.POSITION),
         normals=get_buffer0(g0, p0.attributes.NORMAL),
         coords=get_buffer0(g0, p0.attributes.TEXCOORD_0)
@@ -248,21 +264,30 @@ def _load_blender_gltf_primitive(g0, p0, materials):
     return primitive
 
 
-def get_buffer0(g0, ai, prefix=''):
-    
+def get_buffer0(g0, ai):    
     if ai is not None:
-        a0 = g0.model.accessors[ai]
-        fmt, data = get_buffer(g0, a0)  
-        return prefix + fmt, data
+        return get_buffer(g0, g0.model.accessors[ai])  
     
     
 def get_buffer(g0, a0):
     
-    t2f = {
-        'FLOAT': 'f',
-        'UNSIGNED_SHORT': 'HS',
-        'UNSIGNED_INT': 'I',
-    }
+    t2s = dict(
+        BYTE = 'b',
+        UNSIGNED_BYTE = 'B',
+        SHORT = 'h',
+        UNSIGNED_SHORT = 'H',
+        UNSIGNED_INT = 'I',
+        FLOAT = 'f',
+    )
+    
+    t2f = dict(
+        BYTE = 'i1',
+        UNSIGNED_BYTE = 'u1',
+        SHORT = 'i2',
+        UNSIGNED_SHORT = 'u2',
+        UNSIGNED_INT = 'u4',
+        FLOAT = 'f4',
+    )
     
     t2n = {
         'SCALAR': '1',
@@ -272,7 +297,7 @@ def get_buffer(g0, a0):
     }
     
     ctn = gltflib.ComponentType._value2member_map_[a0.componentType].name
-    fmt = t2n[a0.type] + t2f[ctn][-1]
+    fmt = t2n[a0.type] + t2f[ctn]
     
     v0 = g0.model.bufferViews[a0.bufferView]
     b0 = g0.model.buffers[v0.buffer]
@@ -283,8 +308,7 @@ def get_buffer(g0, a0):
         
     ao = a0.byteOffset or 0
     d0 = r0.data[ao + v0.byteOffset: ao + v0.byteOffset + v0.byteLength]
-
-    data = [s[0] for s in struct.Struct(t2f[ctn][0]).iter_unpack(d0)]   
+    data = np.frombuffer(d0, fmt[1:])   
     
-    return fmt, data
+    return data, fmt
 

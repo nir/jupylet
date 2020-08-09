@@ -27,6 +27,7 @@
 
 # Search pattern for gl instances: \bgl(?!m\b|tf|sl|int|uint|obal|ob\b| ).*
 
+import moderngl
 import logging
 import weakref
 import glob
@@ -39,6 +40,9 @@ import PIL.Image
 from .lru import _lru_textures, _lru_materials, _MAX_TEXTURES, _MAX_MATERIALS
 from .node import Object, Node
 from .resource import get_shader_3d, pil_from_texture, get_context
+
+
+logger = logging.getLogger(__name__)
 
 
 class Scene(Object):
@@ -84,26 +88,26 @@ class Scene(Object):
         shader._members['nlights'].value = len(self.lights)
         
         if self.shadows and any(l.shadows for l in self.lights.values()):
-            self.render_shadowmaps(shader)
+            self.render_shadowmaps(shader)            
             shader._members['shadowmap_pass'].value = 2 
+            fbo.use()
+
         else:
             shader._members['shadowmap_pass'].value = 0
 
         for light in self.lights.values():
             light.set_state(shader, self.shadows)
-        
+
         for camera in self.cameras.values():
             camera.set_state(shader)
-                
-        fbo.use()
 
         for mesh in self.meshes.values():
             mesh.draw(shader)
 
-    def render_shadowmaps(self, shader)
+    def render_shadowmaps(self, shader):
     
         ctx = get_context()
-        ctx.enable_only(moderngl.DEPTH_TEST)
+        ctx.disable(moderngl.CULL_FACE)
 
         if self.cubemap:
             self.cubemap.hide = True
@@ -113,6 +117,8 @@ class Scene(Object):
 
         camera = list(self.cameras.values())[0]
         camera_position = glm.vec4(camera.position, 1.0)
+
+        width, height = ctx.fbo.size 
 
         zfar = camera.zfar
         yfov = math.sin(camera.yfov) * zfar
@@ -202,6 +208,8 @@ class Material(Object):
 
     def set_state(self, shader):
             
+        ctx = get_context()
+
         shader._members['material'].value = self._mslot
 
         _, _, self._mslot, mnew = _lru_materials.allocate(self._mlid)
@@ -220,7 +228,8 @@ class Material(Object):
 
             if isinstance(self.color, moderngl.texture.Texture):
                 
-                self.color.use(self._cslot)
+                ctx.clear_samplers(self._cslot, self._cslot+1)
+                self.color.use(location=self._cslot)
                 
                 shader._members['textures[%s].t' % self._cslot].value = self._cslot
                 shader._members[material + 'color_texture'].value = self._cslot
@@ -233,7 +242,8 @@ class Material(Object):
                 shader._members[material + 'normals_scale'].value = self.normals_scale
                 shader._members[material + 'normals_gamma'].value = self.normals_gamma
 
-                self.normals.use(self._nslot)
+                ctx.clear_samplers(self._nslot, self._nslot+1)
+                self.normals.use(location=self._nslot)
                 
                 shader._members['textures[%s].t' % self._nslot].value = self._nslot
                 shader._members[material + 'normals_texture'].value = self._nslot
@@ -242,7 +252,8 @@ class Material(Object):
                     
             if isinstance(self.emissive, moderngl.texture.Texture):
                 
-                self.emissive.use(self._eslot)
+                ctx.clear_samplers(self._eslot, self._eslot+1)
+                self.emissive.use(location=self._eslot)
                 
                 shader._members['textures[%s].t' % self._eslot].value = self._eslot
                 shader._members[material + 'emissive_texture'].value = self._eslot
@@ -252,7 +263,8 @@ class Material(Object):
 
             if isinstance(self.roughness, moderngl.texture.Texture):
                 
-                self.roughness.use(self._rslot)
+                ctx.clear_samplers(self._rslot, self._rslot+1)
+                self.roughness.use(location=self._rslot)
                 
                 shader._members['textures[%s].t' % self._rslot].value = self._rslot
                 shader._members[material + 'roughness_texture'].value = self._rslot
@@ -376,12 +388,12 @@ class Light(Node):
             self._dirty.clear()
                             
             shader._members[prefix + 'type'].value = LIGHT_TYPE[self.type]
-            shader._members[prefix + 'color'].value = self.color
+            shader._members[prefix + 'color'].value = tuple(self.color)
             shader._members[prefix + 'intensity'].value = self.intensity
             shader._members[prefix + 'ambient'].value = self.ambient
             
-            shader._members[prefix + 'position'].value = self.position
-            shader._members[prefix + 'direction'].value = self.front
+            shader._members[prefix + 'position'].value = tuple(self.position)
+            shader._members[prefix + 'direction'].value = tuple(self.front)
             
             shader._members[prefix + 'inner_cone'].value = math.cos(self.inner_cone)
             shader._members[prefix + 'outer_cone'].value = math.cos(self.outer_cone)
@@ -519,8 +531,8 @@ class Camera(Node):
                 self.zfar
             )
 
-            shader._members['view'].value = flatten(self._view0)
-            shader._members['camera.position'].value = self.position
+            shader._members['view'].write(self._view0)
+            shader._members['camera.position'].value = tuple(self.position)
 
             shader._members['projection'].write(self._proj0)
             shader._members['camera.zfar'].value = self.zfar
@@ -540,32 +552,32 @@ class Mesh(Node):
         self.shadow_bias = 0
         self.hide = False
         
-        self.parent = weakref.proxy(parent) if parent else None
+        self._parent = weakref.proxy(parent) if parent else None
 
     def add_primitive(self, primitive):
         self.primitives.append(primitive)
         
     def composed_matrix(self):
         
-        if self.parent is None:
+        if self._parent is None:
             return self.matrix
 
-        return self.parent.composed_matrix() * self.matrix 
+        return self._parent.composed_matrix() * self.matrix 
 
     def draw(self, shader):
-        
+        #logger.debug('Enter Mesh.draw(shader=%r).', shader)
+
         if self.hide:
-            pass #return self._group
+            return 
 
         shader._members['shadow_bias'].value = self.shadow_bias
         shader._members['model'].write(self.composed_matrix())
         
-    def unset_state(self):
+        for p in self.primitives:
+            p.draw(shader)
 
-        if self.hide:
-            return
-
-        self._dirty.clear()
+        for c in self.children.values():
+            c.draw(shader)
 
     
 class Primitive(Object):
@@ -575,34 +587,63 @@ class Primitive(Object):
         super(Primitive, self).__init__()
         
         self.material = material
+        self.nvertices = len(vertices[0]) // 3
+        self.content = []
+        self.has_uvs = coords is not None
+        self.shader = None
+        self.vao = None
 
-        self._indices = indices
-        self._vertices = vertices
-        self._normals = normals
-        self._coords = coords
-        
-        self.nvertices = len(self._vertices[1]) // 3
-        self.has_uvs = self._coords is not None
-       
-        #self._group = Group(self)
-        
-    """def batch_add(self, batch):
+        ctx = get_context()
 
-        vl = [self._vertices, self._normals, self._coords]
-        vl = [('%sg%s' % (i, fv[0]), fv[1]) for i, fv in enumerate(vl) if fv]
+        self.indices = ctx.buffer(indices.astype('i4'))
+
+        if vertices: 
+            data, fmt = vertices
+            self.content.append((ctx.buffer(data), fmt, 'position'))
         
-        batch.add_indexed(self.nvertices, GL_TRIANGLES, self._group, self._indices, *vl)"""
-        
-    def set_state(self):
-        shader = pass #self._group.shader
+        if normals:
+            data, fmt = normals
+            self.content.append((ctx.buffer(data), fmt, 'normal'))
+
+        if coords:
+            data, fmt = coords
+            self.content.append((ctx.buffer(data), fmt, 'uv'))
+
+    def __del__(self):
+
+        if self.vao is not None:
+            self.vao.release()
+
+        self.indices.release()
+
+        for b, f, n in self.content:
+            b.release()
+
+    def draw(self, shader):
+        #logger.debug('Enter Primitive.draw(shader=%r).', shader)
+
         if shader.extra.get('shadowmap_pass') != 1:
             self.material.set_state(shader)
-        
-    def unset_state(self):
-        pass 
-        #if self._group.shader.extra.get('shadowmap_pass') != 1:
-        #    self.material.unset_state()
 
+        vao = self.get_vao(shader)
+        vao.render()
+
+    def get_vao(self, shader):
+
+        if self.shader is not shader:
+            self.shader = shader
+            if self.vao:
+                self.vao.release()
+
+            ctx = get_context()
+            self.vao = ctx.vertex_array(
+                self.shader, 
+                self.content, 
+                self.indices
+            )
+
+        return self.vao
+        
 
 class CubeMap(Object):
     
@@ -613,7 +654,7 @@ class CubeMap(Object):
         # TODO: Replace with moderngl geometry.
         #scene = None #load_blender_gltf(abspath('./assets/cube.gltf'))
 
-        self.cube = pass #scene.meshes['CubeMap']
+        self.cube = None #scene.meshes['CubeMap']
         self.path = path
         self.hide = False
 
@@ -630,7 +671,7 @@ class CubeMap(Object):
         if self.hide:
             return #self._group
 
-        shader = pass #self._group.shader
+        shader = None #self._group.shader
 
         shader._members['cubemap.render_cubemap'].value = True
 
