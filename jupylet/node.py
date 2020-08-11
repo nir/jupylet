@@ -145,14 +145,11 @@ class Node(Object):
         return self._matrix
 
     def move_local(self, xyz):
-
         rxyz = glm.mat4_cast(self.rotation) * glm.vec4(xyz, 1.)
         self.position += rxyz.xyz
         
     def rotate_local(self, angle, axis=(0., 0., 1.)):
-
-        axis = glm.mat4_cast(self.rotation) * glm.vec4(axis, 1.)
-        self.rotation *= aa2q(angle, axis.xyz)
+        self.rotation *= aa2q(angle, glm.vec3(axis))
             
     def move_global(self, xyz):
         self.position += xyz

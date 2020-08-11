@@ -257,8 +257,8 @@ class App(EventLeg, ClockLeg):
             0, width, 0, height, -1, 1
         ))
 
-        self.ctx.enable(moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.CULL_FACE)
         set_context(self.ctx)
+        self.set2d()
 
         self._use_shm = False
         self._shm = None
@@ -469,6 +469,12 @@ class App(EventLeg, ClockLeg):
     def get_logging_widget(self, height='256px', quiet_default_logger=True):
         return get_logging_widget(height, quiet_default_logger)
 
+    def set2d(self):
+        self.ctx.enable_only(moderngl.BLEND)
+
+    def set3d(self):
+        self.ctx.enable_only(moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.CULL_FACE)
+        
 
 def _b2i(buffer, size, format='RGBA'):
     """Convert bytes buffer to PIL image."""

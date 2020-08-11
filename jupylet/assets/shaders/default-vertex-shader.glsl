@@ -118,7 +118,6 @@ void main()
             return;
         }
 
-
         float d0 = length(frag_position - lights[li].position);
 
         bias *= 2 * lights[li].snear / d0;
@@ -137,12 +136,13 @@ void main()
 
         gl_Position = projection * view * model * vec4(position, 1.0);
         gl_Position = gl_Position.xyww;
+
+        vert_position = position;
     }
     else {
         gl_Position = projection * frag_view;
     }
     
-    vert_position = position;
     frag_position = vec3(mp4);
     frag_normal = mat3(transpose(inverse(model))) * normal;
     frag_uv = vec2(uv.x, 1.0 - uv.y);

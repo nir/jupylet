@@ -319,12 +319,12 @@ class JupyterWindow(Window):
         self._on_key('on_key_release', code, key, ctrl_key, alt_key, shift_key, meta_key)
         
     def _on_key(self, event_type, code, key, ctrl_key, alt_key, shift_key, meta_key):
+        logger.info('Enter JupyterWindow._on_key(event_type=%r, code=%r, key=%r, ctrl_key=%r, alt_key=%r, shift_key=%r, meta_key=%r).', event_type, code, key, ctrl_key, alt_key, shift_key, meta_key)
 
         modifiers = 0
-        modifiers |= alt_key or 0 and pyglet.window.key.MOD_ALT
-        modifiers |= ctrl_key or 0 and pyglet.window.key.MOD_CTRL
-        modifiers |= shift_key or 0 and pyglet.window.key.MOD_SHIFT
-        modifiers |= meta_key or 0 and pyglet.window.key.MOD_WINDOWS
+        modifiers |= (alt_key or 0) and pyglet.window.key.MOD_ALT
+        modifiers |= (ctrl_key or 0) and pyglet.window.key.MOD_CTRL
+        modifiers |= (shift_key or 0) and pyglet.window.key.MOD_SHIFT
         
         symbol = self._code2symbol(code)
 
@@ -362,9 +362,9 @@ class JupyterWindow(Window):
         }[button]
         
         modifiers = 0
-        modifiers |= alt_key or 0 and pyglet.window.key.MOD_ALT
-        modifiers |= ctrl_key or 0 and pyglet.window.key.MOD_CTRL
-        modifiers |= shift_key or 0 and pyglet.window.key.MOD_SHIFT
+        modifiers |= (alt_key or 0) and pyglet.window.key.MOD_ALT
+        modifiers |= (ctrl_key or 0) and pyglet.window.key.MOD_CTRL
+        modifiers |= (shift_key or 0) and pyglet.window.key.MOD_SHIFT
         
         self.dispatch_event(event_type, x, y, button, modifiers)
 
@@ -373,10 +373,15 @@ class JupyterWindow(Window):
         
         code = re.sub(r'Arrow(Up|Right|Down|Left)', r'\1', code)
         code = re.sub(r'Digit(\d)', r'_\1', code)
-        code = re.sub(r'(\w+)(L|R)(?:eft|ight)|(?:Key(\w))', r'\2\1\3', code)
+        code = re.sub(r'Key(\w)', r'\1', code)
+        code = re.sub(r'(\w+)(L|R)(?:eft|ight)', r'\2\1', code)
+        code = re.sub(r'Control', 'CTRL', code)
         code = code.upper()
 
         symbol = getattr(pyglet.window.key, code, None)
+
+        logger.info('In JupyterWindow._code2symbol() code=%r, symbol=%r.', code, symbol)
+        
         if type(symbol) is int:
             return symbol
 

@@ -383,6 +383,8 @@ class Light(Node):
                     shader._members['textures[%s].t' % sm['slot']].value = sm['slot']
                     shader._members[prefix + 'shadowmap_textures[%s].t' % i].value = sm['slot']
 
+        _trigger_dirty_flat = self.matrix
+
         if self._dirty:
 
             self._dirty.clear()
@@ -521,6 +523,8 @@ class Camera(Node):
         dirty = self._aspect != width / height
         self._aspect = width / height
                     
+        _trigger_dirty_flat = self.matrix
+
         if dirty or self._dirty:
 
             self._view0 = glm.lookAt(self.position, self.position - self.front, self.up)

@@ -125,7 +125,7 @@ def _load_blender_gltf_texture(g0, ti):
             
         dirname = _relative(r0._basepath)
 
-        return texture_load(os.path.join(dirname, r0.filename))
+        return texture_load(os.path.join(dirname, r0.filename), flip=True)
 
 
 def _is_blender_gltf_light(g0, n0):
