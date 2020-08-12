@@ -25,26 +25,29 @@
 """
 
 
+import logging
 import random
 import struct
 import time
+import glm
 import sys
 import os
 
 sys.path.insert(0, os.path.abspath('./..'))
 
-import glm
-
-import pyglet.window.key as key
-
 from jupylet.label import Label
-from jupylet.app import App, State
-from jupylet.model import load_blender_gltf
+from jupylet.app import App
+from jupylet.state import State
+from jupylet.loader import load_blender_gltf
+
+
+logger = logging.getLogger()
 
 
 app = App(768, 512)
 
 scene = load_blender_gltf('./scenes/lego/lego.gltf')
+scene.shadows = True
 
 camera = scene.cameras['Camera']
 
@@ -73,52 +76,45 @@ state = State(
 
 
 @app.event
-def on_key_press(symbol, modifiers):
-    on_key(symbol, modifiers, True)
-
-
-@app.event
-def on_key_release(symbol, modifiers):
-    on_key(symbol, modifiers, False)
+def key_event(key, action, modifiers):
+    logger.info('Enter key_event(key=%r, action=%r, modifiers=%r).', key, action, modifiers)
     
+    keys = app.window.keys
 
-def on_key(symbol, modifiers, value):
+    value = action == keys.ACTION_PRESS
     
-    if symbol == key.SPACE:
-        state.lv *= 0
-        state.av *= 0
-
-    if symbol == key.CAPSLOCK and value:
+    if key == keys.CAPS_LOCK and value:
         state.capslock = not state.capslock
         
-    if symbol == key.LALT:
-        state.alt = value
+    state.alt = modifiers.alt        
+    state.shift = modifiers.shift
         
-    if symbol == key.LSHIFT:
-        state.shift = value
+    if key == keys.SPACE:
+        state.lv *= 0.
+        state.av *= 0.
         
-    if symbol == key.UP:
+    if key == keys.UP:
         state.up = value
         
-    if symbol == key.DOWN:
+    if key == keys.DOWN:
         state.down = value
         
-    if symbol == key.LEFT:
+    if key == keys.LEFT:
         state.left = value
         
-    if symbol == key.RIGHT:
+    if key == keys.RIGHT:
         state.right = value
         
-    if symbol == key.W:
+    if key == keys.W:
         state.key_w = value
         
-    if symbol == key.S:
+    if key == keys.S:
         state.key_s = value    
         
-    if symbol == key.A:
+    if key == keys.A:
         state.key_a = value
         
-    if symbol == key.D:
+    if key == keys.D:
         state.key_d = value
 
 
@@ -127,8 +123,9 @@ obj = brick if state.capslock else camera
 linear_acceleration = 1 / 2
 angular_acceleration = 1 / 24
 
-@app.run_me_again_and_again(1/48)
-def move_object(dt):
+
+@app.run_me_many(1/48)
+def move_object(ct, dt):
         
     global obj
     
@@ -171,8 +168,8 @@ def move_object(dt):
     if state.key_d:
         state.lv.x -= linear_acceleration * sign
         
-    state.lv = glm.clamp(state.lv, -10, 10)
-    state.av = glm.clamp(state.av, -10, 10)
+    state.lv = glm.clamp(state.lv, -64, 64)
+    state.av = glm.clamp(state.av, -64, 64)
     
     obj.move_local(dt * state.lv)
     
@@ -189,25 +186,21 @@ label1 = Label('Hello World!', color='white', font_size=12, x=10, y=52)
 label2 = Label('Hello World!', color='white', font_size=12, x=10, y=30)
 label3 = Label('Hello World!', color='white', font_size=12, x=10, y=8)
 
-hello_world = Label('Hello World 3D!', color='cyan', font_size=16, x=600, y=10)
+hello_world = Label('hello, world 3D!', color='cyan', font_size=16, x=600, y=10)
 
 
 dtl = [0]
 
 @app.event
-def on_draw():
+def render(ct, dt):
         
     app.window.clear()
-    app.set3d()    
-    
-    t0 = time.time()
-    
+        
     scene.draw()
     
-    dtl.append(0.98 * dtl[-1] + 0.02 * (time.time() - t0))
+    dtl.append(0.98 * dtl[-1] + 0.02 * app._time2draw)
     dtl[:] = dtl[-256:]
     
-    app.set2d()
             
     label0.text = 'time to draw - %.2f ms' % (1000 * dtl[-1])
     label1.text = 'up - %r' % obj.up
@@ -220,17 +213,6 @@ def on_draw():
     label3.draw()  
 
     hello_world.draw()
-
-
-scene.lights['Light.Sun'].intensity = 0.5
-scene.lights['Light.Spot'].intensity = 60
-scene.lights['Light.Point'].intensity = 80
-
-scene.shadows = True
-
-scene.lights['Light.Point'].shadows = True
-scene.lights['Light.Spot'].shadows = True
-scene.lights['Light.Sun'].shadows = True
 
 
 if __name__ == '__main__':

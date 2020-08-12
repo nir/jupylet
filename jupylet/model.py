@@ -34,12 +34,15 @@ import glob
 import math
 import glm
 
-import numpy as np
 import PIL.Image
+
+import moderngl_window.geometry as geometry
+import numpy as np
 
 from .lru import _lru_textures, _lru_materials, _MAX_TEXTURES, _MAX_MATERIALS
 from .node import Object, Node
 from .resource import get_shader_3d, pil_from_texture, get_context
+from .resource import resolve_glob_path, unresolve_path, load_texture_cube
 
 
 logger = logging.getLogger(__name__)
@@ -59,11 +62,8 @@ class Scene(Object):
         self.materials = {}
         
         self.shadows = shadows
-        self.cubemap = None
-        self.hdri = None
 
-    def add_cubemap(self, path, intensity=1.0):
-        self.cubemap = CubeMap(path, intensity)
+        self.cubemap = None
 
     def add_material(self, material):
         self.materials[material.name] = material
@@ -81,6 +81,8 @@ class Scene(Object):
     def draw(self, shader=None):
         
         ctx = get_context()
+        ctx.enable_only(moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.CULL_FACE)
+
         fbo = ctx.fbo
 
         shader = shader or get_shader_3d()
@@ -101,6 +103,9 @@ class Scene(Object):
         for camera in self.cameras.values():
             camera.set_state(shader)
 
+        if self.cubemap is not None:
+            self.cubemap.draw(shader)
+            
         for mesh in self.meshes.values():
             mesh.draw(shader)
 
@@ -109,9 +114,6 @@ class Scene(Object):
         ctx = get_context()
         ctx.disable(moderngl.CULL_FACE)
 
-        if self.cubemap:
-            self.cubemap.hide = True
-            
         shader.extra['shadowmap_pass'] = 1
         shader._members['shadowmap_pass'].value = 1
 
@@ -148,9 +150,6 @@ class Scene(Object):
         
         shader.extra['shadowmap_pass'] = 0
 
-        if self.cubemap:
-            self.cubemap.hide = False
-            
         ctx.enable(moderngl.CULL_FACE)
     
 
@@ -603,15 +602,15 @@ class Primitive(Object):
 
         if vertices: 
             data, fmt = vertices
-            self.content.append((ctx.buffer(data), fmt, 'position'))
+            self.content.append((ctx.buffer(data), fmt, 'in_position'))
         
         if normals:
             data, fmt = normals
-            self.content.append((ctx.buffer(data), fmt, 'normal'))
+            self.content.append((ctx.buffer(data), fmt, 'in_normal'))
 
         if coords:
             data, fmt = coords
-            self.content.append((ctx.buffer(data), fmt, 'uv'))
+            self.content.append((ctx.buffer(data), fmt, 'in_texcoord_0'))
 
     def __del__(self):
 
@@ -651,108 +650,59 @@ class Primitive(Object):
 
 class CubeMap(Object):
     
-    def __init__(self, path, intensity=1.0):
+    def __init__(self, path, flip=False, flip_left_right=False, intensity=1.0):
         
         super(CubeMap, self).__init__()
         
-        # TODO: Replace with moderngl geometry.
-        #scene = None #load_blender_gltf(abspath('./assets/cube.gltf'))
+        ctx = get_context()
 
-        self.cube = None #scene.meshes['CubeMap']
         self.path = path
+        #self.smpl = ctx.sampler(compare_func='<=')
+        self.cube = geometry.cube(size=(1, 1, 1))
         self.hide = False
-
+                
         self._items = dict(
             intensity = intensity,
-            texture_id = self.load(path, False),
+            texture = load_texture_cube(
+                path, 
+                flip=flip, 
+                flip_left_right=flip_left_right
+            ),
         )
 
-        #self._group = Group(self)
-        #self.cube._group.parent = self._group
-
-    def set_state(self):
+    def draw(self, shader=None):
                 
         if self.hide:
-            return #self._group
+            return 
 
-        shader = None #self._group.shader
+        ctx = get_context()
 
-        shader._members['cubemap.render_cubemap'].value = True
+        ccw = ctx.front_face
+        ctx.front_face = 'cw'
+        ctx.disable(moderngl.DEPTH_TEST)
 
-        glCullFace(GL_FRONT)
-        glDepthFunc(GL_LEQUAL)   
+        #glDepthFunc(GL_LEQUAL)   
         
+        shader = shader or get_shader_3d()
+        shader._members['cubemap.render_cubemap'].value = 1
+
         if self._dirty:
             
-            glActiveTexture(GL_TEXTURE0)
-            glBindTexture(GL_TEXTURE_CUBE_MAP, self.texture_id)
-
             shader._members['cubemap.intensity'].value = self.intensity
-            shader._members['cubemap.texture_exists'].value = True
-            shader._members['cubemap.texture'].value = 0
+            shader._members['cubemap.texture_exists'].value = 1
+            shader._members['cubemap.texture'].value = 30
+
+            #self.smpl.use(location=30)
+            self.texture.use(location=30)
 
             self._dirty.clear()
 
-    def unset_state(self):
+        self.cube.render(shader)
 
-        if self.hide:
-            return
+        shader._members['cubemap.render_cubemap'].value = 0
 
-        pass #self._group.shader._members['cubemap.render_cubemap'].value = False
+        ctx.enable(moderngl.DEPTH_TEST)
+        ctx.front_face = ccw
 
-        glDepthFunc(GL_LESS)        
-        glCullFace(GL_BACK) 
-
-    def load(self, path, update_shader=True):
-        
-        paths = set(glob.glob(path))
-
-        tid = GLuint()
-        glGenTextures(1, ctypes.byref(tid))
-        glBindTexture(GL_TEXTURE_CUBE_MAP, tid.value)
-
-        faces = {
-            'right': 'RT',
-            'left': 'LF',
-            'bottom': 'DN', # Bottom and top should actually be reversed...
-            'top': 'UP',
-            'front': 'FT',
-            'back': 'BK',
-        }
-
-        def get_face_path(face, paths):
-            return [p for p in paths if faces[face] in p][0]
-
-        for i, face in enumerate(faces):
-        
-            path = get_face_path(face, paths)
-            
-            im = PIL.Image.open(path)
-            b0 = im.tobytes("raw", "RGB", 0, -1)
-            w0, h0 = im.size
-            
-            glTexImage2D(
-                GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 
-                0, 
-                GL_RGB, 
-                w0, 
-                h0, 
-                0, 
-                GL_RGB, 
-                GL_UNSIGNED_BYTE, 
-                b0
-            )
-    
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
-
-        if update_shader:
-            self.path = path
-            self.texture_id = tid
-
-        return tid
+        #glDepthFunc(GL_LESS)        
 

@@ -35,20 +35,11 @@ import os
 import numpy as np
 
 from .utils import abspath
-from .resource import texture_load, resolve_path
+from .resource import load_texture, resolve_path, unresolve_path
 from .model import Scene, Material, Light, Camera, Mesh, Primitive
 
 
 __all__ = ['load_blender_gltf']
-
-
-_cwds = set()
-
-
-def _relative(path):
-    for p in _cwds:
-        if path.startswith(p):
-            return path[len(p):].lstrip('\\')
 
 
 def load_blender_gltf(path):
@@ -64,8 +55,6 @@ def load_blender_gltf(path):
     """
 
     pp = resolve_path(path)
-    _cwds.add(str(pp.cwd()))
-
     g0 = gltflib.GLTF.load(str(pp))
     s0 = g0.model.scenes[g0.model.scene]
     
@@ -123,9 +112,9 @@ def _load_blender_gltf_texture(g0, ti):
         i0 = g0.model.images[t0.source]
         r0 = [r for r in g0.resources if r._uri == i0.uri][0]
             
-        dirname = _relative(r0._basepath)
+        dirname = unresolve_path(r0._basepath)
 
-        return texture_load(os.path.join(dirname, r0.filename), flip=True)
+        return load_texture(os.path.join(dirname, r0.filename), flip=True)
 
 
 def _is_blender_gltf_light(g0, n0):

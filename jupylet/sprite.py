@@ -37,7 +37,7 @@ import moderngl_window as mglw
 import numpy as np
 
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
-from .resource import texture_load, pil_from_texture, get_shader_2d
+from .resource import load_texture, pil_from_texture, get_shader_2d
 from .utils import glm_dumps, glm_loads
 from .color import c2v
 from .state import State
@@ -86,7 +86,7 @@ class Sprite(Node):
             pos=(0.5, 0.5)
         )
 
-        self.texture = texture_load(
+        self.texture = load_texture(
             img,
             anisotropy=anisotropy, 
             autocrop=autocrop,
@@ -227,7 +227,7 @@ class Sprite(Node):
         scale = self.scale
 
         self.texture.release()
-        self.texture = texture_load(
+        self.texture = load_texture(
             img,
             anisotropy=self.anisotropy, 
             autocrop=self.autocrop,

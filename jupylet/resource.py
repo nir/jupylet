@@ -27,7 +27,10 @@
 
 import moderngl
 import pathlib
+import glob
 import io
+import os
+import re
 
 import PIL.Image
 
@@ -35,7 +38,10 @@ import numpy as np
 
 import moderngl_window as mglw
 
+import moderngl_window.loaders.texture.cube
+
 from moderngl_window.meta import TextureDescription, DataDescription
+from moderngl_window.conf import settings
 
 
 _context = None
@@ -84,16 +90,129 @@ def register_dir(path):
     mglw.resources.register_dir(pathlib.Path(path).absolute())
 
 
+_dirs = set()
+
+
+def unresolve_path(path):
+    """Attempt to unresolve absolute path back to reource relative."""
+
+    path = str(pathlib.Path(path))
+
+    for p in _dirs:
+        if path.startswith(p):
+            return path[len(p):].lstrip('\\/')
+
+
 def resolve_path(path):
 
     dd = DataDescription(path=path, kind='binary')
     mglw.resources.data.resolve_loader(dd)
     pp = dd.loader_cls(dd).find_data(dd.path)
     
+    p0 = pathlib.Path(path)
+    p1 = str(pp)[: -len(str(p0))]
+
+    _dirs.add(p1)
+
     return pp
 
 
-def texture_load(
+def resolve_glob_path(path):
+    
+    dirname, basename = os.path.split(path)
+    dirname = resolve_path(dirname)
+    path = os.path.join(dirname, basename)
+
+    return glob.glob(path)
+
+
+class CubeLoader0(moderngl_window.loaders.texture.cube.Loader):
+
+    def _load_texture(self, path):
+
+        switch = self.meta._kwargs['flip_left_right'] and path in [self.meta.pos_y, self.meta.neg_y]
+
+        if switch:
+            self.meta._kwargs['flip'], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs['flip']
+
+        #print(repr(self.meta._kwargs))
+        image = super(CubeLoader0, self)._load_texture(path)
+        if self.meta._kwargs.get('flip_left_right'):
+            image = image.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+
+        if switch:
+            self.meta._kwargs['flip'], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs['flip']
+
+        return image
+
+
+def _init_loaders():
+
+    loaders = settings.TEXTURE_LOADERS
+    if any('CubeLoader0' in l for l in loaders):
+        return
+
+    loaders[:] = [l for l in loaders if 'cube' not in l]
+    loaders.append('moderngl_window.loaders.texture.cube.CubeLoader0')
+
+    moderngl_window.loaders.texture.cube.CubeLoader0 = CubeLoader0
+
+
+def load_texture_cube(
+    path,
+    flip=False,
+    mipmap=False,
+    anisotropy=1.0,
+    flip_left_right=False,
+    **kwargs
+) -> moderngl.TextureCube:
+    """Loads a texture cube.
+
+    Keyword Args:
+        path (str): Glob pattern path to images for each face of the cubemap.
+        mipmap (bool): Generate mipmaps. Will generate max possible levels unless
+                        `mipmap_levels` is defined.
+        anisotropy (float): Number of samples for anisotropic filtering
+        **kwargs: Additional parameters to TextureDescription
+    Returns:
+        moderngl.TextureCube: Texture instance
+    """
+
+    _init_loaders()
+
+    paths = resolve_glob_path(path)
+    paths = [unresolve_path(p) for p in paths]
+
+    k2k = dict(
+        RT = 'pos_x', posx = 'pos_x',
+        UP = 'pos_y', posy = 'pos_y',
+        BK = 'pos_z', posz = 'pos_z',
+        LF = 'neg_x', negx = 'neg_x',
+        DN = 'neg_y', negy = 'neg_y',
+        FT = 'neg_z', negz = 'neg_z',    
+    )
+
+    ptn = r'^(.*?(BK|DN|FT|LF|RT|UP|pos[xyz]|neg[xyz])[^\\/]*)$'
+    f2p = [re.match(ptn, p).groups() for p in paths]
+    f2p = {k2k[k]:v for v, k in f2p}
+
+    return mglw.resources.textures.load(TextureDescription(
+        pos_x=f2p['pos_x'],
+        pos_y=f2p['pos_y'],
+        pos_z=f2p['pos_z'],
+        neg_x=f2p['neg_x'],
+        neg_y=f2p['neg_y'],
+        neg_z=f2p['neg_z'],
+        flip=flip,
+        flip_left_right=flip_left_right,
+        mipmap=mipmap,
+        anisotropy=anisotropy,
+        kind='cube',
+        **kwargs,
+    ))
+
+
+def load_texture(
     o, 
     anisotropy=8.0, 
     autocrop=False,

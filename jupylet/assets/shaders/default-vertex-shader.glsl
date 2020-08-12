@@ -1,8 +1,8 @@
 #version 330 core
 
-in vec3 position;
-in vec3 normal;
-in vec2 uv;
+in vec3 in_position;
+in vec3 in_normal;
+in vec2 in_texcoord_0;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -86,7 +86,7 @@ uniform int shadowmap_light;
 
 void main()
 {
-    vec4 mp4 = model * vec4(position, 1.0);
+    vec4 mp4 = model * vec4(in_position, 1.0);
 
     if (shadowmap_pass == 1) {
         
@@ -104,7 +104,7 @@ void main()
             light_direction = normalize(lights[li].position - frag_position);
         }
 
-        frag_normal = normalize(mat3(transpose(inverse(model))) * normal);
+        frag_normal = normalize(mat3(transpose(inverse(model))) * in_normal);
 
         float nl = dot(frag_normal, light_direction);
         if (nl < 0.001) {
@@ -134,18 +134,18 @@ void main()
         mat4 model = mat4(1.0);
         model[3].xyz = camera.position;
 
-        gl_Position = projection * view * model * vec4(position, 1.0);
-        gl_Position = gl_Position.xyww;
+        gl_Position = projection * view * model * vec4(in_position, 1.0);
+        gl_Position = gl_Position.xyzw;
 
-        vert_position = position;
+        vert_position = in_position;
     }
     else {
         gl_Position = projection * frag_view;
     }
     
     frag_position = vec3(mp4);
-    frag_normal = mat3(transpose(inverse(model))) * normal;
-    frag_uv = vec2(uv.x, 1.0 - uv.y);
+    frag_normal = mat3(transpose(inverse(model))) * in_normal;
+    frag_uv = vec2(in_texcoord_0.x, 1.0 - in_texcoord_0.y);
 
     //if (shadowmap_pass == 2) {
     //    for (int i = 0; i < nlights; i++) {

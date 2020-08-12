@@ -337,7 +337,7 @@ void main() {
     }
     
     if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
-        FragColor = cubemap.intensity * texture(cubemap.texture, vert_position);
+        FragColor = cubemap.intensity * texture(cubemap.texture, normalize(vert_position));
         return;
     }
 

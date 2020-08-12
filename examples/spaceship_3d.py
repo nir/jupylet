@@ -25,21 +25,24 @@
 """
 
 
+import logging
 import random
 import struct
 import time
+import glm
 import sys
 import os
 
 sys.path.insert(0, os.path.abspath('./..'))
 
-import glm
-
-import pyglet.window.key as key
-
 from jupylet.label import Label
-from jupylet.app import App, State
-from jupylet.model import load_blender_gltf
+from jupylet.app import App
+from jupylet.state import State
+from jupylet.model import CubeMap
+from jupylet.loader import load_blender_gltf
+
+
+logger = logging.getLogger()
 
 
 if __name__ == '__main__':
@@ -47,11 +50,12 @@ if __name__ == '__main__':
 else:
     mode = 'hidden'
 
-app = App(768, 512, mode=mode)
+app = App(768, 512, mode=mode)#, log_level=logging.INFO)
+
 
 scene = load_blender_gltf('./scenes/moon/alien-moon.gltf')
 
-scene.add_cubemap('./scenes/moon/nebula/nebula*.png', 2.)
+scene.cubemap = CubeMap('./scenes/moon/nebula/nebula*.png', intensity=2., flip_left_right=True)
 
 scene.shadows = True
 
@@ -87,52 +91,45 @@ state = State(
 
 
 @app.event
-def on_key_press(symbol, modifiers):
-    on_key(symbol, modifiers, True)
-
-
-@app.event
-def on_key_release(symbol, modifiers):
-    on_key(symbol, modifiers, False)
+def key_event(key, action, modifiers):
+    logger.info('Enter key_event(key=%r, action=%r, modifiers=%r).', key, action, modifiers)
     
+    keys = app.window.keys
 
-def on_key(symbol, modifiers, value):
+    value = action == keys.ACTION_PRESS
     
-    if symbol == key.CAPSLOCK and value:
+    if key == keys.CAPS_LOCK and value:
         state.capslock = not state.capslock
         
-    if symbol == key.SPACE:
+    state.alt = modifiers.alt        
+    state.shift = modifiers.shift
+        
+    if key == keys.SPACE:
         state.lv *= 0.
         state.av *= 0.
         
-    if symbol == key.LALT:
-        state.alt = value
-        
-    if symbol == key.LSHIFT:
-        state.shift = value
-        
-    if symbol == key.UP:
+    if key == keys.UP:
         state.up = value
         
-    if symbol == key.DOWN:
+    if key == keys.DOWN:
         state.down = value
         
-    if symbol == key.LEFT:
+    if key == keys.LEFT:
         state.left = value
         
-    if symbol == key.RIGHT:
+    if key == keys.RIGHT:
         state.right = value
         
-    if symbol == key.W:
+    if key == keys.W:
         state.key_w = value
         
-    if symbol == key.S:
+    if key == keys.S:
         state.key_s = value    
         
-    if symbol == key.A:
+    if key == keys.A:
         state.key_a = value
         
-    if symbol == key.D:
+    if key == keys.D:
         state.key_d = value
 
 
@@ -141,8 +138,9 @@ obj = moon if state.capslock else camera
 linear_acceleration = 1 / 2
 angular_acceleration = 1 / 24
 
-@app.run_me_again_and_again(1/48)
-def move_object(dt):
+
+@app.run_me_many(1/48)
+def move_object(ct, dt):
         
     global obj
     
@@ -198,35 +196,38 @@ def move_object(dt):
     state.av *= 0.67 ** dt
 
 
-label0 = Label('Hello World!', color='white', font_size=12, x=10, y=74)
-label1 = Label('Hello World!', color='white', font_size=12, x=10, y=52)
-label2 = Label('Hello World!', color='white', font_size=12, x=10, y=30)
-label3 = Label('Hello World!', color='white', font_size=12, x=10, y=8)
+label0 = Label('Hello World!', color='white', font_size=14, x=10, y=74)
+label1 = Label('Hello World!', color='white', font_size=14, x=10, y=52)
+label2 = Label('Hello World!', color='white', font_size=14, x=10, y=30)
+label3 = Label('Hello World!', color='white', font_size=14, x=10, y=8)
 
-hello_world = Label('Hello World 3D!', color='cyan', font_size=16, x=600, y=10)
+hello_world = Label('hello, world 3D!', color='cyan', font_size=16, x=600, y=10)
 
 
 dtl = [0]
 
 @app.event
-def on_draw():
+def render(ct, dt):
         
-    app.window.clear()
-    app.set3d()    
+    app.window.clear(blue=0.3)
     
-    t0 = time.time()
-    
+    #shader = get_shader_3d()
+    #shader._members['cubemap.render_cubemap'].value = 0
+
     scene.draw()
     
-    dtl.append(0.98 * dtl[-1] + 0.02 * (time.time() - t0))
-    dtl[:] = dtl[-256:]
+    #cubemap.draw()
     
-    app.set2d()
-            
-    label0.text = 'time to draw - %.2f ms' % (1000 * dtl[-1])
-    label1.text = 'up - %r' % obj.up
-    label2.text = 'front - %r' % obj.front
-    label3.text = 'position - %r' % obj.position
+    #shader['model'].write(glm.mat4(1.))
+    #vao.render()
+    
+    dtl.append(0.95 * dtl[-1] + 0.05 * app._time2draw)
+    dtl[:] = dtl[-32:]
+                
+    label0.text = 'time to draw - %0.3f ms' % (1000 * dtl[-1])
+    label1.text = 'up - %0.3f, %0.3f, %0.3f' % tuple(obj.up)
+    label2.text = 'front - %0.3f, %0.3f, %0.3f' % tuple(obj.front)
+    label3.text = 'position - %0.3f, %0.3f, %0.3f' % tuple(obj.position)
     
     label0.draw()
     label1.draw()  
@@ -237,7 +238,7 @@ def on_draw():
 
 
 @app.schedule_interval(1/30)
-def spin(dt):
+def spin(ct, dt):
     scene.meshes['Alien'].rotate_local(-0.5 * dt, (0, 0, 1))
 
 
