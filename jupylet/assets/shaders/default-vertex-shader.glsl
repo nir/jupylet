@@ -73,7 +73,7 @@ struct Light {
     mat4 shadowmap_projection;
 };  
 
-#define MAX_LIGHTS 16
+#define MAX_LIGHTS 12
 
 uniform Light lights[MAX_LIGHTS];
 uniform int nlights;

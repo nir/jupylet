@@ -30,7 +30,7 @@ struct Texture {
     sampler2D t;
 };
 
-#define MAX_TEXTURES 28
+#define MAX_TEXTURES 32
 
 uniform Texture textures[MAX_TEXTURES];
 
@@ -53,7 +53,7 @@ struct Material {
     int emissive_texture;
 };  
 
-#define MAX_MATERIALS 32
+#define MAX_MATERIALS 24
 
 uniform Material materials[MAX_MATERIALS];
 uniform int material;
@@ -107,7 +107,7 @@ struct Light {
     mat4 shadowmap_projection;
 };  
 
-#define MAX_LIGHTS 16
+#define MAX_LIGHTS 12
 
 uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
