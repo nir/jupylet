@@ -25,6 +25,7 @@
 """
 
 
+import functools
 import importlib
 import itertools
 import traceback
@@ -42,27 +43,17 @@ import os
 import multiprocessing as mp
 import numpy as np
 
+try:
+    from multiprocessing import shared_memory
+except:
+    shared_memory = None
+    
 
 SCALARS = {str, bytes, int, float, bool}
 
 
 def is_scalar(a):
     return type(a) in SCALARS
-
-
-def o2h(o, n=12):
-    return hashlib.sha256(pickle.dumps(o)).hexdigest()[:n]
-
-
-def get_tmp_dir():
-    
-    if os.path.exists('/dev/shm/'):
-        return '/dev/shm'
-    else:
-        return tempfile.gettempdir()
-
-def get_random_mm_path():
-    return os.path.join(get_tmp_dir(), 'jupylet-mm-array-%s.tmp' % o2h(random.random()))
 
 
 def rgetattr(o, name):
@@ -85,85 +76,27 @@ def rsetattr(o, name, value):
     setattr(o, name, value)
 
 
-class mmcache(object):
-    
-    def __init__(self):
-        
-        self._r = {}
-        self._w = {}
+@functools.lru_cache()
+def get_shared_memory(name):
+    return shared_memory.SharedMemory(name=name)
 
-        self.ison = os.path.exists('/dev/shm')
-        
-    def __del__(self):
 
-        for cache in [self._r, self._w]:
-            while cache:
-                mmd = cache.popitem()[1]
-                while mmd:
-                    path, mm = mmd.popitem()
-                    mode = mm.mode
-                    del mm
-                    if mode == 'w+':
-                        os.remove(path)
-                        
-    def get(self, dtype, shape, path=None):
+def load(o, depth=1):
 
-        if path:
-
-            mmd = self._r.setdefault((dtype, shape), {})
-
-            if path not in mmd:
-                mmd[path] = np.memmap(path, dtype=dtype, shape=shape, mode='r')
-
-            return path, mmd[path]
-
-        mmd = self._w.setdefault((dtype, shape), {})
-        if mmd:
-            return mmd.popitem()
-
-        path = path or get_random_mm_path()
-        return path, np.memmap(path, dtype=dtype, shape=shape, mode='w+')
-    
-    def set(self, ml):
-        for path, mm in ml:
-            if mm.mode == 'w+':
-                self._w.setdefault((mm.dtype, mm.shape), {})[path] = mm
-        
-    def dump(self, o, ml, size=1024, depth=1):
-
-        if type(o) in [int, float, str]:
-            return o
-
-        if depth and type(o) in [list, tuple]:
-            return type(o)(self.dump(v, ml, size, depth-1) for v in o)
-
-        if depth and type(o) is dict:
-            return {k: self.dump(v, ml, size, depth-1) for k, v in o.items()}
-
-        if isinstance(o, np.ndarray) and o.size > size:
-            path, mm = self.get(o.dtype, o.shape)
-            mm[:] = o[:]
-            mm.flush()
-            ml.append((path, mm))
-            return ('__ndarray__', o.dtype.name, o.shape, path)
-
-        return o   
-    
-    def load(self, o, depth=1):
-
-        if type(o) in [int, float, str]:
-            return o
-
-        if type(o) is tuple and len(o) == 4 and o[0] == '__ndarray__':
-            return np.array(self.get(*o[1:])[1])
-
-        if depth and type(o) in [list, tuple]:
-            return type(o)(self.load(v, depth-1) for v in o)
-
-        if depth and type(o) is dict:
-            return {k: self.load(v, depth-1) for k, v in o.items()}
-
+    if type(o) in [int, float, str]:
         return o
+
+    if type(o) is tuple and len(o) == 4 and o[0] == '__ndarray__':
+        _, shape, dtype, name = o
+        return np.ndarray(shape, dtype, buffer=get_shared_memory(name).buf)
+
+    if depth and type(o) in [list, tuple]:
+        return type(o)(load(v, depth-1) for v in o)
+
+    if depth and type(o) is dict:
+        return {k: load(v, depth-1) for k, v in o.items()}
+
+    return o
 
 
 class ModuleProcess(object):
@@ -171,15 +104,12 @@ class ModuleProcess(object):
     def __init__(self, name, debug=False):
         
         self.name = name
-        self.path = get_random_mm_path()
         self.debug = debug
 
         self.c0, c0 = mp.Pipe()
         self.c1 = self.c0
 
         self.p0 = mp.Process(target=self._worker0, args=(c0,))
-
-        self.mm = mmcache()
         
     def __del__(self):
         self.stop()
@@ -214,6 +144,7 @@ class ModuleProcess(object):
             self.q3.put('[%s] [%s]  %s' % (date, self.p0.ident, msg))"""
 
     def start(self):
+        
         if self.p0.ident is not None:
             return
 
@@ -239,38 +170,26 @@ class ModuleProcess(object):
         return self._c0_recv()
     
     def stop(self):
+
         if self.p0.ident is None or not self.p0.is_alive():
             return
 
         try:
             self.c0.send('STOP')
             self.p0.join()
+
         except AssertionError:
             pass
 
     def _c1_send(self, v):
-
-        if not self.mm.ison:
-            return self.c1.send(('vv', v))
-
-        ml = []
-        v = self.mm.dump(v, ml)
-
-        if not ml:
-            return self.c1.send(('vv', v))
-
-        self.mm.set(ml)
-        return self.c1.send(('mm', v))
-            
+        return self.c1.send(('vv', v))
+     
     def _c0_recv(self, timeout=5.):     
         
         t, v = self.c1.recv()
         
         if t == 'vv':
-            return v
-        
-        if t == 'mm':
-            return self.mm.load(v)
+            return load(v)
         
         if t == 'ee':
             sys.stderr.write('\n'.join(v))   
@@ -281,14 +200,14 @@ class GameProcess(ModuleProcess):
     def start(self, interval=1/24, size=224):
 
         super(GameProcess, self).start()
-        
+
         self.call('app.start', interval)
         self.call('app.scale_window_to', size)
-        self.call('app._redraw_windows', 0)
-        self.call('app._redraw_windows', 0)
+        self.call('app._redraw_windows', 0, 0)
+        self.call('app.use_shared_memory')        
 
-    def get_observation(self):
-        return self.get('app.array0')
+    def observe(self):
+        return self.call('app.observe')
         
     def step(self, *args, **kwargs):
         return self.call('step', *args, **kwargs)
@@ -322,11 +241,11 @@ class Games(object):
                 
         self.call('app.start', interval)
         self.call('app.scale_window_to', size)
-        self.call('app._redraw_windows', 0)
-        self.call('app._redraw_windows', 0)
+        self.call('app._redraw_windows', 0, 0)
+        self.call('app.use_shared_memory')        
 
-    def get_observation(self):
-        return self.get('app.array0')        
+    def observe(self):
+        return self.call('app.observe') 
 
     def step(self, *args, **kwargs):
         return self.call('step', *args, **kwargs) 

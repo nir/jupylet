@@ -27,10 +27,23 @@
 
 import functools
 import platform
+import inspect
 import os
 import sys
 
 import multiprocessing as mp
+
+
+_mode = None
+
+
+def set_app_mode(mode):
+    global _mode
+    _mode = mode
+
+
+def get_app_mode():
+    return _mode
 
 
 @functools.lru_cache()
@@ -105,3 +118,18 @@ def start_xvfb():
 
 def is_xvfb():
     return _xvfb is not None
+
+
+@functools.lru_cache()
+def in_python_script():
+
+    f0 = inspect.currentframe()
+    
+    while f0:
+        if not f0.f_back and f0.f_globals.get('__name__') == '__main__':
+            return True
+        
+        f0 = f0.f_back
+        
+    return False
+

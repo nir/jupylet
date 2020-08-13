@@ -25,77 +25,170 @@
 """
 
 
-import webcolors
+import functools
 import pyglet
+import math
+import io
+import os
 
-from .color import color2rgb
+import PIL.Image
+import PIL.ImageDraw
+import PIL.ImageFont
+
+import moderngl_window as mglw
+import numpy as np
+
+from moderngl_window.meta import DataDescription
+
+from .sprite import Sprite
 from .state import State
 
 
-class Label(pyglet.text.Label):
+def rtl(s):
+    return str(s[::-1])
+
+
+#
+# Note: Find free fonts at www.fontsquirrel.com
+#
+
+@functools.lru_cache(maxsize=32)
+def load_font(path, size):
+
+    ff = mglw.resources.data.load(DataDescription(path=path, kind='binary'))
+    return PIL.ImageFont.truetype(io.BytesIO(ff), size)
+
+
+@functools.lru_cache(maxsize=2048)
+def draw_chr(c, path, size):
     
-    def __init__(self, text='',
-                 font_name=None, font_size=16, bold=False, italic=False,
-                 color='white',
-                 x=10, y=10, width=None, height=None,
-                 anchor_x='left', anchor_y='baseline',
-                 align='left',
-                 multiline=False, dpi=None, batch=None, group=None):
+    font = load_font(path, size)
+    w, h = font.getsize(c)
+    
+    im = PIL.Image.new('L', (w, h))
+    di = PIL.ImageDraw.Draw(im)
+    di.text((0, 0), c, fill='white', font=font)
+    
+    return np.array(im)
+
+
+def draw_str(s, path, size, line_height=1.2):
+    
+    al = []
+
+    lh = math.ceil(size * line_height)
+    bl = draw_chr('a', path, size).shape[0]
+
+    hh = 0
+    ww = 0
+    
+    mh = 0
+    mw = 0
+    
+    for c in s.rstrip():
+        if c == '\n':
+            hh += lh
+            mw = max(mw, ww)
+            ww = 0
+            mh = 0
+            continue
+            
+        a = draw_chr(c, path, size)
+        al.append((a, (hh, ww)))
+        
+        h, w = a.shape
+        
+        mh = max(mh, h)
+        ww += w
+
+    bl = mh - bl  
+    mh = hh + mh
+    mw = max(mw, ww)
+    a0 = np.zeros((mh, mw), dtype='uint8')
+
+    for a, (hh, ww) in al:
+        
+        h, w = a.shape
+        a0[hh:hh+h, ww:ww+w] = a
+        
+    return a0, bl
+
+
+class Label(Sprite):
+    
+    def __init__(
+        self, 
+        text='',
+        font_path='fonts/SourceSerifPro-Bold.otf', 
+        font_size=16,
+        line_height=1.2,
+        bold=False, 
+        italic=False,
+        color='white',
+        x=0, 
+        y=0, 
+        width=None, 
+        height=None,
+        anchor_x='left', 
+        anchor_y='baseline',
+        align='left'
+    ):
                 
-        if type(color) == str:
-            color = color2rgb(color)
-                    
-        super(Label, self).__init__(text,
-                 font_name, font_size, bold, italic,
-                 color,
-                 x, y, width, height,
-                 anchor_x, anchor_y,
-                 align,
-                 multiline, dpi, batch, group)
-        
-    @property
-    def alpha(self):
-        return self.color[-1]
-        
-    @alpha.setter
-    def alpha(self, alpha):
-        self.color = self.color[:3] + (alpha,)
-        
-    @property
-    def color_name(self):
-        return webcolors.rgb_to_name(self.color[:3])
+        image, baseline = draw_str(text, font_path, font_size, line_height)
 
-    @property
-    def color(self):
-        """Text color.
-        Color is a 4-tuple of RGBA components, each in range [0, 255].
-        :type: (int, int, int, int)
-        """
-        return self.document.get_style('color')
+        super(Label, self).__init__(
+            image,
+            x, 
+            y, 
+            anchor_x=anchor_x,
+            anchor_y=anchor_y,
+            height=height,
+            width=width,
+            collisions=False,
+        )
 
-    @color.setter
-    def color(self, color):
-        
-        if type(color) == str:
-            color = color2rgb(color)
-        else:
-            color = tuple(int(v) for v in color)
+        self._items = dict(
+            text = text,
+            font_path = font_path,
+            font_size = font_size,
+            line_height = line_height,
+        )
 
-        self.document.set_style(0, len(self.document.text), {'color': color})
+        self.baseline = baseline / self.texture.height
+
+        self.color = color
+
+    def update(self, shader):
+
+        if self._dirty:
+            self._dirty.clear()
+            
+            self.image, baseline = draw_str(
+                self.text, 
+                self.font_path, 
+                self.font_size, 
+                self.line_height
+            )
+
+            self.baseline = baseline / self.texture.height
+
+            if self._ay == 'baseline':
+                self.anchor.y = self.baseline
 
     def get_state(self):
-        
-        return State(
-            x = self.x,
-            y = self.y,
+        return dict(
+            sprite = super(Label, self).get_state(),
             text = self.text,
-            color = self.color,
+            font_path = self.font_path,
+            font_size = self.font_size,
+            line_height = self.line_height,
         )
 
     def set_state(self, s):
         
-        self.x = s.x
-        self.y = s.y
-        self.text = s.text
-        self.color = s.color
+        for k, v in s.items():
+            if k == 'sprite':
+                super(Label, self).set_state(v)
+            else:
+                setattr(self, k, v)
 

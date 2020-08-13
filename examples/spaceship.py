@@ -25,7 +25,7 @@
 """
 
 
-import pyglet
+import logging
 import math
 import sys
 import os
@@ -35,65 +35,37 @@ p1 = os.path.abspath(os.path.join(p0, '..'))
 
 sys.path.insert(0, p1)
 
-from jupylet.app import App
-from jupylet.label import Label
 from jupylet.sprite import Sprite
+from jupylet.label import Label
+from jupylet.app import App
 
-import pyglet.window.key as key
+
+logger = logging.getLogger()
 
 
-if __name__ == '__main__':
-    mode = 'window'
-else:
-    mode = 'hidden'
+app = App(log_level=logging.INFO)
 
-app = App(mode=mode)
 
-window = app.window
+stars = Sprite('images/stars.png', scale=2.5)
+alien = Sprite('images/alien.png', scale=0.5)
+ship = Sprite('images/ship1.png', x=app.width/2, y=app.height/2, scale=0.5)
+moon = Sprite('images/moon.png', x=app.width-70, y=app.height-70, scale=0.5)
 
-WIDTH = app.width
-HEIGHT = app.height
+circle = Sprite('images/yellow-circle.png', width=184)
+circle.opacity = 0.
 
-stars = Sprite('stars.png', scale=2.5)
-alien = Sprite('alien.png', scale=0.5)
-ship = Sprite('ship1.png', x=WIDTH/2, y=HEIGHT/2, scale=0.5)
-moon = Sprite('moon.png', x=WIDTH-70, y=HEIGHT-70, scale=0.5)
-
-circle = Sprite('yellow-circle.png')
-circle.opacity = 0
-circle.width = 184
-
-label = Label('Hello World!', color='cyan', font_size=16, x=10, y=10)
+label = Label('hello, world', color='cyan', font_size=32, x=10, y=10)
 
 
 @app.event
-def on_draw():
-    
-    window.clear()
-    
-    stars.draw()
-    moon.draw()
-    
-    label.draw()
-
-    circle.draw()
-    alien.draw()
-    ship.draw()
-
-
-@app.event
-def on_mouse_motion(x, y, dx, dy):
+def mouse_position_event(x, y, dx, dy):
+    logger.info('Enter mouse_position_event(%r, %r, %r, %r).', x, y, dx, dy)
     
     alien.x = x
     alien.y = y
     
     circle.x = x
     circle.y = y    
-    
-
-@app.run_me_again_and_again(1/36)
-def update_alien(dt):
-    alien.rotation += dt * 36
 
 
 vx = 0
@@ -104,62 +76,85 @@ left = 0
 right = 0
 
 
-@app.run_me_again_and_again(1/120)
-def update_ship(dt):
+@app.run_me_many(1/120)
+def update_ship(ct, dt):
     
     global vx, vy
 
     if left:
-        ship.rotation -= 2
+        ship.angle += 128 * dt
         
     if right:
-        ship.rotation += 2
+        ship.angle -= 128 * dt
         
     if up:
-        vx += 3 * math.cos((90 - ship.rotation) / 180 * math.pi)
-        vy += 3 * math.sin((90 - ship.rotation) / 180 * math.pi)
+        vx += 3 * math.cos((90 + ship.angle) / 180 * math.pi)
+        vy += 3 * math.sin((90 - ship.angle) / 180 * math.pi)
 
     ship.x += vx * dt
     ship.y += vy * dt
     
-    ship.wrap_position(WIDTH, HEIGHT)
+    ship.wrap_position(app.width, app.height)
     
     if len(ship.collisions_with(alien)) > 0:
-        circle.opacity = 128
+        circle.opacity = 0.5
     else:
-        circle.opacity = 0
-        
+        circle.opacity = 0.0
+
+
+@app.run_me_many(1/48)
+def rotate(ct, dt):
+    
+    alien.angle += 64 * dt
+
 
 @app.event
-def on_key_press(symbol, modifiers):
+def key_event(key, action, modifiers):
+    logger.info('Enter key_event(key=%r, action=%r, modifiers=%r).', key, action, modifiers)
     
     global up, left, right
     
-    if symbol == key.UP:
-        ship.image = 'ship2.png'
-        up = True
+    keys = app.window.keys
+    
+    if action == keys.ACTION_PRESS:
 
-    if symbol == key.LEFT:
-        left = True
-        
-    if symbol == key.RIGHT:
-        right = True
-        
+        if key == keys.UP:
+            ship.image = 'images/ship2.png'
+            up = True
+
+        if key == keys.LEFT:
+            left = True
+
+        if key == keys.RIGHT:
+            right = True
+
+    if action == keys.ACTION_RELEASE:
+    
+        if key == keys.UP:
+            ship.image = 'images/ship1.png'
+            up = False
+
+        if key == keys.LEFT:
+            left = False
+
+        if key == keys.RIGHT:
+            right = False
+
 
 @app.event
-def on_key_release(symbol, modifiers):
+def render(ct, dt):
+    #logger.debug('Enter render(%r, %r).', ct, dt)
     
-    global up, left, right
+    app.window.clear()
     
-    if symbol == key.UP:
-        ship.image = 'ship1.png'
-        up = False
-        
-    if symbol == key.LEFT:
-        left = False
-        
-    if symbol == key.RIGHT:
-        right = False
+    stars.draw()
+    moon.draw()
+
+    circle.draw()
+    alien.draw()
+    ship.draw()
+    
+    label.draw()
 
 
 if __name__ == '__main__':

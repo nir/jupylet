@@ -30,7 +30,6 @@
 """
 
 
-import pyglet
 import math
 import time
 import sys
@@ -40,8 +39,6 @@ import PIL.Image
 
 import numpy as np
 
-import pyglet.window.key as key
-
 p0 = os.path.abspath(os.path.dirname(__file__))
 p1 = os.path.abspath(os.path.join(p0, '..'))
 
@@ -50,9 +47,14 @@ os.chdir(p0)
 
 import jupylet.color
 
-from jupylet.app import App, State
+from jupylet.env import get_app_mode
+from jupylet.app import App
+from jupylet.sound import Sound
+from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
+
+import moderngl_window.timers.clock as _clock
 
 
 if __name__ == '__main__':
@@ -62,49 +64,44 @@ else:
 
 app = App(mode=mode)
 
-window = app.window
-
-WIDTH = app.width
-HEIGHT = app.height
-
 
 background = '#3e32a2'
 foreground = '#7c71da'
 
-app.set_window_color(foreground)
-
 
 a0 = np.ones((32, 32)) * 255
 a1 = np.ones((128, 16)) * 255
-a2 = np.ones((HEIGHT * 9 // 10, WIDTH * 9 // 10, 3)) * jupylet.color.color2rgb(background)[:3]
+a2 = np.ones((app.height * 9 // 10, app.width * 9 // 10, 3)) * 255
 
-ball = Sprite(a0, y=HEIGHT/2, x=WIDTH/2, autocrop=True)
+ball = Sprite(a0, y=app.height/2, x=app.width/2)
 
-padl = Sprite(a1, y=HEIGHT/2, x=48)
-padr = Sprite(a1, y=HEIGHT/2, x=WIDTH-48)
+padl = Sprite(a1, y=app.height/2, x=48)
+padr = Sprite(a1, y=app.height/2, x=app.width-48)
 
-field = Sprite(a2, y=HEIGHT/2, x=WIDTH/2) 
+field = Sprite(a2, y=app.height/2, x=app.width/2, color=background) 
 
-sound = pyglet.media.load('sounds/pong-blip.wav', streaming=False)
+pong_sound = Sound('sounds/pong-blip.wav', volume=0.1).load()
 
-
-pyglet.font.add_file('fonts/PetMe64.ttf')
 
 scorel = Label(
-    '0', font_name='Pet Me 64', font_size=42, color=foreground, 
-    x=64, y=HEIGHT/2, anchor_y='center', anchor_x='left'
+    '0', font_size=42, color=foreground, 
+    x=64, y=app.height/2, 
+    anchor_y='center', anchor_x='left',
+    font_path='fonts/PetMe64.ttf'
 )
 
 scorer = Label(
-    '0', font_name='Pet Me 64', font_size=42, color=foreground, 
-    x=WIDTH-64, y=HEIGHT/2, anchor_y='center', anchor_x='right'
+    '0', font_size=42, color=foreground, 
+    x=app.width-64, y=app.height/2, 
+    anchor_y='center', anchor_x='right',
+    font_path='fonts/PetMe64.ttf'
 )
 
 
 @app.event
-def on_draw():
+def render(ct, dt):
     
-    window.clear()
+    app.window.clear(color=foreground)
     
     field.draw()
     
@@ -125,10 +122,10 @@ state = State(
     bvy = 192,
     
     vyl = 0,
-    pyl = HEIGHT/2,
+    pyl = app.height/2,
 
     vyr = 0,
-    pyr = HEIGHT/2,
+    pyr = app.height/2,
 
     left = False,
     right = False,
@@ -137,49 +134,53 @@ state = State(
     key_d = False,
 )
 
-@app.event
-def on_key_press(symbol, modifiers):
-        
-    if symbol == key.LEFT:
-        state.left = True
-        
-    if symbol == key.RIGHT:
-        state.right = True
-        
-    if symbol == key.A:
-        state.key_a = True
-        
-    if symbol == key.D:
-        state.key_d = True
-        
 
 @app.event
-def on_key_release(symbol, modifiers):
+def key_event(key, action, modifiers):
+        
+    keys = app.window.keys
     
-    if symbol == key.LEFT:
-        state.left = False
+    if action == keys.ACTION_PRESS:
         
-    if symbol == key.RIGHT:
-        state.right = False
+        if key == keys.LEFT:
+            state.left = True
 
-    if symbol == key.A:
-        state.key_a = False
-        
-    if symbol == key.D:
-        state.key_d = False
-        
+        if key == keys.RIGHT:
+            state.right = True
 
-@app.run_me_again_and_again(1/120)
-def update_pads(dt):
+        if key == keys.A:
+            state.key_a = True
+
+        if key == keys.D:
+            state.key_d = True
+
+    if action == keys.ACTION_RELEASE:
+
+    
+        if key == keys.LEFT:
+            state.left = False
+
+        if key == keys.RIGHT:
+            state.right = False
+
+        if key == keys.A:
+            state.key_a = False
+
+        if key == keys.D:
+            state.key_d = False
+
+
+@app.run_me_many(1/120)
+def update_pads(ct, dt):
         
     if state.right:
-        state.pyr = min(HEIGHT, state.pyr + dt * 512)
+        state.pyr = min(app.height, state.pyr + dt * 512)
         
     if state.left:
         state.pyr = max(0, state.pyr - dt * 512)
         
     if state.key_a:
-        state.pyl = min(HEIGHT, state.pyl + dt * 512)
+        state.pyl = min(app.height, state.pyl + dt * 512)
         
     if state.key_d:
         state.pyl = max(0, state.pyl - dt * 512)
@@ -193,33 +194,33 @@ def update_pads(dt):
     padl.y += state.vyl * dt
     padr.y += state.vyr * dt
     
-    padr.clip_position(WIDTH, HEIGHT)
-    padl.clip_position(WIDTH, HEIGHT)
+    padr.clip_position(app.width, app.height)
+    padl.clip_position(app.width, app.height)
 
 
-@app.run_me_again_and_again(1/120)
-def update_ball(dt):
+@app.run_me_many(1/60)
+def update_ball(ct, dt):
     
     bs0 = state.bvx ** 2 + state.bvy ** 2
     
-    ball.rotation += 200 * dt
+    ball.angle += 200 * dt
     
     ball.x += state.bvx * dt
     ball.y += state.bvy * dt
     
-    if ball.top >= HEIGHT:
-        app.play_once(sound)
-        ball.y -= ball.top - HEIGHT
+    if ball.top >= app.height:
+        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+        ball.y -= ball.top - app.height
         state.bvy = -state.bvy
         
     if ball.bottom <= 0:
-        app.play_once(sound)
+        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
         ball.y -= ball.bottom
         state.bvy = -state.bvy
         
-    if ball.right >= WIDTH:
-        app.play_once(sound)
-        ball.x -= ball.right - WIDTH
+    if ball.right >= app.width:
+        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+        ball.x -= ball.right - app.width
         
         state.bvx = -192
         state.bvy = 192 * np.sign(state.bvy)
@@ -229,7 +230,7 @@ def update_ball(dt):
         scorel.text = str(state.sl)
         
     if ball.left <= 0:
-        app.play_once(sound)
+        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
         ball.x -= ball.left
         
         state.bvx = 192
@@ -241,14 +242,14 @@ def update_ball(dt):
         
     if state.bvx > 0 and ball.top >= padr.bottom and padr.top >= ball.bottom: 
         if 0 < ball.right - padr.left < 10:
-            app.play_once(sound)
+            pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
             ball.x -= ball.right - padr.left
             state.bvx = -state.bvx
             state.bvy += state.vyr / 2
             
     if state.bvx < 0 and ball.top >= padl.bottom and padl.top >= ball.bottom: 
         if 0 < padl.right - ball.left < 10:
-            app.play_once(sound)
+            pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
             ball.x += ball.left - padl.right
             state.bvx = -state.bvx
             state.bvy += state.vyl / 2
@@ -258,11 +259,11 @@ def update_ball(dt):
     if bs1 < 0.9 * bs0:
         state.bvx = (bs0 - state.bvy ** 2) ** 0.5 * np.sign(state.bvx)
 
-    ball.wrap_position(WIDTH, HEIGHT)
+    ball.wrap_position(app.width, app.height)
 
 
 @app.run_me_now()
-def highlights(dt):
+def highlights(ct, dt):
     
     sl0 = state.sl
     sr0 = state.sr
@@ -272,7 +273,7 @@ def highlights(dt):
     
     while True:
         
-        dt = yield 1/24
+        ct, dt = yield 1/24
         
         r0 = 0.9 ** (120 * dt)
         
@@ -303,7 +304,7 @@ def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
     reward = (state.sl - sl0) - (state.sr - sr0)
 
     return {
-        'screen0': app.array0,
+        'screen0': app.observe(),
         'player0': {'score': state.sl, 'reward': reward},
         'player1': {'score': state.sr, 'reward': -reward},
     }
@@ -321,7 +322,7 @@ def load(path):
     
 
 def save(path=None):
-    return app.save_state('pong', path, state, ball, padl, padr, scorel, scorer)
+    app.save_state('pong', path, state, ball, padl, padr, scorel, scorer)
 
 
 if __name__ == '__main__':

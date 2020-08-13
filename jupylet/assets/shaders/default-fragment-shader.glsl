@@ -12,15 +12,15 @@ in vec3 frag_position;
 in vec3 frag_normal;
 in vec2 frag_uv;
 
-struct Cubemap {
+struct Skybox {
 
-    int render_cubemap;
+    int render_skybox;
     int texture_exists;
     float intensity;
     samplerCube texture;
 };
 
-uniform Cubemap cubemap;
+uniform Skybox skybox;
 
 // Python code to dynamically retreive max units.
 // mt = ctypes.c_int()
@@ -137,7 +137,7 @@ mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv ) {
     vec3 T = dp2perp * duv1.x + dp1perp * duv2.x; 
     vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;   
     // construct a scale-invariant frame 
-    float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) ); 
+    float invmax = inversesqrt( max( dot(T, T), dot(B, B) ) ); 
     return mat3( T * invmax, B * invmax, N ); 
 }
 
@@ -237,7 +237,7 @@ void compute_light0() {
     
     if (materials[mi].normals_texture >= 0) {
 
-        mat3 TBN = cotangent_frame(frag_normal, -l0.view_direction, frag_uv); 
+        mat3 TBN = cotangent_frame(l0.normal, -l0.view_direction, frag_uv); 
        
         l0.normal = texture(textures[materials[mi].normals_texture].t, frag_uv).rgb;
         l0.normal = pow(l0.normal, vec3(materials[mi].normals_gamma)) * 2 - 1;
@@ -333,22 +333,11 @@ vec3 compute_light(int light_index) {
 void main() {
 
     if (shadowmap_pass  == 1) {
-
-        //if (lights[shadowmap_light].type == DIRECTIONAL_LIGHT) {
-        //    light_direction = normalize(lights[shadowmap_light].direction);
-        //} 
-        //else {
-        //    light_direction = normalize(lights[shadowmap_light].position - frag_position);
-        //}
-
         return;
     }
     
-    //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-    //return;
-
-    if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
-        FragColor = cubemap.intensity * texture(cubemap.texture, vert_position);
+    if (skybox.texture_exists == 1 && skybox.render_skybox == 1) {
+        FragColor = skybox.intensity * texture(skybox.texture, normalize(vert_position));
         return;
     }
 
