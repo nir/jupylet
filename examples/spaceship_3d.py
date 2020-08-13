@@ -211,22 +211,22 @@ def render(ct, dt):
     
     scene.draw()
     
-    #label0.text = 'time to draw - %0.3f ms' % (1000 * app._time2draw_rm)
-    #label1.text = 'up - %0.3f, %0.3f, %0.3f' % tuple(obj.up)
-    #label2.text = 'front - %0.3f, %0.3f, %0.3f' % tuple(obj.front)
-    #label3.text = 'position - %0.3f, %0.3f, %0.3f' % tuple(obj.position)
+    label0.text = 'time to draw - %0.3f ms' % (1000 * app._time2draw_rm)
+    label1.text = 'up - %0.3f, %0.3f, %0.3f' % tuple(obj.up)
+    label2.text = 'front - %0.3f, %0.3f, %0.3f' % tuple(obj.front)
+    label3.text = 'position - %0.3f, %0.3f, %0.3f' % tuple(obj.position)
     
-    #label0.draw()
-    #label1.draw()  
-    #label2.draw()  
-    #label3.draw()  
+    label0.draw()
+    label1.draw()  
+    label2.draw()  
+    label3.draw()  
 
     hello_world.draw()
 
 
 @app.schedule_interval(1/30)
 def spin(ct, dt):
-    scene.meshes['Alien'].rotate_local(-0.75 * dt, (0, 0, 1))
+    scene.meshes['Alien'].rotate_local(-0.5 * dt, (0, 0, 1))
 
 
 if __name__ == '__main__':
