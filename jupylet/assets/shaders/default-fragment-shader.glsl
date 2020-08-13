@@ -12,15 +12,15 @@ in vec3 frag_position;
 in vec3 frag_normal;
 in vec2 frag_uv;
 
-struct Cubemap {
+struct Skybox {
 
-    int render_cubemap;
+    int render_skybox;
     int texture_exists;
     float intensity;
     samplerCube texture;
 };
 
-uniform Cubemap cubemap;
+uniform Skybox skybox;
 
 // Python code to dynamically retreive max units.
 // mt = ctypes.c_int()
@@ -336,8 +336,8 @@ void main() {
         return;
     }
     
-    if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
-        FragColor = cubemap.intensity * texture(cubemap.texture, normalize(vert_position));
+    if (skybox.texture_exists == 1 && skybox.render_skybox == 1) {
+        FragColor = skybox.intensity * texture(skybox.texture, normalize(vert_position));
         return;
     }
 

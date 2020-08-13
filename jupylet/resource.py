@@ -103,7 +103,7 @@ def unresolve_path(path):
             return path[len(p):].lstrip('\\/')
 
 
-def resolve_path(path):
+def find_path(path):
 
     dd = DataDescription(path=path, kind='binary')
     mglw.resources.data.resolve_loader(dd)
@@ -117,10 +117,10 @@ def resolve_path(path):
     return pp
 
 
-def resolve_glob_path(path):
+def find_glob_path(path):
     
     dirname, basename = os.path.split(path)
-    dirname = resolve_path(dirname)
+    dirname = find_path(dirname)
     path = os.path.join(dirname, basename)
 
     return glob.glob(path)
@@ -180,7 +180,7 @@ def load_texture_cube(
 
     _init_loaders()
 
-    paths = resolve_glob_path(path)
+    paths = find_glob_path(path)
     paths = [unresolve_path(p) for p in paths]
 
     k2k = dict(

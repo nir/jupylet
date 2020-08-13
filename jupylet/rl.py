@@ -43,8 +43,11 @@ import os
 import multiprocessing as mp
 import numpy as np
 
-from multiprocessing import shared_memory
-
+try:
+    from multiprocessing import shared_memory
+except:
+    shared_memory = None
+    
 
 SCALARS = {str, bytes, int, float, bool}
 

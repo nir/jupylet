@@ -44,6 +44,11 @@ import numpy as np
 import moderngl
 import moderngl_window as mglw
 
+try:
+    from multiprocessing import shared_memory
+except:
+    shared_memory = None
+
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
 from .env import is_remote, set_app_mode, in_python_script
 from .color import c2v
@@ -264,6 +269,7 @@ class App(EventLeg, ClockLeg):
         self._shm = None
 
         self._time2draw = 0
+        self._time2draw_rm = 0
 
     def __del__(self):
 
@@ -370,6 +376,7 @@ class App(EventLeg, ClockLeg):
         self.window.swap_buffers()
         
         self._time2draw = time.time() - t0
+        self._time2draw_rm = self._time2draw_rm * 0.95 + self._time2draw * 0.05
 
         if self.mode != 'window':
             self.buffer = self.window.fbo.read(components=4)
@@ -408,7 +415,8 @@ class App(EventLeg, ClockLeg):
         return self.buffer
 
     def use_shared_memory(self):
-        self._use_shm = True
+        if shared_memory is not None:
+            self._use_shm = True
 
     def get_shared_memory(self):
 
@@ -422,8 +430,6 @@ class App(EventLeg, ClockLeg):
             self._shm = None
 
         if self._shm is None:
-
-            from multiprocessing import shared_memory
             self._shm = shared_memory.SharedMemory(create=True, size=size)
 
         return self._shm

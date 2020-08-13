@@ -14,15 +14,15 @@ out vec3 frag_position;
 out vec3 frag_normal;
 out vec2 frag_uv;
 
-struct Cubemap {
+struct Skybox {
     
-    int render_cubemap;
+    int render_skybox;
     int texture_exists;
     float intensity;
     samplerCube texture;
 };
 
-uniform Cubemap cubemap;
+uniform Skybox skybox;
 
 struct Camera { 
 
@@ -129,7 +129,7 @@ void main()
 
     frag_view = view * mp4;
 
-    if (cubemap.texture_exists == 1 && cubemap.render_cubemap == 1) {
+    if (skybox.texture_exists == 1 && skybox.render_skybox == 1) {
         
         mat4 model = mat4(1.0);
         model[3].xyz = camera.position;

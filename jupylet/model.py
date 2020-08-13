@@ -42,7 +42,7 @@ import numpy as np
 from .lru import _lru_textures, _lru_materials, _MAX_TEXTURES, _MAX_MATERIALS
 from .node import Object, Node
 from .resource import get_shader_3d, pil_from_texture, get_context
-from .resource import resolve_glob_path, unresolve_path, load_texture_cube
+from .resource import find_glob_path, unresolve_path, load_texture_cube
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class Scene(Object):
         
         self.shadows = shadows
 
-        self.cubemap = None
+        self.skybox = None
 
     def add_material(self, material):
         self.materials[material.name] = material
@@ -103,8 +103,8 @@ class Scene(Object):
         for camera in self.cameras.values():
             camera.set_state(shader)
 
-        if self.cubemap is not None:
-            self.cubemap.draw(shader)
+        if self.skybox is not None:
+            self.skybox.draw(shader)
             
         for mesh in self.meshes.values():
             mesh.draw(shader)
@@ -648,11 +648,11 @@ class Primitive(Object):
         return self.vao
         
 
-class CubeMap(Object):
+class Skybox(Object):
     
     def __init__(self, path, flip=False, flip_left_right=False, intensity=1.0):
         
-        super(CubeMap, self).__init__()
+        super(Skybox, self).__init__()
         
         ctx = get_context()
 
@@ -684,22 +684,22 @@ class CubeMap(Object):
         #glDepthFunc(GL_LEQUAL)   
         
         shader = shader or get_shader_3d()
-        shader._members['cubemap.render_cubemap'].value = 1
+        shader._members['skybox.render_skybox'].value = 1
 
         if self._dirty:
             
-            shader._members['cubemap.intensity'].value = self.intensity
-            shader._members['cubemap.texture_exists'].value = 1
-            shader._members['cubemap.texture'].value = 30
+            shader._members['skybox.intensity'].value = self.intensity
+            shader._members['skybox.texture_exists'].value = 1
+            shader._members['skybox.texture'].value = 0
 
-            #self.smpl.use(location=30)
-            self.texture.use(location=30)
+            #self.smpl.use(location=0)
+            self.texture.use(location=0)
 
             self._dirty.clear()
 
         self.cube.render(shader)
 
-        shader._members['cubemap.render_cubemap'].value = 0
+        shader._members['skybox.render_skybox'].value = 0
 
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.front_face = ccw

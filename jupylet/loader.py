@@ -35,7 +35,7 @@ import os
 import numpy as np
 
 from .utils import abspath
-from .resource import load_texture, resolve_path, unresolve_path
+from .resource import load_texture, find_path, unresolve_path
 from .model import Scene, Material, Light, Camera, Mesh, Primitive
 
 
@@ -54,7 +54,7 @@ def load_blender_gltf(path):
     Blender 2.83.
     """
 
-    pp = resolve_path(path)
+    pp = find_path(path)
     g0 = gltflib.GLTF.load(str(pp))
     s0 = g0.model.scenes[g0.model.scene]
     

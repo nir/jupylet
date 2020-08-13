@@ -186,10 +186,8 @@ label1 = Label('Hello World!', color='white', font_size=12, x=10, y=52)
 label2 = Label('Hello World!', color='white', font_size=12, x=10, y=30)
 label3 = Label('Hello World!', color='white', font_size=12, x=10, y=8)
 
-hello_world = Label('hello, world 3D!', color='cyan', font_size=16, x=600, y=10)
+hello_world = Label('hello, world 3D!', color='cyan', font_size=24, x=575, y=10)
 
-
-dtl = [0]
 
 @app.event
 def render(ct, dt):
@@ -198,11 +196,7 @@ def render(ct, dt):
         
     scene.draw()
     
-    dtl.append(0.98 * dtl[-1] + 0.02 * app._time2draw)
-    dtl[:] = dtl[-256:]
-    
-            
-    label0.text = 'time to draw - %.2f ms' % (1000 * dtl[-1])
+    label0.text = 'time to draw - %.2f ms' % (1000 * app._time2draw_rm)
     label1.text = 'up - %r' % obj.up
     label2.text = 'front - %r' % obj.front
     label3.text = 'position - %r' % obj.position

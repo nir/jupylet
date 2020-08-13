@@ -43,7 +43,7 @@ from jupylet.app import App
 logger = logging.getLogger()
 
 
-app = App() #log_level=logging.DEBUG)
+app = App(log_level=logging.INFO)
 
 
 stars = Sprite('images/stars.png', scale=2.5)
@@ -110,6 +110,7 @@ def rotate(ct, dt):
 
 @app.event
 def key_event(key, action, modifiers):
+    logger.info('Enter key_event(key=%r, action=%r, modifiers=%r).', key, action, modifiers)
     
     global up, left, right
     

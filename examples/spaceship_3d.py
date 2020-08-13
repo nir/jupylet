@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.abspath('./..'))
 from jupylet.label import Label
 from jupylet.app import App
 from jupylet.state import State
-from jupylet.model import CubeMap
+from jupylet.model import Skybox
 from jupylet.loader import load_blender_gltf
 
 
@@ -55,7 +55,7 @@ app = App(768, 512, mode=mode)#, log_level=logging.INFO)
 
 scene = load_blender_gltf('./scenes/moon/alien-moon.gltf')
 
-scene.cubemap = CubeMap('./scenes/moon/nebula/nebula*.png', intensity=2., flip_left_right=True)
+scene.skybox = Skybox('./scenes/moon/nebula/nebula*.png', intensity=2., flip_left_right=True)
 
 scene.shadows = True
 
@@ -201,45 +201,32 @@ label1 = Label('Hello World!', color='white', font_size=14, x=10, y=52)
 label2 = Label('Hello World!', color='white', font_size=14, x=10, y=30)
 label3 = Label('Hello World!', color='white', font_size=14, x=10, y=8)
 
-hello_world = Label('hello, world 3D!', color='cyan', font_size=16, x=600, y=10)
+hello_world = Label('hello, world 3D!', color='cyan', font_size=24, x=575, y=10)
 
-
-dtl = [0]
 
 @app.event
 def render(ct, dt):
         
     app.window.clear(blue=0.3)
     
-    #shader = get_shader_3d()
-    #shader._members['cubemap.render_cubemap'].value = 0
-
     scene.draw()
     
-    #cubemap.draw()
+    #label0.text = 'time to draw - %0.3f ms' % (1000 * app._time2draw_rm)
+    #label1.text = 'up - %0.3f, %0.3f, %0.3f' % tuple(obj.up)
+    #label2.text = 'front - %0.3f, %0.3f, %0.3f' % tuple(obj.front)
+    #label3.text = 'position - %0.3f, %0.3f, %0.3f' % tuple(obj.position)
     
-    #shader['model'].write(glm.mat4(1.))
-    #vao.render()
-    
-    dtl.append(0.95 * dtl[-1] + 0.05 * app._time2draw)
-    dtl[:] = dtl[-32:]
-                
-    label0.text = 'time to draw - %0.3f ms' % (1000 * dtl[-1])
-    label1.text = 'up - %0.3f, %0.3f, %0.3f' % tuple(obj.up)
-    label2.text = 'front - %0.3f, %0.3f, %0.3f' % tuple(obj.front)
-    label3.text = 'position - %0.3f, %0.3f, %0.3f' % tuple(obj.position)
-    
-    label0.draw()
-    label1.draw()  
-    label2.draw()  
-    label3.draw()  
+    #label0.draw()
+    #label1.draw()  
+    #label2.draw()  
+    #label3.draw()  
 
     hello_world.draw()
 
 
 @app.schedule_interval(1/30)
 def spin(ct, dt):
-    scene.meshes['Alien'].rotate_local(-0.5 * dt, (0, 0, 1))
+    scene.meshes['Alien'].rotate_local(-0.75 * dt, (0, 0, 1))
 
 
 if __name__ == '__main__':
