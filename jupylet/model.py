@@ -103,12 +103,12 @@ class Scene(Object):
         for camera in self.cameras.values():
             camera.set_state(shader)
 
-        if self.skybox is not None:
-            self.skybox.draw(shader)
-            
         for mesh in self.meshes.values():
             mesh.draw(shader)
 
+        if self.skybox is not None:
+            self.skybox.draw(shader)
+            
     def render_shadowmaps(self, shader):
     
         ctx = get_context()
@@ -679,8 +679,9 @@ class Skybox(Object):
 
         ccw = ctx.front_face
         ctx.front_face = 'cw'
-        ctx.disable(moderngl.DEPTH_TEST)
+        ctx.depth_func = '<='
 
+        #ctx.disable(moderngl.DEPTH_TEST)
         #glDepthFunc(GL_LEQUAL)   
         
         shader = shader or get_shader_3d()
@@ -690,10 +691,10 @@ class Skybox(Object):
             
             shader._members['skybox.intensity'].value = self.intensity
             shader._members['skybox.texture_exists'].value = 1
-            shader._members['skybox.texture'].value = 0
+            shader._members['skybox.texture'].value = 30
 
-            #self.smpl.use(location=0)
-            self.texture.use(location=0)
+            #self.smpl.use(location=30)
+            self.texture.use(location=30)
 
             self._dirty.clear()
 
@@ -701,8 +702,9 @@ class Skybox(Object):
 
         shader._members['skybox.render_skybox'].value = 0
 
-        ctx.enable(moderngl.DEPTH_TEST)
+        ctx.depth_func = '<'
         ctx.front_face = ccw
 
+        #ctx.enable(moderngl.DEPTH_TEST)
         #glDepthFunc(GL_LESS)        
 

@@ -135,7 +135,7 @@ void main()
         model[3].xyz = camera.position;
 
         gl_Position = projection * view * model * vec4(in_position, 1.0);
-        gl_Position = gl_Position.xyzw;
+        gl_Position = gl_Position.xyww;
 
         vert_position = in_position;
     }

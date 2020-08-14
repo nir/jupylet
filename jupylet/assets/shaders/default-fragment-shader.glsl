@@ -30,7 +30,7 @@ struct Texture {
     sampler2D t;
 };
 
-#define MAX_TEXTURES 32
+#define MAX_TEXTURES 30
 
 uniform Texture textures[MAX_TEXTURES];
 
