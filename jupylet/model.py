@@ -691,10 +691,10 @@ class Skybox(Object):
             
             shader._members['skybox.intensity'].value = self.intensity
             shader._members['skybox.texture_exists'].value = 1
-            shader._members['skybox.texture'].value = 0
+            shader._members['skybox.texture'].value = 30
 
-            #self.smpl.use(location=0)
-            self.texture.use(location=0)
+            #self.smpl.use(location=30)
+            self.texture.use(location=30)
 
             self._dirty.clear()
 
