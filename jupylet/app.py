@@ -191,6 +191,9 @@ class App(EventLeg, ClockLeg):
             sys.stderr.write(REMOTE_WARNING + '\n')
             self._show_remote_warning = True
 
+        self._use_shm = False
+        self._shm = None
+
         self._width = width
         self._height = height
 
@@ -264,9 +267,6 @@ class App(EventLeg, ClockLeg):
 
         set_context(self.ctx)
         self.ctx.enable_only(moderngl.BLEND)
-
-        self._use_shm = False
-        self._shm = None
 
         self._time2draw = 0
         self._time2draw_rm = 0
