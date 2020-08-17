@@ -48,6 +48,7 @@ import soundfile as sf
 
 import numpy as np
 
+from .resource import find_path
 from .utils import o2h
 from .env import get_app_mode, is_remote, in_python_script
 
@@ -262,6 +263,7 @@ class Sound(object):
     def __init__(self, path, volume=1., loop=False, balance=0.5):
         
         if not _is_worker:
+            path = str(find_path(path))
             self.__dict__['uid'] = submit(_create_sound, path, volume, loop, balance).result()
             return
 

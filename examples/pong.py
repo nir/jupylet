@@ -39,11 +39,7 @@ import PIL.Image
 
 import numpy as np
 
-p0 = os.path.abspath(os.path.dirname(__file__))
-p1 = os.path.abspath(os.path.join(p0, '..'))
-
-sys.path.insert(0, p1)
-os.chdir(p0)
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import jupylet.color
 

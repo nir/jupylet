@@ -33,7 +33,7 @@ import glm
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath('./..'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from jupylet.label import Label
 from jupylet.app import App
@@ -51,7 +51,6 @@ else:
     mode = 'hidden'
 
 app = App(768, 512, mode=mode)#, log_level=logging.INFO)
-
 
 scene = load_blender_gltf('./scenes/moon/alien-moon.gltf')
 

@@ -86,11 +86,17 @@ def get_shader_2d():
     return _shaders[SHADER_2D]
 
 
-def register_dir(path):
-    mglw.resources.register_dir(pathlib.Path(path).absolute())
-
-
 _dirs = set()
+_regd = set()
+
+
+def register_dir(path, relative_to=''):
+
+    p0 = os.path.join(relative_to, path)
+    pp = pathlib.Path(p0).absolute()
+    mglw.resources.register_dir(pp)
+
+    _regd.add(str(pp))
 
 
 def unresolve_path(path):
@@ -103,16 +109,21 @@ def unresolve_path(path):
             return path[len(p):].lstrip('\\/')
 
 
-def find_path(path):
+def find_path(path, throw=True):
 
+    assert _regd, "No resource path has been registered yet. Did you remember to create an App() instance?"
+    
     dd = DataDescription(path=path, kind='binary')
     mglw.resources.data.resolve_loader(dd)
     pp = dd.loader_cls(dd).find_data(dd.path)
     
-    p0 = pathlib.Path(path)
-    p1 = str(pp)[: -len(str(p0))]
+    if pp is None and throw:
+        raise IOError("Path %r not found." % path)
 
-    _dirs.add(p1)
+    if pp is not None:
+        p0 = pathlib.Path(path)
+        p1 = str(pp)[: -len(str(p0))]
+        _dirs.add(p1)
 
     return pp
 

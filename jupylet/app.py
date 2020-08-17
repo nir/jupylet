@@ -54,7 +54,7 @@ from .env import is_remote, set_app_mode, in_python_script
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
-from .utils import Dict, o2h, abspath, patch_method
+from .utils import Dict, o2h, abspath, callerpath, patch_method
 
 
 #__all__ = ['App']
@@ -250,7 +250,7 @@ class App(EventLeg, ClockLeg):
         self.is_running = False
         self.ndraws = 0
 
-        register_dir(resource_dir)
+        register_dir(resource_dir, callerpath())
         register_dir(abspath('assets')) 
 
         set_shader_3d(self.load_program(

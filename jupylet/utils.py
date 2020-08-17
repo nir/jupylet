@@ -27,6 +27,7 @@
 
 import functools
 import hashlib
+import inspect
 import pickle
 import types
 import glm
@@ -37,6 +38,16 @@ def abspath(path):
 
     dirname = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(os.path.join(dirname, path))
+
+
+def callerpath(levelsup=1):
+
+    ff = inspect.currentframe().f_back
+    for i in range(levelsup):
+        ff = ff.f_back
+
+    pp = ff.f_globals.get('__file__', '')
+    return os.path.dirname(pp)
 
 
 def auto_read(s):
