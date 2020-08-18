@@ -26,7 +26,6 @@
 
 
 import functools
-import traceback
 import asyncio
 import inspect
 import logging
@@ -36,6 +35,8 @@ import time
 import sys
 
 import moderngl_window as mglw
+
+from .utils import trimmed_traceback
 
 
 logger = logging.getLogger(__name__)
@@ -120,7 +121,7 @@ class Scheduler(object):
             try:
                 foo(t1, t1 - t0, *args, **kwargs)
             except:
-                logger.error(''.join(traceback.format_exception(*sys.exc_info())))
+                logger.error(trimmed_traceback())
                 _type = 'once'
             
             if _type == 'once':
@@ -152,6 +153,9 @@ class ClockLeg(object):
         self.scheduler = Scheduler(timer)
         self.schedules = {}
         
+    def sonic(self, *args, **kwargs):
+        return self.schedule_once(0, *args, **kwargs)
+    
     def run_me_now(self, *args, **kwargs):
         return self.schedule_once(0, *args, **kwargs)
     
@@ -179,6 +183,16 @@ class ClockLeg(object):
 
             self.unschedule(foo)
             
+            async def fuu(ct, dt, *args, **kwargs):
+
+                try:
+                    await foo(ct, dt, *args, **kwargs)
+                
+                except asyncio.exceptions.CancelledError:
+                    pass
+                except:
+                    logger.error(trimmed_traceback())
+
             @functools.wraps(foo)
             def bar(ct, dt, *args, **kwargs):
                 
@@ -197,7 +211,8 @@ class ClockLeg(object):
                         self.scheduler.schedule_once(bar, delay, *args, **kwargs)
                         
                 elif inspect.iscoroutinefunction(foo):
-                    task = asyncio.create_task(foo(ct, dt, *args, **kwargs))
+
+                    task = asyncio.create_task(fuu(ct, dt, *args, **kwargs))
                     self.schedules[foo.__name__]['task'] = task
                     
                 else:

@@ -49,7 +49,7 @@ import soundfile as sf
 import numpy as np
 
 from .resource import find_path
-from .utils import o2h
+from .utils import o2h, callerframe
 from .env import get_app_mode, is_remote, in_python_script
 
 
@@ -114,7 +114,7 @@ def put_sounds(sounds):
 def mix_sounds(sounds, frames):
     
     d = np.stack([
-        s._consume_loop(frames) * s.volume * [1 - s.balance, s.balance] 
+        s._consume_loop(frames) * s.amp * [1 - s.pan, 1 + s.pan] / 2.
         for s in sounds
     ])
 
@@ -221,11 +221,11 @@ def proxy(write_only=False, wait=False, return_self=False):
     return proxy1
 
 
-def _create_sound(path, volume, loop, balance):
+def _create_sound(path, amp, loop, pan):
 
     globals()['_is_worker'] = True
 
-    sound = Sound(path, volume, loop, balance)
+    sound = Sound(path, amp, loop, pan)
     _soundsd[sound.uid] = sound
     return sound.uid
 
@@ -260,17 +260,17 @@ def _setattr(uid, key, value):
     
 class Sound(object):
     
-    def __init__(self, path, volume=1., loop=False, balance=0.5):
+    def __init__(self, path, amp=1., loop=False, pan=0.):
         
         if not _is_worker:
             path = str(find_path(path))
-            self.__dict__['uid'] = submit(_create_sound, path, volume, loop, balance).result()
+            self.__dict__['uid'] = submit(_create_sound, path, amp, loop, pan).result()
             return
 
         self.uid = o2h((random.random(), time.time()))
         self.path = path
-        self.volume = volume
-        self.balance = balance
+        self.amp = amp
+        self.pan = pan
         
         self.playing = False
         self.reset = False
@@ -325,13 +325,16 @@ class Sound(object):
         return super(Sound, self).__setattr__(key, value)
 
     @proxy(write_only=True)
-    def play(self, balance=None):
+    def play(self, amp=None, pan=None):
         """Hey."""
 
         init_sound_worker0()
 
-        if balance is not None:
-            self.balance = balance
+        if amp is not None:
+            self.amp = amp
+
+        if pan is not None:
+            self.pan = pan
 
         done = self.done
 
@@ -402,4 +405,128 @@ class Sound(object):
             l -= len(bl[-1])
             
         return np.concatenate(bl, 0)
+
+
+dth = {}
+
+def sleep(dt=0):
+    
+    dt0 = max(0, dt)
+    fid = hash(callerframe())
+    t00 = dth.get(fid) or time.time()
+    dth[fid] = t00 + dt0
+    
+    return asyncio.sleep(dt0)
+
+
+#play(C4, amp=2)
+#sleep(0.5)
+
+
+@functools.lru_cache(maxsize=32)
+def get_sine_wave(cycles=1, samples=256):
+    a0 = np.sin(np.linspace(0, 2 * np.pi, samples, dtype='float32'))
+    return np.concatenate([a0] * cycles)
+
+
+@functools.lru_cache(maxsize=32)
+def get_saw_wave(cycles=1, samples=256):
+    a0 = np.linspace(-1, 1, samples, dtype='float32')
+    return np.concatenate([a0] * cycles)    
+
+
+@functools.lru_cache(maxsize=32)
+def get_triangle_wave(cycles=1, samples=256):
+    a0 = np.linspace(-1, 1, samples//2, dtype='float32')
+    a1 = np.linspace(1, -1, samples - samples//2, dtype='float32')
+    a2 = np.concatenate((a0, a1)) 
+    return np.concatenate([a2] * cycles)    
+
+
+@functools.lru_cache(maxsize=32)
+def get_pulse_wave(cycles=1, samples=256):
+    a0 = np.ones((samples,), dtype='float32')
+    a0[:samples//2] *= -1.
+    return np.concatenate([a0] * cycles)
+
+_notes = dict(
+    C = 1,
+    Cs = 2, Db = 2,
+    D = 3,
+    Ds = 4, Eb = 4,
+    E = 5,
+    F = 6,
+    Fs = 7, Gb = 7,
+    G = 8, 
+    Gs = 9, Ab = 9,
+    A = 10,
+    As = 11, Bb = 11,
+    B = 12,
+)
+
+
+def get_note_key(note):
+    
+    if note[-1].isdigit():
+        octave = int(note[-1])
+        note = note[:-1]
+    else:
+        octave = 4
+        
+    return _notes[note] + octave * 12 + 11
+
+
+def get_note_freq(note):
+    return get_key_freq(get_note_key(note))
+
+
+def get_key_freq(key, a4=440):
+    return a4 * 2 ** ((key - 69) / 12)
+
+def get_freq_cycles(f, sps=44100, max_cycles=32):
+    
+    f0 = sps / f
+    mr = 1000
+    mc = 1
+    
+    for i in range(1, 1 + max_cycles):
+        
+        fi = f0 * i
+        fr = fi % 1
+        fr = min(fr, 1 - fr)
+        #print(fr, fi)
+        
+        if mr > fr / fi / 0.06:
+            mr = fr / fi / 0.06
+            mc = i
+            
+            if mr < 0.003:# or f0 * mc > 2000:
+                break
+            
+    return mc, round(f0 * mc), round(mr, 4)
+
+_wave_foo = {
+    'sine': get_sine_wave,
+    'saw': get_saw_wave,
+    'tri': get_triangle_wave,
+    'pulse': get_pulse_wave,
+}
+
+
+@functools.lru_cache(maxsize=1024)
+def get_note_wave(note, wave='sine'):
+    
+    foo = _wave_foo[wave]
+    
+    if type(note) is int:
+        freq = get_key_freq(note)
+    else:
+        freq = get_note_freq(note)
+        
+    cycles, samples = get_freq_cycles(freq)[:2]
+    
+    wave0 = foo(cycles)
+    wave1 = scipy.signal.resample(wave0, samples)
+    
+    return wave1
 

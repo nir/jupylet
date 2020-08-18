@@ -26,7 +26,6 @@
 
 
 import ipyevents
-import traceback
 import platform
 import moderngl
 import inspect
@@ -43,6 +42,8 @@ import moderngl_window as mglw
 from moderngl_window.context.pyglet.window import Window
 
 from typing import Tuple, Type
+
+from .utils import trimmed_traceback
 
 
 logger = logging.getLogger(__name__)
@@ -291,8 +292,8 @@ class JupyterWindow(Window):
         try:
             foo(**kwargs)
         except:
-            logger.error(''.join(traceback.format_exception(*sys.exc_info())))
-            
+            logger.error(trimmed_traceback())
+
     def _dom_on_keydown(self, code, key, repeat, ctrl_key, alt_key, shift_key, meta_key):
 
         if not repeat:        

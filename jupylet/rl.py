@@ -28,7 +28,6 @@
 import functools
 import importlib
 import itertools
-import traceback
 import datetime
 import platform
 import tempfile
@@ -42,6 +41,8 @@ import os
 
 import multiprocessing as mp
 import numpy as np
+
+from .utils import trimmed_traceback
 
 try:
     from multiprocessing import shared_memory
@@ -135,7 +136,7 @@ class ModuleProcess(object):
                     self._c1_send(rgetattr(module, name))
              
             except:
-                self.c1.send(('ee', traceback.format_exception(*sys.exc_info())))
+                self.c1.send(('ee', trimmed_traceback()))
                    
     """def log(self, msg, *args):
         if self.debug:

@@ -426,7 +426,7 @@ class App(EventLeg, ClockLeg):
         if self._shm is not None and self._shm.size != size:
         
             self._shm.close()
-            self._shm.unlink
+            self._shm.unlink()
             self._shm = None
 
         if self._shm is None:

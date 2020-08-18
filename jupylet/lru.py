@@ -74,3 +74,7 @@ _lru_textures = LRU(_MAX_TEXTURES)
 _MAX_MATERIALS = 24
 _lru_materials = LRU(_MAX_MATERIALS)
 
+
+#viewport = (0, 0, id_, texture.width, texture.height, 1)
+#texture.write(data, viewport)
+

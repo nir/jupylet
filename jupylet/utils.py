@@ -26,11 +26,14 @@
 
 
 import functools
+import traceback
 import hashlib
 import inspect
 import pickle
 import types
 import glm
+import sys
+import re
 import os
 
 
@@ -48,6 +51,15 @@ def callerpath(levelsup=1):
 
     pp = ff.f_globals.get('__file__', '')
     return os.path.dirname(pp)
+
+
+def callerframe(levelsup=1):
+
+    ff = inspect.currentframe().f_back
+    for i in range(levelsup):
+        ff = ff.f_back
+
+    return ff
 
 
 def auto_read(s):
@@ -106,3 +118,9 @@ def glm_loads(o):
     return getattr(glm, o[1])(o[2])
 
     
+def trimmed_traceback():
+    
+    e = ''.join(traceback.format_exception(*sys.exc_info()))
+    e = re.sub(r'(?s)^.*?The above exception was the direct cause of the following exception:\s*', '', e)
+    return e
+
