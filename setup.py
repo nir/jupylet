@@ -39,6 +39,7 @@ setuptools.setup(
         'gltflib',
         'jupyter',
         'moderngl',
+        'requests',
         'soundfile',
         'webcolors', 
         'ipyevents', 
@@ -46,6 +47,7 @@ setuptools.setup(
         'matplotlib', 
         'sounddevice', 
         'xvfbwrapper',
+        'scikit-image',
         'moderngl-window',
     ],
     classifiers=[

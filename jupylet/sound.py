@@ -32,10 +32,15 @@ import hashlib
 import logging
 import random
 import queue
+import copy
 import time
+import sys
 import os
 
 import concurrent.futures
+import skimage.draw
+import scipy.signal
+import PIL.Image
 
 import multiprocessing.process as process
 
@@ -54,6 +59,9 @@ from .env import get_app_mode, is_remote, in_python_script
 
 
 logger = logging.getLogger(__name__)
+
+
+SPS = 44100
 
 
 class Mock(object):
@@ -121,31 +129,68 @@ def mix_sounds(sounds, frames):
     return np.sum(d, 0)
 
 
+class _dt0(object):
+
+    def reset(self):
+
+        self.init = time.time()
+        self.start = 0
+        self.callback = 0
+        self.out = 0
+        self.cbl = []
+
+_dt = _dt0()
+_al = []
+
+
 def callback(outdata, frames, _time, status):
         
+        _dt.cbl.append((
+            time.perf_counter_ns() / 10e8, 
+            repr(frames), 
+            repr(_time.inputBufferAdcTime),
+            repr(_time.outputBufferDacTime),
+            repr(_time.currentTime),
+        ))
+        _dt.cbl[:] = _dt.cbl[-16:]
+        _dt.callback = _dt.callback or time.time()
+
         if status:
             print(status, file=sys.stderr)
         
         sounds = get_sounds()
         
         if not sounds:
-            _workerq.put('QUIT')
-            raise sd.CallbackStop
+            a0 = np.zeros_like(outdata)
+            outdata[:] = a0
+
+            #_workerq.put('QUIT')
+            #raise sd.CallbackStop
             
         else: 
-            outdata[:] = mix_sounds(sounds, frames)
+            a0 = mix_sounds(sounds, frames)
+            outdata[:] = a0
             put_sounds(sounds)
+
+        if len(_al) * frames > SPS:
+            _al.pop(0)
+        _al.append(a0)
+
+        _dt.out = _dt.out or time.time()
 
 
 def init_sound_worker0():
     
     if not _worker0:
+        _dt.reset()
         _worker0.append(_thread.start_new_thread(sound_worker0, ()))
         
 
 def sound_worker0():
     
-    with sd.OutputStream(channels=2, callback=callback, latency='low'):
+    _dt.start = _dt.start or time.time()
+
+    with sd.OutputStream(channels=2, callback=callback, latency=0.066):
         _workerq.get()
         
     _worker0.pop(0)
@@ -221,11 +266,11 @@ def proxy(write_only=False, wait=False, return_self=False):
     return proxy1
 
 
-def _create_sound(path, amp, loop, pan):
+def _create_sound(*args, **kwargs):
 
     globals()['_is_worker'] = True
 
-    sound = Sound(path, amp, loop, pan)
+    sound = Sound(*args, **kwargs)
     _soundsd[sound.uid] = sound
     return sound.uid
 
@@ -257,24 +302,110 @@ def _setattr(uid, key, value):
 
     return setattr(_soundsd[uid], key, value)
     
+
+def get_sound_spectrum_as_image(
+    ms=1024, 
+    amp=1., 
+    color=255, 
+    size=(512, 256),
+    scale=2.
+):
     
+    w0, h0 = size
+    w1, h1 = int(w0//scale), int(h0//scale)
+
+    a0 = get_sound_spectrum_as_array(ms, amp, color, (w1, h1))
+    im = PIL.Image.fromarray(a0).resize(size)
+    return im
+
+
+def get_sound_spectrum_as_array(ms=1024, amp=1., color=255, size=(512, 256)):
+    
+    w0, h0 = size
+
+    a0 = get_array(SPS * ms // 1000, w0).mean(-1)
+    a0 = (a0 * amp).clip(-1., 1.)
+    #a0 = scipy.signal.resample(a0, w0)
+
+    a1 = np.arange(len(a0))
+    a2 = ((a0 + 1) * h0 / 2).clip(0, h0 - 1).astype(a1.dtype)
+    a3 = np.stack((a2, a1), -1)
+
+    a4 = np.concatenate((a3[:-1], a3[1:]), -1)
+    a5 = np.zeros((h0, w0, 4))
+    a5[...,:3] = color
+
+    for cc in a4:
+        y, x, c = skimage.draw.line_aa(*cc)
+        a5[y, x, -1] = c * 255
+    
+    return a5.astype('uint8')
+
+
+def get_dt():
+    return submit(_get_dt).result()
+
+
+def _get_dt():
+    return vars(_dt)
+
+
+def get_array(steps=SPS, width=None):
+
+    try:
+        return submit(_get_array, steps, width).result()
+    except:
+        return np.zeros((width or SPS, 2))
+
+
+def _get_array(steps=SPS, width=None):
+    a0 = np.concatenate(_al)[int(-steps):]
+    if width:
+        a0 = scipy.signal.resample(a0, width)
+    return a0
+
+
 class Sound(object):
     
-    def __init__(self, path, amp=1., loop=False, pan=0.):
+    def __init__(
+        self, 
+        path=None, 
+        amp=1., 
+        pan=0., 
+        loop=False,
+        duration=0,
+    ):
         
         if not _is_worker:
-            path = str(find_path(path))
-            self.__dict__['uid'] = submit(_create_sound, path, amp, loop, pan).result()
+            path = str(find_path(path)) if path else None
+            self.__dict__['uid'] = submit(
+                _create_sound, 
+                path, 
+                amp, 
+                pan, 
+                loop,
+                duration
+            ).result()
             return
 
         self.uid = o2h((random.random(), time.time()))
         self.path = path
+
         self.amp = amp
         self.pan = pan
         
+        self.loop = loop
+        self.duration = duration
+
+        self.attack = 0
+        self.decay = 0
+        self.sustain = 1
+        self.release = 0
+
         self.playing = False
         self.reset = False
-        self.loop = loop
+
+        self.start = None
         self.stop = False
 
         self.channels = 0
@@ -325,24 +456,43 @@ class Sound(object):
         return super(Sound, self).__setattr__(key, value)
 
     @proxy(write_only=True)
-    def play(self, amp=None, pan=None):
+    def set_envelope(self, attack=None, decay=None, sustain=None, release=None):
+
+        if attack is not None:
+            self.attack = attack
+
+        if decay is not None:
+            self.decay = decay
+
+        if sustain is not None:
+            self.sustain = sustain
+
+        if release is not None:
+            self.release = release
+
+    @proxy(write_only=True)
+    def play_copy(self, **kwargs):
+
+        o = copy.copy(self)
+        o.reset = False
+        o.index = 0
+        o.play(**kwargs)
+
+    @proxy(write_only=True)
+    def play(self, **kwargs):
         """Hey."""
 
         init_sound_worker0()
 
-        if amp is not None:
-            self.amp = amp
-
-        if pan is not None:
-            self.pan = pan
-
-        done = self.done
-
-        self.load()
+        for k, v in kwargs.items():
+            if k in {'pan', 'amp'}:
+                setattr(self, k, v)
 
         if self.playing:  
             self.reset = True
             return
+
+        self.load()
 
         self.playing = True
         _soundsq.put(self)
@@ -449,6 +599,7 @@ def get_pulse_wave(cycles=1, samples=256):
     a0[:samples//2] *= -1.
     return np.concatenate([a0] * cycles)
 
+
 _notes = dict(
     C = 1,
     Cs = 2, Db = 2,
@@ -463,6 +614,16 @@ _notes = dict(
     As = 11, Bb = 11,
     B = 12,
 )
+
+
+class note(object):
+    pass
+
+
+for o in range(8):
+    for k in _notes:
+        ko = (k + str(o)).rstrip('0')
+        setattr(note, ko, ko)
 
 
 def get_note_key(note):
@@ -482,6 +643,7 @@ def get_note_freq(note):
 
 def get_key_freq(key, a4=440):
     return a4 * 2 ** ((key - 69) / 12)
+
 
 def get_freq_cycles(f, sps=44100, max_cycles=32):
     
@@ -504,6 +666,7 @@ def get_freq_cycles(f, sps=44100, max_cycles=32):
                 break
             
     return mc, round(f0 * mc), round(mr, 4)
+
 
 _wave_foo = {
     'sine': get_sine_wave,
