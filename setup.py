@@ -31,6 +31,7 @@ setuptools.setup(
         'RL',
     ],
     install_requires=[
+        'loky',
         'wget',
         'numpy', 
         'PyGLM',

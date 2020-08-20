@@ -33,6 +33,7 @@ import logging
 import random
 import queue
 import copy
+import loky
 import time
 import sys
 import os
@@ -65,7 +66,7 @@ SPS = 44100
 
 
 def t2samples(t):
-    return SPS * t
+    return int(SPS * t)
 
 
 def samples2t(samples):
@@ -91,8 +92,9 @@ def submit(foo, *args, **kwargs):
         return Mock()
 
     if _pool is None:
-        _pool = concurrent.futures.ProcessPoolExecutor(max_workers=1)
-        
+        #_pool = concurrent.futures.ProcessPoolExecutor(max_workers=1)
+        _pool = loky.get_reusable_executor(max_workers=1)
+
     return _pool.submit(foo, *args, **kwargs)
 
 
@@ -133,31 +135,19 @@ def mix_sounds(sounds, frames):
     return np.sum(d, 0).clip(-1, 1)
 
 
-class _dt0(object):
-
-    def reset(self):
-
-        self.init = time.time()
-        self.start = 0
-        self.callback = 0
-        self.out = 0
-        self.cbl = []
-
-_dt = _dt0()
+_dt = []
 _al = []
 
 
 def callback(outdata, frames, _time, status):
         
-        _dt.cbl.append((
-            time.perf_counter_ns() / 10e8, 
-            repr(frames), 
-            repr(_time.inputBufferAdcTime),
-            repr(_time.outputBufferDacTime),
-            repr(_time.currentTime),
+        _dt.append((
+            time.time(), 
+            frames, 
+            _time.inputBufferAdcTime,
+            _time.outputBufferDacTime,
+            _time.currentTime,
         ))
-        _dt.cbl[:] = _dt.cbl[-16:]
-        _dt.callback = _dt.callback or time.time()
 
         if status:
             print(status, file=sys.stderr)
@@ -178,22 +168,19 @@ def callback(outdata, frames, _time, status):
 
         if len(_al) * frames > SPS:
             _al.pop(0)
-        _al.append(a0)
+            _dt.pop(0)
 
-        _dt.out = _dt.out or time.time()
+        _al.append(a0)
 
 
 def init_sound_worker0():
     
     if not _worker0:
-        _dt.reset()
         _worker0.append(_thread.start_new_thread(sound_worker0, ()))
         
 
 def sound_worker0():
     
-    _dt.start = _dt.start or time.time()
-
     with sd.OutputStream(channels=2, callback=callback, latency=0.066):
         _workerq.get()
         
@@ -213,19 +200,27 @@ def get_oscilloscope_as_image(
 ):
     
     w0, h0 = size
-    w1, h1 = int(w0//scale), int(h0//scale)
+    w1, h1 = int(w0 // scale), int(h0 // scale)
 
-    a0 = get_oscilloscope_as_array(ms, amp, color, (w1, h1))
+    a0, t0, dp = get_oscilloscope_as_array(ms, amp, color, (w1, h1))
+    a0[:,w1//2:w1//2+1] = 255
+    
     im = PIL.Image.fromarray(a0).resize(size)
-    return im
+
+    return im, t0, dp / scale
 
 
-def get_oscilloscope_as_array(ms=1024, amp=1., color=255, size=(512, 256)):
+def get_oscilloscope_as_array(
+    ms=1024, 
+    amp=1., 
+    color=255, 
+    size=(512, 256)
+):
     
     w0, h0 = size
 
-    a0 = get_array(SPS * ms // 1000, w0).mean(-1)
-    a0 = (a0 * amp).clip(-1., 1.)
+    a0, t0, dp = get_array(SPS * ms // 1000, w0)
+    a0 = (a0.mean(-1) * amp).clip(-1., 1.)
     #a0 = scipy.signal.resample(a0, w0)
 
     a1 = np.arange(len(a0))
@@ -240,32 +235,44 @@ def get_oscilloscope_as_array(ms=1024, amp=1., color=255, size=(512, 256)):
         y, x, c = skimage.draw.line_aa(*cc)
         a5[y, x, -1] = c * 255
     
-    return a5.astype('uint8')
-
-
-def get_dt():
-    return submit(_get_dt).result()
-
-
-def _get_dt():
-    return vars(_dt)
+    return a5.astype('uint8'), t0, dp
 
 
 def get_array(steps=SPS, width=None):
 
     try:
-        return submit(_get_array, steps, width).result()
+        return submit(_get_array, steps, width).result() or 1/0
     except:
-        return np.zeros((width or SPS, 2))
+        return np.zeros((width or SPS, 2)), 0, 0
 
 
 def _get_array(steps=SPS, width=None):
-    a0 = np.concatenate(_al)[int(-steps):]
+
+    if not _dt or not _al:
+        return np.zeros((width or SPS, 2)), 0, 0
+
+    a0 = np.concatenate(_al)
+    a0 = a0[int(-steps):]
+    
+    dt = len(a0) / SPS
+
     if width:
         a0 = scipy.signal.resample(a0, width)
-    return a0
+    
+    dp = dt / len(a0)
+    t0 = _dt[-1][3] + _dt[-1][1] / SPS
+
+    return a0, t0, dp
 
    
+def get_dt():
+    return submit(_get_dt).result()
+
+
+def _get_dt():
+    return _dt
+
+
 @functools.lru_cache(maxsize=128)
 def load_sound(path, channels=2):
 
