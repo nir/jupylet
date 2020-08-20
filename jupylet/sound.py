@@ -64,6 +64,14 @@ logger = logging.getLogger(__name__)
 SPS = 44100
 
 
+def t2samples(t):
+    return SPS * t
+
+
+def samples2t(samples):
+    return samples  / SPS
+
+
 class Mock(object):
     def result(self):
         pass
@@ -121,12 +129,8 @@ def put_sounds(sounds):
      
 def mix_sounds(sounds, frames):
     
-    d = np.stack([
-        s._consume_loop(frames) * s.amp * [1 - s.pan, 1 + s.pan] / 2.
-        for s in sounds
-    ])
-
-    return np.sum(d, 0)
+    d = np.stack([s._consume_loop(frames) for s in sounds])
+    return np.sum(d, 0).clip(-1, 1)
 
 
 class _dt0(object):
@@ -199,7 +203,69 @@ def sound_worker0():
 def quit_sound_worker():
     _soundsq.put('QUIT')
     
+
+def get_oscilloscope_as_image(
+    ms=1024, 
+    amp=1., 
+    color=255, 
+    size=(512, 256),
+    scale=2.
+):
     
+    w0, h0 = size
+    w1, h1 = int(w0//scale), int(h0//scale)
+
+    a0 = get_oscilloscope_as_array(ms, amp, color, (w1, h1))
+    im = PIL.Image.fromarray(a0).resize(size)
+    return im
+
+
+def get_oscilloscope_as_array(ms=1024, amp=1., color=255, size=(512, 256)):
+    
+    w0, h0 = size
+
+    a0 = get_array(SPS * ms // 1000, w0).mean(-1)
+    a0 = (a0 * amp).clip(-1., 1.)
+    #a0 = scipy.signal.resample(a0, w0)
+
+    a1 = np.arange(len(a0))
+    a2 = ((a0 + 1) * h0 / 2).clip(0, h0 - 1).astype(a1.dtype)
+    a3 = np.stack((a2, a1), -1)
+
+    a4 = np.concatenate((a3[:-1], a3[1:]), -1)
+    a5 = np.zeros((h0, w0, 4))
+    a5[...,:3] = color
+
+    for cc in a4:
+        y, x, c = skimage.draw.line_aa(*cc)
+        a5[y, x, -1] = c * 255
+    
+    return a5.astype('uint8')
+
+
+def get_dt():
+    return submit(_get_dt).result()
+
+
+def _get_dt():
+    return vars(_dt)
+
+
+def get_array(steps=SPS, width=None):
+
+    try:
+        return submit(_get_array, steps, width).result()
+    except:
+        return np.zeros((width or SPS, 2))
+
+
+def _get_array(steps=SPS, width=None):
+    a0 = np.concatenate(_al)[int(-steps):]
+    if width:
+        a0 = scipy.signal.resample(a0, width)
+    return a0
+
+   
 @functools.lru_cache(maxsize=128)
 def load_sound(path, channels=2):
 
@@ -266,13 +332,15 @@ def proxy(write_only=False, wait=False, return_self=False):
     return proxy1
 
 
-def _create_sound(*args, **kwargs):
+def _create_sound(classname, *args, **kwargs):
 
     globals()['_is_worker'] = True
 
-    sound = Sound(*args, **kwargs)
-    _soundsd[sound.uid] = sound
-    return sound.uid
+    _cls = globals()[classname]
+    _sound = _cls(*args, **kwargs)
+    _soundsd[_sound.uid] = _sound
+
+    return _sound.uid
 
 
 def _delete_sound(uid):
@@ -303,68 +371,6 @@ def _setattr(uid, key, value):
     return setattr(_soundsd[uid], key, value)
     
 
-def get_sound_spectrum_as_image(
-    ms=1024, 
-    amp=1., 
-    color=255, 
-    size=(512, 256),
-    scale=2.
-):
-    
-    w0, h0 = size
-    w1, h1 = int(w0//scale), int(h0//scale)
-
-    a0 = get_sound_spectrum_as_array(ms, amp, color, (w1, h1))
-    im = PIL.Image.fromarray(a0).resize(size)
-    return im
-
-
-def get_sound_spectrum_as_array(ms=1024, amp=1., color=255, size=(512, 256)):
-    
-    w0, h0 = size
-
-    a0 = get_array(SPS * ms // 1000, w0).mean(-1)
-    a0 = (a0 * amp).clip(-1., 1.)
-    #a0 = scipy.signal.resample(a0, w0)
-
-    a1 = np.arange(len(a0))
-    a2 = ((a0 + 1) * h0 / 2).clip(0, h0 - 1).astype(a1.dtype)
-    a3 = np.stack((a2, a1), -1)
-
-    a4 = np.concatenate((a3[:-1], a3[1:]), -1)
-    a5 = np.zeros((h0, w0, 4))
-    a5[...,:3] = color
-
-    for cc in a4:
-        y, x, c = skimage.draw.line_aa(*cc)
-        a5[y, x, -1] = c * 255
-    
-    return a5.astype('uint8')
-
-
-def get_dt():
-    return submit(_get_dt).result()
-
-
-def _get_dt():
-    return vars(_dt)
-
-
-def get_array(steps=SPS, width=None):
-
-    try:
-        return submit(_get_array, steps, width).result()
-    except:
-        return np.zeros((width or SPS, 2))
-
-
-def _get_array(steps=SPS, width=None):
-    a0 = np.concatenate(_al)[int(-steps):]
-    if width:
-        a0 = scipy.signal.resample(a0, width)
-    return a0
-
-
 class Sound(object):
     
     def __init__(
@@ -373,18 +379,27 @@ class Sound(object):
         amp=1., 
         pan=0., 
         loop=False,
-        duration=0,
+        duration=0.,
+        attack=0.,
+        decay=0.,
+        sustain=1.,
+        release=0.,
     ):
         
         if not _is_worker:
             path = str(find_path(path)) if path else None
             self.__dict__['uid'] = submit(
                 _create_sound, 
+                'Sound',
                 path, 
                 amp, 
                 pan, 
                 loop,
-                duration
+                duration,
+                attack,
+                decay,
+                sustain,
+                release,
             ).result()
             return
 
@@ -394,25 +409,27 @@ class Sound(object):
         self.amp = amp
         self.pan = pan
         
-        self.loop = loop
+        self.loop = loop or duration
         self.duration = duration
 
-        self.attack = 0
-        self.decay = 0
-        self.sustain = 1
-        self.release = 0
+        self.attack = attack
+        self.decay = decay
+        self.sustain = sustain
+        self.release = release
+
+        self.adsr0 = None
+        self.adsr1 = None
 
         self.playing = False
         self.reset = False
-
-        self.start = None
         self.stop = False
 
         self.channels = 0
         self.buffer = []
         self.dtype = 'float32'
         self.index = 0
-        self.freq = None
+        self.indez = 0
+        self.freq = SPS
 
     def __del__(self):
 
@@ -456,7 +473,10 @@ class Sound(object):
         return super(Sound, self).__setattr__(key, value)
 
     @proxy(write_only=True)
-    def set_envelope(self, attack=None, decay=None, sustain=None, release=None):
+    def set_envelope(self, duration=None, attack=None, decay=None, sustain=None, release=None):
+
+        if duration is not None:
+            self.duration = duration
 
         if attack is not None:
             self.attack = attack
@@ -470,12 +490,40 @@ class Sound(object):
         if release is not None:
             self.release = release
 
+    @proxy(wait=True)
+    def get_adsr(self):
+        
+        if not self.duration:
+            return
+
+        adsr = (self.duration, self.attack, self.decay, self.sustain, self.release)
+        if self.adsr0 != adsr:
+            self.adsr0 = adsr
+            
+            dn, a0, d0, s0, r0 = adsr
+            
+            a0 = max(min(a0, dn), 0.01)
+            d0 = max(min(d0, dn - a0), 0.01)
+            dn = min(dn, dn - a0 - d0)
+            r0 = max(r0, 0.01)
+
+            a1 = np.linspace(0., 1., int(SPS * a0))
+            d1 = np.linspace(1., s0, int(SPS * d0))
+            s1 = np.linspace(s0, s0, int(SPS * dn))
+            r1 = np.linspace(s0, 0., int(SPS * r0))
+            p1 = np.linspace(0., 0., 4096)
+            
+            self.adsr1 = np.concatenate((a1, d1, s1, r1, p1)).reshape(-1, 1)
+
+        return self.adsr1
+
     @proxy(write_only=True)
     def play_copy(self, **kwargs):
 
         o = copy.copy(self)
         o.reset = False
         o.index = 0
+        o.indez = 0
         o.play(**kwargs)
 
     @proxy(write_only=True)
@@ -485,14 +533,14 @@ class Sound(object):
         init_sound_worker0()
 
         for k, v in kwargs.items():
-            if k in {'pan', 'amp'}:
+            if k in self.__dict__:
                 setattr(self, k, v)
+
+        self.load()
 
         if self.playing:  
             self.reset = True
             return
-
-        self.load()
 
         self.playing = True
         _soundsq.put(self)
@@ -506,6 +554,7 @@ class Sound(object):
         self.dtype = self.buffer.dtype
         self.reset = False
         self.index = 0
+        self.indez = 0
                 
     @property
     @proxy(wait=True)
@@ -514,11 +563,14 @@ class Sound(object):
         if self.stop:
             return True
         
-        if self.loop:
-            return False
-        
-        return self.remains <= 0
+        if not self.loop:
+            return self.remains <= 0
     
+        if not self.duration:
+            return False
+
+        return samples2t(self.indez) >= self.duration + max(self.release, 0.01)
+
     @property
     @proxy(wait=True)
     def remains(self):
@@ -529,11 +581,14 @@ class Sound(object):
         if self.reset:
             self.reset = False
             self.index = 0
+            self.indez = 0
 
         l = min(l, self.remains)
         
         data = self.buffer[self.index: self.index+l]
+        
         self.index += l
+        self.indez += l
         
         if self.loop:
             self.index = self.index % len(self.buffer)
@@ -543,6 +598,7 @@ class Sound(object):
     @proxy()
     def _consume_loop(self, l):
         
+        iz = self.indez
         bl = []
         
         while l > 0:
@@ -554,7 +610,13 @@ class Sound(object):
                 
             l -= len(bl[-1])
             
-        return np.concatenate(bl, 0)
+        b0 = np.concatenate(bl, 0)
+        b0 = b0 * self.amp * [1 - self.pan, 1 + self.pan] / 2.
+
+        if self.duration:
+            b0 = b0 * self.get_adsr()[iz: iz + len(b0)]
+        
+        return b0
 
 
 dth = {}
@@ -668,7 +730,7 @@ def get_freq_cycles(f, sps=44100, max_cycles=32):
     return mc, round(f0 * mc), round(mr, 4)
 
 
-_wave_foo = {
+_shape_foo = {
     'sine': get_sine_wave,
     'saw': get_saw_wave,
     'tri': get_triangle_wave,
@@ -677,9 +739,9 @@ _wave_foo = {
 
 
 @functools.lru_cache(maxsize=1024)
-def get_note_wave(note, wave='sine'):
+def get_note_wave(note, shape='sine', channels=2):
     
-    foo = _wave_foo[wave]
+    foo = _shape_foo[shape]
     
     if type(note) is int:
         freq = get_key_freq(note)
@@ -688,8 +750,67 @@ def get_note_wave(note, wave='sine'):
         
     cycles, samples = get_freq_cycles(freq)[:2]
     
-    wave0 = foo(cycles)
-    wave1 = scipy.signal.resample(wave0, samples)
-    
-    return wave1
+    wave = foo(cycles)
+    wave = scipy.signal.resample(wave, samples)
 
+    data = wave.reshape(-1, 1)
+    data = data.repeat(channels, -1)
+
+    return data.astype('float32')
+
+
+class Synth(Sound):
+    
+    def __init__(
+        self,
+        shape='sine',
+        amp=1., 
+        pan=0., 
+        duration=0.5,
+        attack=0.,
+        decay=0.,
+        sustain=1.,
+        release=0.,
+        note='C',
+    ):
+
+        if not _is_worker:
+            self.__dict__['uid'] = submit(
+                _create_sound, 
+                'Synth',
+                shape, 
+                amp, 
+                pan, 
+                duration,
+                attack,
+                decay,
+                sustain,
+                release,
+                note,
+            ).result()
+            return
+
+        super(Synth, self).__init__(
+            amp=amp, 
+            pan=pan, 
+            duration=duration,
+            attack=attack,
+            decay=decay,
+            sustain=sustain,
+            release=release,
+        )
+
+        self.shape = shape
+        self.note = note
+
+    @proxy(return_self=True)
+    def load(self, channels=2):
+        
+        self.buffer = get_note_wave(self.note, self.shape, channels)
+        
+        self.channels = int(self.buffer.shape[-1])
+        self.dtype = self.buffer.dtype
+        self.reset = False
+        self.index = 0
+        self.indez = 0
+ 
