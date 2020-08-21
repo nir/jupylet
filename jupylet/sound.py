@@ -135,19 +135,13 @@ def mix_sounds(sounds, frames):
     return np.sum(d, 0).clip(-1, 1)
 
 
-_dt = []
 _al = []
+_dt = []
 
 
 def callback(outdata, frames, _time, status):
         
-        _dt.append((
-            time.time(), 
-            frames, 
-            _time.inputBufferAdcTime,
-            _time.outputBufferDacTime,
-            _time.currentTime,
-        ))
+        t0 = time.time()
 
         if status:
             print(status, file=sys.stderr)
@@ -171,6 +165,13 @@ def callback(outdata, frames, _time, status):
             _dt.pop(0)
 
         _al.append(a0)
+        _dt.append((
+            t0, 
+            frames, 
+            _time.inputBufferAdcTime,
+            _time.outputBufferDacTime,
+            _time.currentTime,
+        ))
 
 
 def init_sound_worker0():
@@ -203,7 +204,7 @@ def get_oscilloscope_as_image(
     w1, h1 = int(w0 // scale), int(h0 // scale)
 
     a0, t0, dp = get_oscilloscope_as_array(ms, amp, color, (w1, h1))
-    a0[:,w1//2:w1//2+1] = 255
+    #a0[:,w1//2:w1//2+1] = 255
     
     im = PIL.Image.fromarray(a0).resize(size)
 
@@ -228,14 +229,14 @@ def get_oscilloscope_as_array(
     a3 = np.stack((a2, a1), -1)
 
     a4 = np.concatenate((a3[:-1], a3[1:]), -1)
-    a5 = np.zeros((h0, w0, 4))
+    a5 = np.zeros((h0, w0, 4), dtype='uint8')
     a5[...,:3] = color
 
     for cc in a4:
         y, x, c = skimage.draw.line_aa(*cc)
         a5[y, x, -1] = c * 255
     
-    return a5.astype('uint8'), t0, dp
+    return a5, t0, dp
 
 
 def get_array(steps=SPS, width=None):
@@ -260,9 +261,11 @@ def _get_array(steps=SPS, width=None):
         a0 = scipy.signal.resample(a0, width)
     
     dp = dt / len(a0)
-    t0 = _dt[-1][3] + _dt[-1][1] / SPS
 
-    return a0, t0, dp
+    t0, st, _, da, ct = _dt[-1]
+    t1 = t0 + da - ct + st / SPS
+
+    return a0, t1, dp
 
    
 def get_dt():
@@ -749,9 +752,9 @@ _shape_foo = {
 def get_note_wave(note, shape='sine', channels=2):
     
     foo = _shape_foo[shape]
-    
-    if type(note) is int:
-        freq = get_key_freq(note)
+
+    if type(note) in (int, float):
+        freq = get_key_freq(note) if note < 100 else note
     else:
         freq = get_note_freq(note)
         

@@ -366,7 +366,7 @@ class App(EventLeg, ClockLeg):
     def set_redraw_interval(self, interval):
 
         self.scheduler.unschedule(self._redraw_windows)
-        self.scheduler.schedule_interval_soft(self._redraw_windows, interval)
+        self.scheduler.schedule_interval(self._redraw_windows, interval)
 
     def _redraw_windows(self, ct, dt):
         
