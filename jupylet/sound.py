@@ -591,6 +591,16 @@ class Sample(object):
 
         return self.adsr1
 
+    def play_new(self, note=None, **kwargs):
+        """Play new copy of sound.
+
+        If sound is already playing it will play the new copy in parallel. 
+        This function returns the copied sound object.
+        """
+        uid = _create_uid()
+        self.play(note, reset=False, uid=uid, **kwargs)
+        return type(self)(uid=uid)
+
     @proxy(write_only=True)
     def play(self, note=None, reset=False, **kwargs):
 
@@ -604,9 +614,12 @@ class Sample(object):
             o.index = 0
             o.indez = 0
 
-            _soundsd[o.uid] = o
-            self.uid = _create_uid()
+            if 'uid' in kwargs:
+                o.uid = kwargs.pop('uid')
+            else:
+                self.uid = _create_uid()
 
+            _soundsd[o.uid] = o
             return o.play(note, reset=True, **kwargs)
 
         if note is not None:
