@@ -42,13 +42,13 @@ There are two things to note here:
 .. code-block:: python
 
     @app.event
-    def on_draw():
+    def render(ct, dt):
         app.window.clear()
         hello.draw()
 
-    @app.run_me_again_and_again(1/30)
-    def scroll(dt):
-        hello.x -= 1
+    @app.run_me_many(1/30)
+    def scroll(ct, dt):
+        hello.x -= dt * 48
         if hello.x < -220:
             hello.x = app.width
 

@@ -153,22 +153,16 @@ class ClockLeg(object):
         self.scheduler = Scheduler(timer)
         self.schedules = {}
         
-    def sonic(self, *args, **kwargs):
-        return self.schedule_once(0, *args, **kwargs)
+    def sonic_live_loop(self, times=0, *args, **kwargs):
+        return self.schedule_once(0, times, *args, **kwargs)
     
-    def run_me_now(self, *args, **kwargs):
-        return self.schedule_once(0, *args, **kwargs)
-    
-    def run_me_once(self, delay, *args, **kwargs):
-        return self.schedule_once(delay, *args, **kwargs)
+    def run_me(self, delay=0, *args, **kwargs):
+        return self.schedule_once(delay, 1, *args, **kwargs)
     
     def run_me_many(self, interval, *args, **kwargs):
         return self.schedule_interval(interval, *args, **kwargs)
     
-    def run_me_no_more(self, foo=None):
-        return self.unschedule(foo, levels_up=2)
-    
-    def schedule_once(self, delay, *args, **kwargs):
+    def schedule_once(self, delay=0, times=1, *args, **kwargs):
         """Schedule decorated function to be called once after ``delay`` seconds.
         
         This function uses the default clock. ``delay`` can be a float. The
@@ -183,11 +177,23 @@ class ClockLeg(object):
 
             self.unschedule(foo)
             
+            spec = inspect.getfullargspec(foo)
+
             async def fuu(ct, dt, *args, **kwargs):
 
                 try:
-                    await foo(ct, dt, *args, **kwargs)
-                
+                    args = (ct, dt) + args
+                    args = args[:len(spec.args)]
+                    
+                    n = times
+                    while True:
+
+                        await foo(*args, **kwargs)
+                        
+                        n -= 1
+                        if n == 0:
+                            break
+
                 except asyncio.exceptions.CancelledError:
                     pass
                 except:
@@ -208,7 +214,7 @@ class ClockLeg(object):
                         delay = goo.send((ct, dt))
                     
                     if delay is not None:
-                        self.scheduler.schedule_once(bar, delay, *args, **kwargs)
+                        self.scheduler.schedule_once(bar, delay, times, *args, **kwargs)
                         
                 elif inspect.iscoroutinefunction(foo):
 
@@ -222,6 +228,14 @@ class ClockLeg(object):
             self.scheduler.schedule_once(bar, delay, *args, **kwargs)
 
             return foo
+
+        if inspect.isroutine(delay): # @app.run_me - without ()
+            foo , delay = delay, 0
+            return schedule0(foo)
+
+        if inspect.isroutine(times): # @app.sonic_live_loop - without ()
+            foo , times = times, 0
+            return schedule0(foo)
 
         return schedule0
 
@@ -288,6 +302,8 @@ class ClockLeg(object):
         """
         if foo is None:
             fname = inspect.stack()[kwargs.get('levels_up', 1)][3] 
+        elif type(foo) is str:
+            fname = foo
         else:
             fname = foo.__name__
             

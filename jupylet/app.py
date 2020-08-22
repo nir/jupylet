@@ -251,6 +251,7 @@ class App(EventLeg, ClockLeg):
         self._run_timestamp = None
 
         self.is_running = False
+        self.interval = 1/48
         self.ndraws = 0
 
         register_dir(resource_dir, callerpath())
@@ -353,7 +354,10 @@ class App(EventLeg, ClockLeg):
         if self._exit:
             self.is_running = False
 
-    def stop(self):
+    def stop(self, foo=None):
+
+        if foo is not None:
+            return self.unschedule(foo, levels_up=2)
 
         if self._run_timestamp and time.time() - self._run_timestamp < 0.5:
             sys.stderr.write('Ignoring call to stop() since it appears to have been done accidentally.')
@@ -365,6 +369,7 @@ class App(EventLeg, ClockLeg):
 
     def set_redraw_interval(self, interval):
 
+        self.interval = interval
         self.scheduler.unschedule(self._redraw_windows)
         self.scheduler.schedule_interval(self._redraw_windows, interval)
 

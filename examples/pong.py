@@ -45,7 +45,7 @@ import jupylet.color
 
 from jupylet.env import get_app_mode
 from jupylet.app import App
-from jupylet.sound import Sound
+from jupylet.sound import Sample
 from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
@@ -76,7 +76,7 @@ padr = Sprite(a1, y=app.height/2, x=app.width-48)
 
 field = Sprite(a2, y=app.height/2, x=app.width/2, color=background) 
 
-pong_sound = Sound('sounds/pong-blip.wav', volume=0.1).load()
+pong_sound = Sample('sounds/pong-blip.wav', amp=0.1).load()
 
 
 scorel = Label(
@@ -205,17 +205,17 @@ def update_ball(ct, dt):
     ball.y += state.bvy * dt
     
     if ball.top >= app.height:
-        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+        pong_sound.play(pan=2*max(.25, min(.75, ball.x / app.width))-1)
         ball.y -= ball.top - app.height
         state.bvy = -state.bvy
         
     if ball.bottom <= 0:
-        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+        pong_sound.play(pan=2*max(.25, min(.75, ball.x / app.width))-1)
         ball.y -= ball.bottom
         state.bvy = -state.bvy
         
     if ball.right >= app.width:
-        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+        pong_sound.play(pan=2*max(.25, min(.75, ball.x / app.width))-1)
         ball.x -= ball.right - app.width
         
         state.bvx = -192
@@ -226,7 +226,7 @@ def update_ball(ct, dt):
         scorel.text = str(state.sl)
         
     if ball.left <= 0:
-        pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+        pong_sound.play(pan=2*max(.25, min(.75, ball.x / app.width))-1)
         ball.x -= ball.left
         
         state.bvx = 192
@@ -238,14 +238,14 @@ def update_ball(ct, dt):
         
     if state.bvx > 0 and ball.top >= padr.bottom and padr.top >= ball.bottom: 
         if 0 < ball.right - padr.left < 10:
-            pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+            pong_sound.play(pan=2*max(.25, min(.75, ball.x / app.width))-1)
             ball.x -= ball.right - padr.left
             state.bvx = -state.bvx
             state.bvy += state.vyr / 2
             
     if state.bvx < 0 and ball.top >= padl.bottom and padl.top >= ball.bottom: 
         if 0 < padl.right - ball.left < 10:
-            pong_sound.play(balance=max(.25, min(.75, ball.x / app.width)))
+            pong_sound.play(pan=2*max(.25, min(.75, ball.x / app.width))-1)
             ball.x += ball.left - padl.right
             state.bvx = -state.bvx
             state.bvy += state.vyl / 2
@@ -258,7 +258,7 @@ def update_ball(ct, dt):
     ball.wrap_position(app.width, app.height)
 
 
-@app.run_me_now()
+@app.run_me()
 def highlights(ct, dt):
     
     sl0 = state.sl
