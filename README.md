@@ -32,11 +32,11 @@ to programmatically control multiple simultaneous games and render thousands
 of frames per second.
 
 Consider for example the pong game included in this repository. With a few
-lines of code you can modify the colors of the game or turn the background into
-a swirling giant flower to experiment with transfer learning, or turn the game
-into 4-way pong with agents on all four sides of the game court to experiment
-with cooperation between multiple agents. And since you can modify the game
-interactively in Jupyter this process is not only easy but also fun.  
+lines of code you can modify the colors of the game to experiment with transfer 
+learning, or turn the game into 4-way pong with agents on all four sides of the 
+game court to experiment with cooperation between multiple agents. And since you 
+can modify the game interactively in Jupyter this process is not only easy but 
+also fun.  
 
 Head to [examples/22-pong-RL.ipynb](examples/22-pong-RL.ipynb) to see how to programmatically control a 2-player version of pong.
 
