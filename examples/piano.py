@@ -115,6 +115,8 @@ label1 = Label('span: %.1f ms' % state.ms, x=10, y=174)
 label2 = Label('use ← → ↑ ↓ to modify', anchor_x='right', x=app.width - 10, y=174)
 
 
+pk = {}
+
 @app.event
 def key_event(key, action, modifiers):
             
@@ -134,7 +136,11 @@ def key_event(key, action, modifiers):
         state.left = value
         
     if action == keys.ACTION_PRESS and key in keyboard:
-        synth.play(note=keyboard[key], duration=0.05)
+        assert key not in pk
+        pk[key] = synth.play_new(note=keyboard[key], duration=20)
+           
+    if action == keys.ACTION_RELEASE and key in keyboard:
+        pk.pop(key).play_release()
 
 
 @app.run_me_many(1/24)

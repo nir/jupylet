@@ -578,7 +578,7 @@ class Sample(object):
             
             a0 = max(min(a0, dn), 0.01)
             d0 = max(min(d0, dn - a0), 0.01)
-            dn = min(dn, dn - a0 - d0)
+            dn = max(min(dn, dn - a0 - d0), 0.01)
             r0 = max(r0, 0.01)
 
             a1 = np.linspace(0., 1., int(FPS * a0), dtype='float32')
@@ -591,36 +591,24 @@ class Sample(object):
 
         return self.adsr1
 
+    @proxy(write_only=True)
+    def play_release(self, release=None):
+
+        if release is not None:
+            self.release = release
+            
+        self.duration = frames2t(self.indez)
+        
     def play_new(self, note=None, **kwargs):
         """Play new copy of sound.
 
         If sound is already playing it will play the new copy in parallel. 
-        This function returns the copied sound object.
+        This function returns the new sound object.
         """
-        uid = _create_uid()
-        self.play(note, reset=False, uid=uid, **kwargs)
-        return type(self)(uid=uid)
+        return self.copy().play(note, **kwargs)
 
-    @proxy(write_only=True)
-    def play(self, note=None, reset=False, **kwargs):
-
-        if not reset:
-
-            o = copy.copy(self)
-
-            o.playing = False
-            o.reset = False
-            o._stop = False
-            o.index = 0
-            o.indez = 0
-
-            if 'uid' in kwargs:
-                o.uid = kwargs.pop('uid')
-            else:
-                self.uid = _create_uid()
-
-            _soundsd[o.uid] = o
-            return o.play(note, reset=True, **kwargs)
+    @proxy(return_self=True)
+    def play(self, note=None, **kwargs):
 
         if note is not None:
             self.note = note
@@ -638,6 +626,30 @@ class Sample(object):
         self.playing = True
         _soundsq.put(self)
             
+    def copy(self, **kwargs):
+
+        uid = _create_uid()
+        self._copy(uid, **kwargs)
+        return type(self)(uid=uid)
+
+    @proxy(write_only=True)
+    def _copy(self, uid, **kwargs):
+
+        o = copy.copy(self)
+
+        o.playing = False
+        o.reset = False
+        o._stop = False
+        o.index = 0
+        o.indez = 0
+        o.uid = uid
+        
+        _soundsd[o.uid] = o
+
+        for k, v in kwargs.items():
+            if k in self.__dict__:
+                setattr(self, k, v)
+
     @proxy(return_self=True)
     def load(self, channels=2):
         
