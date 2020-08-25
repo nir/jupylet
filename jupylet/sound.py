@@ -70,12 +70,19 @@ FPS = 44100
 
 
 def t2frames(t):
+    """Convert time in seconds to frames at 44100 frames per second."""
     return int(FPS * t)
 
 
 def frames2t(frames):
+    """Convert frames at 44100 frames per second to time in seconds."""
     return frames  / FPS
 
+
+#
+# The sound server runs in a dedicated worker process 
+# (living in a pool of size 1).
+#
 
 _pool0 = None
 _queue = None
@@ -107,6 +114,10 @@ def submit(foo, *args, **kwargs):
 
 
 class MockFuture(object):
+    """Mock future objects for remote headless servers. 
+    
+    We don't want them to start playing sounds in their remote server rack.
+    """
     def result(self):
         pass
 
@@ -316,8 +327,6 @@ def get_oscilloscope_as_image(
     w1, h1 = int(w0 // scale), int(h0 // scale)
 
     a0, ts, te = get_oscilloscope_as_array(fps, ms, amp, color, (w1, h1))
-    #a0[:,w1//2:w1//2+1] = 255
-    
     im = PIL.Image.fromarray(a0).resize(size)
 
     return im, ts, te
@@ -367,9 +376,6 @@ def get_oscilloscope_as_array(
         y, x, c = skimage.draw.line_aa(*cc)
         a5[y, x, -1] = c * 255
     
-    #while t0 - time.time() > 0:
-    #    np.random.randn(1024)
-
     return a5, ts, te
 
 
@@ -449,7 +455,7 @@ class Sample(object):
     def __init__(
         self, 
         path=None, 
-        amp=1., 
+        amp=0.5, 
         pan=0., 
         loop=False,
         duration=0.,
@@ -677,8 +683,8 @@ class Sample(object):
         _soundsd[o.uid] = o
 
         for k, v in kwargs.items():
-            if k in self.__dict__:
-                setattr(self, k, v)
+            if k in o.__dict__:
+                setattr(o, k, v)
 
     @proxy(return_self=True)
     def load(self, channels=2):
@@ -772,16 +778,37 @@ def _ampan(amp, pan, dtype='float32'):
     return a0.astype(dtype)
 
 
-dth = {}
+dtd = {}
+syd = {}
+
+
+def use(synth, **kwargs):
+
+    if kwargs:
+        synth = synth.copy(**kwargs)
+
+    cf = hash(callerframe())
+    syd[cf] = synth
+
+
+def play(note, **kwargs):
+
+    cf = hash(callerframe())
+    sy = syd[cf]
+
+    return sy.play_new(note, **kwargs)
+
 
 def sleep(dt=0):
     
-    dt0 = max(0, dt)
-    fid = hash(callerframe())
-    t00 = dth.get(fid) or time.time()
-    dth[fid] = t00 + dt0
+    dt = max(0, dt)
+    cf = hash(callerframe())
+
+    tt = time.time()
+    t0 = dtd.get(cf) or tt
+    t1 = dtd[cf] = max(t0 + dt, tt)
     
-    return asyncio.sleep(dt0)
+    return asyncio.sleep(t1 - tt)
 
 
 #play(C4, amp=2)
@@ -917,7 +944,7 @@ class Synth(Sample):
     def __init__(
         self,
         shape='sine',
-        amp=1., 
+        amp=0.5, 
         pan=0., 
         duration=0.5,
         attack=0.,

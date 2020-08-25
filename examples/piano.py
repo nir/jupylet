@@ -58,7 +58,7 @@ a0 = np.zeros((256, 512, 4), 'uint8')
 oscilloscope = Sprite(a0, x=256, y=292)
 layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
 
-synth = Synth('tri', amp=0.5)
+synth = Synth('tri')
 synth.set_envelope(min_duration=0.05, attack=0.0, decay=0.1, sustain=0.7, release=0.5)
 
 keys = app.window.keys
