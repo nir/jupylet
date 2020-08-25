@@ -59,6 +59,7 @@ import numpy as np
 
 from .resource import find_path
 from .utils import o2h, callerframe, trimmed_traceback
+from .utils import setup_basic_logging, get_logging_level
 from .env import get_app_mode, is_remote, in_python_script
 
 
@@ -81,6 +82,7 @@ _queue = None
 
 
 def submit(foo, *args, **kwargs):
+    logger.debug('Enter submit(foo=%r, *args=%r, **kwargs=%r).', foo, args, kwargs)
 
     global _pool0
     global _queue
@@ -98,7 +100,7 @@ def submit(foo, *args, **kwargs):
             context = _ctx00,
             timeout=2**20,
             initializer=_init_worker,
-            initargs=(_queue,)
+            initargs=(_queue, get_logging_level())
         )
 
     return _pool0.submit(foo, *args, **kwargs)
@@ -111,7 +113,7 @@ class MockFuture(object):
 
 _is_worker = False
 
-def _init_worker(q):
+def _init_worker(q, logging_level=logging.WARNING):
 
     global _is_worker
     global _queue
@@ -119,13 +121,15 @@ def _init_worker(q):
     _is_worker = True
     _queue = q
 
+    setup_basic_logging(logging_level)
     _init_sound_worker()
     
 
 _worker_tid = None
 
 def _init_sound_worker():
-    
+    logger.info('Enter _init_sound_worker().')
+
     global _worker_tid
     if not _worker_tid:
         _worker_tid = _thread.start_new_thread(_sound_worker, ())
@@ -134,6 +138,7 @@ def _init_sound_worker():
 _workerq = queue.Queue()
 
 def _sound_worker():
+    logger.info('Enter _sound_worker().')
     
     with sd.OutputStream(channels=2, callback=_stream_callback, latency=0.066):
         _workerq.get()
@@ -395,7 +400,8 @@ def get_dt():
 
 @functools.lru_cache(maxsize=128)
 def load_sound(path, channels=2):
-
+    logger.info('Enter load_sound(path=%r, channels=%r).', path, channels)
+    
     data, fs = sf.read(path, dtype='float32') 
 
     if len(data.shape) == 1:
@@ -411,6 +417,7 @@ def load_sound(path, channels=2):
 
 
 def _create_sound(classname, *args, **kwargs):
+    logger.info('Enter _create_sound(classname=%r, *args=%r, **kwargs=%r).', classname, args, kwargs)
 
     _cls = globals()[classname]
     _sound = _cls(*args, **kwargs)
@@ -418,18 +425,22 @@ def _create_sound(classname, *args, **kwargs):
 
 
 def _delete_sound(uid):
+    logger.info('Enter _delete_sound().')
     _soundsd.pop(uid, None)
 
 
 def _getattr(uid, key):
+    logger.info('Enter _getattr(uid=%r, key=%r).', uid, key)
     return getattr(_soundsd[uid], key)
     
     
 def _setattr(uid, key, value):
+    logger.info('Enter _setattr(uid=%r, key=%r, value=%r).', uid, key, value)
     return setattr(_soundsd[uid], key, value)
     
 
 def _create_uid():
+    logger.debug('Enter _create_uid().')
     return o2h((random.random(), time.time()))
 
 
@@ -478,9 +489,10 @@ class Sample(object):
         self.amp = amp
         self.pan = pan
         
-        self.loop = loop or bool(duration)
+        self.loop = loop or duration > 0
         self.duration = duration
 
+        self.min_duration = 0
         self.attack = attack
         self.decay = decay
         self.sustain = sustain
@@ -542,15 +554,15 @@ class Sample(object):
     @proxy(write_only=True)
     def set_envelope(
         self, 
-        duration=None, 
+        min_duration=None, 
         attack=None, 
         decay=None, 
         sustain=None, 
         release=None
     ):
 
-        if duration is not None:
-            self.duration = duration
+        if min_duration is not None:
+            self.min_duration = min_duration
 
         if attack is not None:
             self.attack = attack
@@ -567,27 +579,44 @@ class Sample(object):
     @proxy(wait=True)
     def get_adsr(self):
         
-        if not self.duration:
-            return
+        #if self.duration <= 0:
+        #    return
 
-        adsr = (self.duration, self.attack, self.decay, self.sustain, self.release)
+        adsr = (
+            self.duration, 
+            self.min_duration, 
+            self.attack, 
+            self.decay, 
+            self.sustain, 
+            self.release
+        )
+
         if self.adsr0 != adsr:
             self.adsr0 = adsr
             
-            dn, a0, d0, s0, r0 = adsr
+            dn, md, a0, d0, sv, r0 = adsr
             
-            a0 = max(min(a0, dn), 0.01)
-            d0 = max(min(d0, dn - a0), 0.01)
-            dn = max(min(dn, dn - a0 - d0), 0.01)
-            r0 = max(r0, 0.01)
+            ds = int(FPS * max(dn, md))
 
+            a0 = max(a0, 0.01)
             a1 = np.linspace(0., 1., int(FPS * a0), dtype='float32')
-            d1 = np.linspace(1., s0, int(FPS * d0), dtype='float32')
-            s1 = np.linspace(s0, s0, int(FPS * dn), dtype='float32')
-            r1 = np.linspace(s0, 0., int(FPS * r0), dtype='float32')
-            p1 = np.linspace(0., 0., 4096, dtype='float32')
+            a2 = a1[:max(1, ds)]
+            av = a2[-1]
+
+            d0 = max(d0, 0.01)
+            d1 = np.linspace(av, sv, int(FPS * d0), dtype='float32')
+            d2 = d1[:max(1, ds - len(a2))]
+            dv = d2[-1]
+
+            s0 = ds + 128 if dv > 0 else 1
+            s1 = np.linspace(dv, dv, s0, dtype='float32')
+            s2 = s1[:max(1, ds - len(a2) - len(d2))]
+
+            r0 = max(r0, 0.01)
+            r1 = np.linspace(dv, 0., int(FPS * r0), dtype='float32')
+            p0 = np.linspace(0., 0., 4096, dtype='float32')
             
-            self.adsr1 = np.concatenate((a1, d1, s1, r1, p1)).reshape(-1, 1)
+            self.adsr1 = np.concatenate((a2, d2, s2, r1, p0)).reshape(-1, 1)
 
         return self.adsr1
 
@@ -609,7 +638,8 @@ class Sample(object):
 
     @proxy(return_self=True)
     def play(self, note=None, **kwargs):
-
+        logger.info('Enter Sample.play(note=%r, **kwargs=%r).', note, kwargs)
+        
         if note is not None:
             self.note = note
 
@@ -676,10 +706,17 @@ class Sample(object):
         if not self.loop:
             return self.remains <= 0
     
-        if not self.duration:
+        adsr = self.get_adsr()
+        if adsr is None:
             return False
 
-        return frames2t(self.indez) >= self.duration + max(self.release, 0.01)
+        if len(adsr) <= self.indez:
+            return True
+
+        if self.indez < 8:
+            return False
+
+        return adsr[self.indez] == 0
 
     @property
     @proxy(wait=True)
@@ -916,6 +953,7 @@ class Synth(Sample):
         super(Synth, self).__init__(
             amp=amp, 
             pan=pan, 
+            loop=True,
             duration=duration,
             attack=attack,
             decay=decay,

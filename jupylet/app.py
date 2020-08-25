@@ -55,89 +55,13 @@ from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
 from .utils import Dict, o2h, abspath, callerpath, patch_method
+from .utils import get_logging_widget, setup_basic_logging
 
 
 #__all__ = ['App']
 
 
 logger = logging.getLogger(__name__)
-
-
-LOGGING_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
-
-class StreamHandler(logging.StreamHandler):
-    pass
-
-
-class LoggingWidget(logging.Handler):
-    """ Custom logging handler sending logs to an output widget """
-
-    def __init__(self, height='256px', *args, **kwargs):    
-        super(LoggingWidget, self).__init__(*args, **kwargs)
-        
-        self.out = ipywidgets.Output()
-        self.set_layout(height)
-
-    def set_layout(self, height='256px', overflow_y='scroll', **kwargs):
-        self.out.layout=ipywidgets.Layout(
-            height=height, 
-            overflow_y=overflow_y, 
-            **kwargs
-        )
-
-    def emit(self, record):
-        with self.out:
-            print(self.format(record))
-
-
-def get_logging_widget(height='256px', quiet_default_logger=True):
-
-    if type(height) is int:
-        height = str(height) + 'px'
-
-    logger = logging.getLogger()
-
-    wl = [h for h in logger.handlers if isinstance(h, LoggingWidget)]
-    if wl:
-        w = wl[-1]
-        w.set_layout(height)
-        return w.out
-
-    handler = LoggingWidget(height)
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
-    
-    logger.addHandler(handler)
-
-    if quiet_default_logger:
-        wl = [h for h in logger.handlers if isinstance(h, StreamHandler)]
-        if wl:
-            wl[-1].setLevel(logging.WARNING)
-
-    return handler.out
-
-
-def setup_basic_logging(level: int):
-    """Set up basic logging
-
-    Args:
-        level (int): The log level
-    """
-    
-    if level is None:
-        return
-
-    logger = logging.getLogger()
-    logger.setLevel(level)
-
-    if not logger.handlers:
-
-        handler = StreamHandler()
-        handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
-
-        logger.addHandler(handler)
 
 
 REMOTE_WARNING = 'Game video will be compressed and may include noticeable artifacts and latency since it is streamed from a remote server. This is expected. If you install Jupylet on your computer video quality will be high.'

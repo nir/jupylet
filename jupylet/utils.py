@@ -29,12 +29,101 @@ import functools
 import traceback
 import hashlib
 import inspect
+import logging
 import pickle
 import types
 import glm
 import sys
 import re
 import os
+
+
+LOGGING_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+
+class StreamHandler(logging.StreamHandler):
+    pass
+
+
+class LoggingWidget(logging.Handler):
+    """ Custom logging handler sending logs to an output widget """
+
+    def __init__(self, height='256px', *args, **kwargs):    
+        super(LoggingWidget, self).__init__(*args, **kwargs)
+        
+        self.out = ipywidgets.Output()
+        self.set_layout(height)
+
+    def set_layout(self, height='256px', overflow_y='scroll', **kwargs):
+        self.out.layout=ipywidgets.Layout(
+            height=height, 
+            overflow_y=overflow_y, 
+            **kwargs
+        )
+
+    def emit(self, record):
+        with self.out:
+            print(self.format(record))
+
+
+def get_logging_widget(height='256px', quiet_default_logger=True):
+
+    if type(height) is int:
+        height = str(height) + 'px'
+
+    logger = logging.getLogger()
+
+    wl = [h for h in logger.handlers if isinstance(h, LoggingWidget)]
+    if wl:
+        w = wl[-1]
+        w.set_layout(height)
+        return w.out
+
+    handler = LoggingWidget(height)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
+    
+    logger.addHandler(handler)
+
+    if quiet_default_logger:
+        wl = [h for h in logger.handlers if isinstance(h, StreamHandler)]
+        if wl:
+            wl[-1].setLevel(logging.ERROR)
+
+    return handler.out
+
+
+_logging_level = logging.WARNING
+
+
+def get_logging_level():
+    return _logging_level
+
+    
+def setup_basic_logging(level: int):
+    """Set up basic logging
+
+    Args:
+        level (int): The log level
+    """
+    
+    global _logging_level
+
+    if level is None:
+        return
+
+    _logging_level = level
+    
+    logger = logging.getLogger()
+    logger.setLevel(level)
+
+    if not logger.handlers:
+
+        handler = StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
+
+        logger.addHandler(handler)
 
 
 def abspath(path):
