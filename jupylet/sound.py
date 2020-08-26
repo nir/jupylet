@@ -28,7 +28,6 @@
 import functools
 import _thread
 import asyncio
-import hashlib
 import inspect
 import logging
 import random
@@ -41,12 +40,9 @@ import os
 
 import loky.backend.context
 import loky.backend.queues
-import concurrent.futures
 import skimage.draw
 import scipy.signal
 import PIL.Image
-
-import multiprocessing.process as process
 
 try:
     import sounddevice as sd
@@ -60,7 +56,7 @@ import numpy as np
 from .resource import find_path
 from .utils import o2h, callerframe, trimmed_traceback
 from .utils import setup_basic_logging, get_logging_level
-from .env import get_app_mode, is_remote, in_python_script
+from .env import get_app_mode, is_remote
 
 
 logger = logging.getLogger(__name__)
@@ -70,12 +66,26 @@ FPS = 44100
 
 
 def t2frames(t):
-    """Convert time in seconds to frames at 44100 frames per second."""
+    """Convert time in seconds to frames at 44100 frames per second.
+    
+    Args:
+        t (float): The time duration in seconds.
+
+    Returns:
+        int: The number of frames.
+    """
     return int(FPS * t)
 
 
 def frames2t(frames):
-    """Convert frames at 44100 frames per second to time in seconds."""
+    """Convert frames at 44100 frames per second to time in seconds.
+    
+    Args:
+        frames (int): The number of frames.
+
+    Returns:
+        float: The time duration in seconds.
+    """
     return frames  / FPS
 
 
@@ -83,18 +93,32 @@ def frames2t(frames):
 # The sound server runs in a dedicated worker process 
 # (living in a pool of size 1).
 #
-
 _pool0 = None
+
+#
+# This queue can be used to communicate information asynchronously
+# from the sound server to the client process.
+#
 _queue = None
 
 
-def submit(foo, *args, **kwargs):
-    logger.debug('Enter submit(foo=%r, *args=%r, **kwargs=%r).', foo, args, kwargs)
+def _submit(foo, *args, **kwargs):
+    """Submit a job to the sound server.
+
+    Args:
+        foo (function): The function to run at the sound server process.
+        *args: Positional arguments for the function.
+        **kwargs: Keyword arguments for the function.
+
+    Returns:
+        A future object representing the submitted job.
+    """
+    logger.debug('Enter _submit(foo=%r, *args=%r, **kwargs=%r).', foo, args, kwargs)
 
     global _pool0
     global _queue
 
-    assert not _is_worker, 'submit() should not be called by worker process.'
+    assert not _is_worker, '_submit() should not be called by worker process.'
         
     if sd is None:
         return MockFuture()
@@ -115,16 +139,22 @@ def submit(foo, *args, **kwargs):
 
 class MockFuture(object):
     """Mock future objects for remote headless servers. 
-    
+
     We don't want them to start playing sounds in their remote server rack.
     """
     def result(self):
         pass
 
 
+# 
+# This flag is used to determine if code is running at server or
+# client process.
+#
 _is_worker = False
 
+
 def _init_worker(q, logging_level=logging.WARNING):
+    """Init the sound server worker."""
 
     global _is_worker
     global _queue
@@ -133,24 +163,43 @@ def _init_worker(q, logging_level=logging.WARNING):
     _queue = q
 
     setup_basic_logging(logging_level)
-    _init_sound_worker()
+    _init_worker_thread()
     
 
 _worker_tid = None
 
-def _init_sound_worker():
-    logger.info('Enter _init_sound_worker().')
+
+def _init_worker_thread():
+    logger.info('Enter _init_worker_thread().')
 
     global _worker_tid
     if not _worker_tid:
-        _worker_tid = _thread.start_new_thread(_sound_worker, ())
+        _worker_tid = _thread.start_new_thread(_start_sound_stream, ())
         
 
+#
+# This queue is only used to keep the sound stream running.
+#
 _workerq = queue.Queue()
 
-def _sound_worker():
-    logger.info('Enter _sound_worker().')
+
+def _start_sound_stream():
+    """Start the sound device output stream handler."""
+    logger.info('Enter _start_sound_stream().')
     
+    #
+    # Latency is set to 66ms since on Windows it appears to invoke the callback 
+    # regularly at nearly 10ms which is the effective resolution of sleep 
+    # "wakeups" on Windows.
+    # 
+    # The default 'low' latency appears to be 100ms (which is a little high)
+    # and alternates between calling the callback at 10ms and 20ms intervals.
+    # 
+    # Such alternation would cause (ear) noticable delays with starting the 
+    # playing of repeating sounds. This problem could and should be fixed by 
+    # adding a mechanism to schedule the start of new sounds to a particular 
+    # frame in the output stream buffer.
+    #
     with sd.OutputStream(channels=2, callback=_stream_callback, latency=0.066):
         _workerq.get()
         
@@ -158,16 +207,74 @@ def _sound_worker():
     _worker_tid = None
     
 
+_al = []
+_dt = []
+
+
+def _stream_callback(outdata, frames, _time, status):
+    """Compute and set the sound data to be played in a few milliseconds.
+
+    Args:
+        outdata (ndarray): The sound device output buffer.
+        frames (int): The number of frames to compute and set into the output
+            buffer.
+        _time (struct): A bunch of clocks.
+    """
+    t0 = time.time()
+
+    if status:
+        logger.warning('Stream callback called with status: %r.', status)
+    
+    #
+    # Get all sound objects currently playing, mix them, and set the mixed
+    # array into the output buffer.
+    #
+
+    sounds = _get_sounds()
+    
+    if not sounds:
+        a0 = np.zeros_like(outdata)
+        outdata[:] = a0
+
+        #_workerq.put('QUIT')
+        #raise sd.CallbackStop
+        
+    else: 
+        a0 = _mix_sounds(sounds, frames)
+        outdata[:] = a0
+        _put_sounds(sounds)
+
+    # 
+    # Aggregate the output data and timers for the oscilloscope.
+    #
+
+    if len(_al) * frames > FPS:
+        _al.pop(0)
+        _dt.pop(0)
+
+    _al.append(a0)
+    _dt.append((
+        t0, 
+        frames, 
+        _time.inputBufferAdcTime,
+        _time.outputBufferDacTime,
+        _time.currentTime,
+    ))
+
+
 #def _quit_sound_worker():
 #    _soundsq.put('QUIT')
-    
 
+
+#
+# A server-side queue for all currently playing sound objects.
+#
 _soundsq = queue.Queue()
-_soundsd = {}
 
 
-def get_sounds():
-    
+def _get_sounds():
+    """Get all sound objects from the queue of currently playing sounds."""
+
     sounds = []
     
     while not _soundsq.empty():
@@ -184,7 +291,8 @@ def get_sounds():
     return sounds
       
     
-def put_sounds(sounds):
+def _put_sounds(sounds):
+    """Put sound objects into the queue of currently playing sounds."""
     
     for sound in sounds:
 
@@ -194,63 +302,49 @@ def put_sounds(sounds):
             sound.playing = False
 
      
-def mix_sounds(sounds, frames):
-    
+def _mix_sounds(sounds, frames):
+    """Mix sound data from given sounds into a single numpy array.
+
+    Args:
+        sounds: Currently playing sound objects.
+        frames (int): Number of frames to consume from each sound object.
+
+    Returns:
+        ndarray
+    """
     d = np.stack([s._consume(frames) for s in sounds])
     return np.sum(d, 0).clip(-1, 1)
 
 
-_al = []
-_dt = []
+def proxy(wait=False, write_only=False, return_self=False, return_async=False):
+    """Decorate function or sound object method to transparently run it in the 
+    sound server process.
 
-
-def _stream_callback(outdata, frames, _time, status):
-        
-        t0 = time.time()
-
-        if status:
-            print(status, file=sys.stderr)
-        
-        sounds = get_sounds()
-        
-        if not sounds:
-            a0 = np.zeros_like(outdata)
-            outdata[:] = a0
-
-            #_workerq.put('QUIT')
-            #raise sd.CallbackStop
-            
-        else: 
-            a0 = mix_sounds(sounds, frames)
-            outdata[:] = a0
-            put_sounds(sounds)
-
-        if len(_al) * frames > FPS:
-            _al.pop(0)
-            _dt.pop(0)
-
-        _al.append(a0)
-        _dt.append((
-            t0, 
-            frames, 
-            _time.inputBufferAdcTime,
-            _time.outputBufferDacTime,
-            _time.currentTime,
-        ))
-
-
-def proxy(write_only=False, wait=False, return_async=False, return_self=False):
-
+    Args:
+        wait (bool): Emulate a regular function call.
+        write_only (bool): Submit function to run in the server and return None
+            immediately. Should take about 50-100 usec to run.
+        return_self (bool): Submit function to run in the server and return self
+            immediately. Should take about 50-100 usec to run.
+        return_async (bool): Submit function to run in the server and return a
+            waitable future object.
+    """
     assert write_only or wait or return_async or return_self
 
     def proxy1(foo):
 
+        #
+        # Figure out if foo is a regular function or a sound object method.
+        #
         s0 = inspect.getfullargspec(foo)
         is_class_method = s0.args and s0.args[0] == 'self'
 
         @functools.wraps(foo)
         def proxy0(*args, **kwargs):
 
+            #
+            # If on sound server, call the function and return its result.
+            # 
             if _is_worker:
                 return foo(*args, **kwargs)
 
@@ -261,10 +355,14 @@ def proxy(write_only=False, wait=False, return_async=False, return_self=False):
                 self = None
                 self_uid = None
             
+            #
+            # On remote servers or in headless mode bypass the sound module,
+            # since we do not want sound in these scenarios.
+            #
             if is_remote() or get_app_mode() == 'hidden':
                 return self if return_self else None
 
-            fuu = submit(proxy_server, self_uid, foo.__name__, *args, **kwargs)
+            fuu = _submit(_proxy_server, self_uid, foo.__name__, *args, **kwargs)
 
             if return_self:
                 return self
@@ -282,7 +380,20 @@ def proxy(write_only=False, wait=False, return_async=False, return_self=False):
     return proxy1
 
 
-def proxy_server(_uid, name, *args, **kwargs):
+#
+# A server-side dictionary for all sound objects currently referenced by the 
+# client process.
+#
+_soundsd = {}
+
+
+def _proxy_server(_uid, name, *args, **kwargs):
+    """Run submitted function by its name (and object uid).
+    
+    If _uid is not None but curresponding object is not found in the sound 
+    objects dictionary, silently ignore the request.
+    """
+    logging.info('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
 
     if _uid is None:
         foo = globals().get(name)
@@ -291,20 +402,14 @@ def proxy_server(_uid, name, *args, **kwargs):
     else:
         return
 
-    if callable(foo):
-        return foo(*args, **kwargs) 
-    
-    return foo
-
-
-@proxy(write_only=True)
-def _queue_put(x):
-    _queue.put(x)
+    return foo(*args, **kwargs) 
 
 
 @proxy(wait=True)
 def _eval(x, _repr_=True):
-
+    """Debug function to evaluate arbitrary expressions in the sound server."""
+    logging.info('Enter _eval(x=%r, __repr__=%r).', x, __repr__)
+    
     try:
         if _repr_:
             return repr(eval(x))
@@ -322,7 +427,21 @@ def get_oscilloscope_as_image(
     size=(512, 256),
     scale=2.
 ):
-    
+    """Get an oscilloscope image of sound data sent to the sound device.
+
+    Args:
+        fps (float): frame rate (in frames per second) of the monitor on which 
+            the oscilloscope is to be displayed. The given rate will affect the
+            visual stability of the displayed wave forms.
+        ms (float): Span of the oscilloscope x-axis in milliseconds.
+        amp (float): Scale of the y-axis (amplification of the signal).
+        color (int or tuple): Color of the drawn sound wave.
+        size (tuple): size of oscilloscope in pixels given as (width, height).
+
+    Returns:
+        Image, float, float: a 3-tuple with the oscilloscope image, and the 
+            timestamps of the leftmost and rightmost drawn samples.
+    """
     w0, h0 = size
     w1, h1 = int(w0 // scale), int(h0 // scale)
 
@@ -339,6 +458,21 @@ def get_oscilloscope_as_array(
     color=255, 
     size=(512, 256)
 ):
+    """Get an oscilloscope array of sound data sent to the sound device.
+
+    Args:
+        fps (float): frame rate (in frames per second) of the monitor on which 
+            the oscilloscope is to be displayed. The given rate will affect the
+            visual stability of the displayed wave forms.
+        ms (float): Span of the oscilloscope x-axis in milliseconds.
+        amp (float): Scale of the y-axis (amplification of the signal).
+        color (int or tuple): Color of the drawn sound wave.
+        size (tuple): size of oscilloscope in pixels given as (width, height).
+
+    Returns:
+        ndarray, float, float: a 3-tuple with the oscilloscope array, and the 
+            timestamps of the leftmost and rightmost drawn samples.        
+    """
     
     ms = min(ms, 256)
     w0, h0 = size
@@ -399,13 +533,9 @@ def get_output_as_array(start=-FPS, end=None, resample=None):
     return a0, tstart, tend
 
 
-@proxy(wait=True)  
-def get_dt():
-    return _dt
-
-
 @functools.lru_cache(maxsize=128)
 def load_sound(path, channels=2):
+    """Load sound file as a numpy array with given number of sound channels."""
     logger.info('Enter load_sound(path=%r, channels=%r).', path, channels)
     
     data, fs = sf.read(path, dtype='float32') 
@@ -445,8 +575,9 @@ def _setattr(uid, key, value):
     return setattr(_soundsd[uid], key, value)
     
 
-def _create_uid():
-    logger.debug('Enter _create_uid().')
+def _generate_uid():
+    """Generate unique sound object id."""
+    logger.debug('Enter _generate_uid().')
     return o2h((random.random(), time.time()))
 
 
@@ -466,14 +597,22 @@ class Sample(object):
         uid=None,
     ):
         
+        #
+        # This code runs on the client, when the server is about to create
+        # a copy of an existing sound. See the copy() method below.
+        #
         if not _is_worker and uid is not None:
             self.__dict__['uid'] = uid
             return
 
+        #
+        # This code runs on the client to create a new sound object on the 
+        # sound server. The client sound object will serve as its proxy.
+        #
         if not _is_worker:
             path = str(find_path(path)) if path else None
-            self.__dict__['uid'] = _create_uid()
-            submit(
+            self.__dict__['uid'] = _generate_uid()
+            _submit(
                 _create_sound, 
                 'Sample',
                 path, 
@@ -488,6 +627,10 @@ class Sample(object):
                 self.__dict__['uid'],
             )
             return
+
+        #
+        # This code runs on the sound server
+        #
 
         self.uid = uid
         self.path = path
@@ -523,7 +666,7 @@ class Sample(object):
 
         try:
             if not _is_worker and self.__dict__.get('uid', -1) != -1:
-                submit(_delete_sound, self.uid)
+                _submit(_delete_sound, self.uid)
         
         except RuntimeError:
             pass
@@ -537,7 +680,7 @@ class Sample(object):
             return self.__dict__[key]
             
         if not _is_worker:
-            return submit(_getattr, self.uid, key).result()
+            return _submit(_getattr, self.uid, key).result()
 
         return super(Sample, self).__getattribute__(key)
 
@@ -548,7 +691,7 @@ class Sample(object):
             return
 
         if not _is_worker:
-            submit(_setattr, self.uid, key, value)
+            _submit(_setattr, self.uid, key, value)
             return
             
         return super(Sample, self).__setattr__(key, value)
@@ -664,7 +807,7 @@ class Sample(object):
             
     def copy(self, **kwargs):
 
-        uid = _create_uid()
+        uid = _generate_uid()
         self._copy(uid, **kwargs)
         return type(self)(uid=uid)
 
@@ -809,10 +952,6 @@ def sleep(dt=0):
     t1 = dtd[cf] = max(t0 + dt, tt)
     
     return asyncio.sleep(t1 - tt)
-
-
-#play(C4, amp=2)
-#sleep(0.5)
 
 
 @functools.lru_cache(maxsize=32)
@@ -960,8 +1099,8 @@ class Synth(Sample):
             return
 
         if not _is_worker:
-            self.__dict__['uid'] = _create_uid()
-            submit(
+            self.__dict__['uid'] = _generate_uid()
+            _submit(
                 _create_sound, 
                 'Synth',
                 shape, 
