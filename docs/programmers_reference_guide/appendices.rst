@@ -13,10 +13,10 @@ laboratory notebook. Such notebooks have been used by scientists for hundreds
 of years to keep track of their ideas and experiments in physics, chemistry,
 biology, etc...
 
-The most interesting thing about Jupyter notebooks is that when it comes to
+A very interesting thing about Jupyter notebooks is that when it comes to
 computer science and data science they mix the laboratory and the notebook into
 one. That is, a Jupyter notebook is also a computing laboratory since you can
-actually run the Python code in them!
+actually run code in them!
 
 Here is a very special example of a traditional laboratory notebook. A page
 from `Galileo Galilei's <https://en.wikipedia.org/wiki/Galileo_Galilei>`_

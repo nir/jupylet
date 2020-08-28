@@ -21,6 +21,12 @@ console:
 
     pip install jupylet
 
+If you are using Python 3.8 on Windows you also need to run following command:
+
+.. code-block:: bash
+
+    python -m jupylet postinstall
+
 Next, you need to download the *jupylet* repository since it contains the
 example notebooks. If you have `Git <https://git-scm.com/>`_ installed you
 can use it to clone the *jupylet* repository with:
@@ -97,7 +103,7 @@ typing:
 Jupyter Notebooks
 -----------------
 
-Jupyter notebooks are a powerful tool but they can be a little confusing at
+Jupyter notebooks are awesome but they can be a little confusing at
 first. Here are a few resources that explain how to use them:
 
 - *jupylet/examples/01-hello-world.ipynb* notebook contains some instructions on
@@ -106,7 +112,7 @@ first. Here are a few resources that explain how to use them:
 - `Running Code <https://mybinder.org/v2/gh/jupyter/notebook/master?filepath=docs%2Fsource%2Fexamples%2FNotebook%2FRunning%20Code.ipynb>`_
   \- This is a Jupyter notebook explaining how to use Jupyter notebooks 🙂.
   It is in fact a live notebook running in a web service called mybinder. The
-  first time you click it may take a moment to start, so give it that moment.
+  first time you click it may take a moment to start, so give it a moment.
   Since it is "live" you can play around with it. It works!
 
 - `Jupyter's documentation <https://jupyter-notebook.readthedocs.io/en/latest/notebook.html>`_

@@ -61,7 +61,7 @@ console:
 
     pip install jupylet
 
-If you are using Python 3.8 on Windows you then need to run following command as well:
+If you are using Python 3.8 on Windows you also need to run following command:
 
     python -m jupylet postinstall
 

@@ -12,7 +12,7 @@ setuptools.setup(
     packages = ['jupylet'],
     version = '0.8.0',
     license='bsd-2-clause',
-    description = 'A marriage of Jupyter and the pyglet game programming library',
+    description = 'Python game programming in Jupyter notebooks.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author = 'Nir Aides',
