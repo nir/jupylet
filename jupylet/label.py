@@ -26,7 +26,6 @@
 
 
 import functools
-import pyglet
 import math
 import io
 import os

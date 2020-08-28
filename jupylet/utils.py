@@ -25,6 +25,7 @@
 """
 
 
+import ipywidgets
 import functools
 import traceback
 import hashlib

@@ -387,13 +387,24 @@ def proxy(wait=False, write_only=False, return_self=False, return_async=False):
 _soundsd = {}
 
 
+_debug_level_names = {
+    'get_output_as_array': 0,
+}
+
+
 def _proxy_server(_uid, name, *args, **kwargs):
     """Run submitted function by its name (and object uid).
     
     If _uid is not None but curresponding object is not found in the sound 
     objects dictionary, silently ignore the request.
     """
-    logging.info('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
+    if name not in _debug_level_names:
+        logging.info('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
+    else:
+        logging.debug('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
+        if not _debug_level_names[name]:
+            _debug_level_names[name] = 1
+            logging.warning('Messages for %s() will only be shown in DEBUG logging level.' % name)
 
     if _uid is None:
         foo = globals().get(name)
@@ -402,7 +413,10 @@ def _proxy_server(_uid, name, *args, **kwargs):
     else:
         return
 
-    return foo(*args, **kwargs) 
+    if callable(foo):
+        return foo(*args, **kwargs) 
+    
+    return foo
 
 
 @proxy(wait=True)
@@ -594,8 +608,25 @@ class Sample(object):
         decay=0.,
         sustain=1.,
         release=0.,
-        uid=None,
+        **kwargs,
     ):
+        """A sound sample.
+
+        Args:
+            path (str): Path to a WAV, OGG, or FLAC sound file.
+            amp (float): Sound volume with a value between 0. and 1.
+            pan (float): Balance between left (-1.) and right (1.) speakers.
+            loop (bool): Play sound in an endless loop (default False).
+            duration (float): Duration in seconds to play sound (0. plays entire 
+                sound sample).
+            attack (float): Time in seconnds to reach maximum volume.
+            decay (float): Time in seconnds to decay volume to sustain level.
+            sustain (float): Volume level at which sound is sustained for its 
+                duration.
+            release (float): Time in seconds to decay volume to 0. once play
+                duration is up.
+        """
+        uid = kwargs.pop('uid', None)
         
         #
         # This code runs on the client, when the server is about to create
@@ -624,7 +655,7 @@ class Sample(object):
                 decay,
                 sustain,
                 release,
-                self.__dict__['uid'],
+                uid=self.__dict__['uid'],
             )
             return
 
@@ -659,7 +690,6 @@ class Sample(object):
         self.dtype = 'float32'
 
         self.index = 0
-        self.indez = 0
         self.freq = FPS
 
     def __del__(self):
@@ -775,7 +805,7 @@ class Sample(object):
         if release is not None:
             self.release = release
             
-        self.duration = frames2t(self.indez)
+        self.duration = frames2t(self.index)
         
     def play_new(self, note=None, **kwargs):
         """Play new copy of sound.
@@ -820,7 +850,6 @@ class Sample(object):
         o.reset = False
         o._stop = False
         o.index = 0
-        o.indez = 0
         o.uid = uid
         
         _soundsd[o.uid] = o
@@ -839,7 +868,6 @@ class Sample(object):
         self.reset = False
         self._stop = False
         self.index = 0
-        self.indez = 0
 
     @proxy(write_only=True)
     def stop(self):
@@ -853,48 +881,40 @@ class Sample(object):
             return True
         
         if not self.loop:
-            return self.remains <= 0
+            return self.index >= len(self.buffer)
     
+        if not self.duration:
+            return False
+
         adsr = self.get_adsr()
         if adsr is None:
             return False
 
-        if len(adsr) <= self.indez:
+        if len(adsr) <= self.index:
             return True
 
-        if self.indez < 8:
+        if self.index < 8:
             return False
 
-        return adsr[self.indez] == 0
+        return adsr[self.index].max() == 0
 
-    @property
-    @proxy(wait=True)
-    def remains(self):
-        return len(self.buffer) - self.index
-        
     def _consume0(self, frames):
         
         if self.reset:
             self.reset = False
             self.index = 0
-            self.indez = 0
 
-        frames = min(frames, self.remains)
+        index = self.index % len(self.buffer)
+        data0 = self.buffer[index: index + frames]
         
-        data = self.buffer[self.index: self.index + frames]
+        self.index += len(data0)
         
-        self.index += frames
-        self.indez += frames
-        
-        if self.loop:
-            self.index = self.index % len(self.buffer)
-            
-        return data
+        return data0
     
     @proxy(return_async=True)
     def _consume(self, frames):
         
-        iz = self.indez
+        ix = self.index
         bl = []
         
         while frames > 0:
@@ -910,7 +930,7 @@ class Sample(object):
         b0 = b0 * _ampan(self.amp, self.pan)
 
         if self.duration:
-            b0 = b0 * self.get_adsr()[iz: iz + len(b0)]
+            b0 = b0 * self.get_adsr()[ix: ix + len(b0)]
         
         return b0
 
@@ -1015,6 +1035,7 @@ def get_note_key(note):
     else:
         octave = 4
         
+    note = note.replace('#', 's')
     return _notes[note] + octave * 12 + 11
 
 
@@ -1062,6 +1083,9 @@ def get_note_wave(note, shape='sine', channels=2):
     
     foo = _shape_foo[shape]
 
+    if isinstance(note, np.generic):
+        note = float(note)
+
     if type(note) in (int, float):
         freq = get_key_freq(note) if note < 100 else note
     else:
@@ -1091,8 +1115,25 @@ class Synth(Sample):
         sustain=1.,
         release=0.,
         note='C',
-        uid=None,
+        **kwargs,
     ):
+        """A simple single voice synthesizer.
+
+        Args:
+            shape (str): Waveform shape - one of sine, tri, saw, and pulse.
+            amp (float): Sound volume with a value between 0. and 1.
+            pan (float): Balance between left (-1.) and right (1.) speakers.
+            duration (float): Duration in seconds to play sound (0. plays entire 
+                sound sample).
+            attack (float): Time in seconnds to reach maximum volume.
+            decay (float): Time in seconnds to decay volume to sustain level.
+            sustain (float): Volume level at which sound is sustained for its 
+                duration.
+            release (float): Time in seconds to decay volume to 0. once play
+                duration is up.
+            note (str or float):  
+        """
+        uid = kwargs.pop('uid', None)
 
         if not _is_worker and uid is not None:
             self.__dict__['uid'] = uid
@@ -1112,7 +1153,7 @@ class Synth(Sample):
                 sustain,
                 release,
                 note,
-                self.__dict__['uid'],
+                uid=self.__dict__['uid'],
             )
             return
 
@@ -1141,5 +1182,4 @@ class Synth(Sample):
         self.reset = False
         self._stop = False
         self.index = 0
-        self.indez = 0
  
