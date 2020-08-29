@@ -37,6 +37,7 @@ setuptools.setup(
         'PyGLM',
         'scipy', 
         'pillow', 
+        'psutil', 
         'gltflib',
         'jupyter',
         'moderngl',

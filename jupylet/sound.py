@@ -404,7 +404,7 @@ def _proxy_server(_uid, name, *args, **kwargs):
         logging.debug('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
         if not _debug_level_names[name]:
             _debug_level_names[name] = 1
-            logging.warning('Messages for %s() will only be shown in DEBUG logging level.' % name)
+            logging.info('Messages for %s() will only be shown in DEBUG logging level.' % name)
 
     if _uid is None:
         foo = globals().get(name)
@@ -422,7 +422,7 @@ def _proxy_server(_uid, name, *args, **kwargs):
 @proxy(wait=True)
 def _eval(x, _repr_=True):
     """Debug function to evaluate arbitrary expressions in the sound server."""
-    logging.info('Enter _eval(x=%r, __repr__=%r).', x, __repr__)
+    logging.info('Enter _eval(x=%r, _repr_=%r).', x, _repr_)
     
     try:
         if _repr_:
@@ -689,6 +689,7 @@ class Sample(object):
         self.buffer = []
         self.dtype = 'float32'
 
+        #self.level0 = 0
         self.index = 0
         self.freq = FPS
 
@@ -828,6 +829,10 @@ class Sample(object):
 
         self.load()
 
+        #
+        # Set the reset flag to avoid synchronization / consistency problems
+        # with the playback thread.
+        #
         if self.playing:  
             self.reset = True
             return
@@ -906,7 +911,7 @@ class Sample(object):
 
         index = self.index % len(self.buffer)
         data0 = self.buffer[index: index + frames]
-        
+
         self.index += len(data0)
         
         return data0
@@ -932,6 +937,17 @@ class Sample(object):
         if self.duration:
             b0 = b0 * self.get_adsr()[ix: ix + len(b0)]
         
+        #
+        # Interpolate start of play with previous last amplitude level.
+        #
+        #if self.index == 0:
+        #    il = min(32, len(data0))
+        #    ip = np.linspace(0, 1, il).reshape(-1, 1)
+        #    data0 = data0 * 1.
+        #    data0[:il] = ip * data0[:il] + (1. - ip) * self.level0
+        # ?  self.level0 = data0[-1]
+        #
+
         return b0
 
 
