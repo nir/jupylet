@@ -70,7 +70,7 @@ uniform Camera camera;
 #define POINT_LIGHT 1
 #define SPOT_LIGHT 2
 
-#define MAX_CASCADES 5
+#define MAX_CASCADES 4
 
 struct ShadowmapTexture {
     int layer;
@@ -112,7 +112,7 @@ uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
 
 uniform sampler2D shadowmap_texture;
-uniform int shadowmap_layers;
+uniform int shadowmap_width;
 uniform int shadowmap_size;
 uniform int shadowmap_pad;
 
@@ -183,6 +183,9 @@ float compute_shadow(int light_index) {
 
     for (int n = lights[light_index].shadowmap_textures_count - 1; n >= 0; n--) {
 
+        int layer = lights[light_index].shadowmap_textures[n].layer;
+        vec2 xxyy = floor(vec2(layer % shadowmap_width, layer / shadowmap_width));
+
         if (depth <= lights[light_index].shadowmap_textures[n].depth) {
 
             vec4 frag_pos4 = lights[light_index].shadowmap_textures[n].projection * vec4(frag_position, 1.0);
@@ -192,11 +195,9 @@ float compute_shadow(int light_index) {
             frag_pos3.xy += shadowmap_pad;
             frag_pos3.xy = clamp(frag_pos3.xy, 0, shadowmap_size);
             frag_pos3.xy /= shadowmap_size;
+            frag_pos3.xy += xxyy;
+            frag_pos3.xy /= shadowmap_width;
 
-            frag_pos3.x += lights[light_index].shadowmap_textures[n].layer;
-            frag_pos3.x /= shadowmap_layers;
-
-            vec2 shadowmap_size0 = vec2(shadowmap_size * shadowmap_layers, shadowmap_size);
             float shadow = 0;
 
             int n = 0;
@@ -207,7 +208,7 @@ float compute_shadow(int light_index) {
 
                     float shadow_depth = texture(
                         shadowmap_texture, 
-                        frag_pos3.xy + vec2(i, j) / shadowmap_size0
+                        frag_pos3.xy + vec2(i, j) / shadowmap_size / shadowmap_width
                     ).r;
 
                     shadow += (frag_pos3.z - mesh_shadow_bias >= shadow_depth && frag_pos3.z <= 1.0) ? 1.0 : 0.0;

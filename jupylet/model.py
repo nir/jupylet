@@ -56,7 +56,7 @@ class ShadowMap(object):
         self.size = size
         self.pad = pad
         
-        self.layers = 0
+        self.width = 0
         self.layer = 0
 
         self.tex = None
@@ -77,15 +77,15 @@ class ShadowMap(object):
         
         self.layer = 0
 
-        layers = int(max(4, 2 ** math.ceil(math.log2(layers))))
-        if layers in (self.layers, self.layers // 2):
-            return layers
+        width = int(max(2, math.ceil(layers ** 0.5)))
+        if width in (self.width, self.width - 1):
+            return
 
-        self.layers = layers
+        self.width = width
 
         self.release()
 
-        self.tex = ctx.depth_texture((layers * self.size, self.size))
+        self.tex = ctx.depth_texture((width * self.size, width * self.size))
         self.smp = ctx.sampler(border_color=(1., 1., 1., 1.))
         
         self.fbo = ctx.framebuffer(depth_attachment=self.tex)
@@ -98,9 +98,12 @@ class ShadowMap(object):
 
     def next_layer(self):
 
+        col = self.layer % self.width
+        row = self.layer // self.width
+        
         self.fbo.viewport = (
-            self.pad + self.layer * self.size,
-            self.pad,
+            self.pad + col * self.size,
+            self.pad + row * self.size,
             self.size - 2 * self.pad,
             self.size - 2 * self.pad,
         )
@@ -204,7 +207,7 @@ class Scene(Object):
         self.shadowmap.use(location=SHADOW_TEXTURE_UNIT)
 
         shader._members['shadowmap_texture'].value = SHADOW_TEXTURE_UNIT
-        shader._members['shadowmap_layers'].value = self.shadowmap.layers
+        shader._members['shadowmap_width'].value = self.shadowmap.width
         shader._members['shadowmap_size'].value = self.shadowmap.size
         shader._members['shadowmap_pad'].value = self.shadowmap.pad
         

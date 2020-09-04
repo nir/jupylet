@@ -36,7 +36,7 @@ uniform Camera camera;
 #define POINT_LIGHT 1
 #define SPOT_LIGHT 2
 
-#define MAX_CASCADES 5
+#define MAX_CASCADES 4
 
 struct ShadowmapTexture {
     int layer;
