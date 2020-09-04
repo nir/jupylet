@@ -45,7 +45,7 @@ class Object(object):
     def __getattr__(self, k):
         
         if k not in self._items:
-            raise AttributeError(k)
+            return super(Object, self).__getattribute__(k)
             
         return self._items[k]
     

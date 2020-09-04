@@ -25,7 +25,7 @@
 """
 
 
-# Search pattern for gl instances: \bgl(?!m\b|tf|sl|int|uint|obal|ob\b| ).*
+# Search pattern for gl instances: shadow(?!s|map_pass)
 
 import moderngl
 import logging
@@ -40,12 +40,74 @@ import moderngl_window.geometry as geometry
 import numpy as np
 
 from .lru import _lru_textures, _lru_materials, _MAX_TEXTURES, _MAX_MATERIALS
+from .lru import SKYBOX_TEXTURE_UNIT, SHADOW_TEXTURE_UNIT
 from .node import Object, Node
 from .resource import get_shader_3d, pil_from_texture, get_context
 from .resource import find_glob_path, unresolve_path, load_texture_cube
 
 
 logger = logging.getLogger(__name__)
+
+
+class ShadowMap(object):
+
+    def __init__(self, size=1024, pad=12):
+
+        self.size = size
+        self.pad = pad
+        
+        self.layers = 0
+        self.layer = 0
+
+        self.tex = None
+        self.smp = None
+        self.fbo = None
+
+    def __del__(self):
+        self.release()
+
+    def release(self):
+
+        if self.tex is not None:
+            self.tex.release()
+            self.smp.release()
+            self.fbo.release()
+
+    def allocate(self, ctx, layers=8):
+        
+        self.layer = 0
+
+        layers = int(max(4, 2 ** math.ceil(math.log2(layers))))
+        if layers in (self.layers, self.layers // 2):
+            return layers
+
+        self.layers = layers
+
+        self.release()
+
+        self.tex = ctx.depth_texture((layers * self.size, self.size))
+        self.smp = ctx.sampler(border_color=(1., 1., 1., 1.))
+        
+        self.fbo = ctx.framebuffer(depth_attachment=self.tex)
+        self.fbo.clear()
+
+    def use(self, location):
+
+        self.tex.use(location=location)
+        self.smp.use(location=location)
+
+    def next_layer(self):
+
+        self.fbo.viewport = (
+            self.pad + self.layer * self.size,
+            self.pad,
+            self.size - 2 * self.pad,
+            self.size - 2 * self.pad,
+        )
+        self.fbo.clear(viewport=self.fbo.viewport)
+
+        self.layer += 1
+        return self.layer - 1
 
 
 class Scene(Object):
@@ -62,6 +124,7 @@ class Scene(Object):
         self.materials = {}
         
         self.shadows = shadows
+        self.shadowmap = ShadowMap()
 
         self.skybox = None
 
@@ -83,16 +146,14 @@ class Scene(Object):
         ctx = get_context()
         ctx.enable_only(moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.CULL_FACE)
 
-        fbo = ctx.fbo
-
         shader = shader or get_shader_3d()
-        
+
         shader._members['nlights'].value = len(self.lights)
         
-        if self.shadows and any(l.shadows for l in self.lights.values()):
+        if self.shadows and self.shadowmaps_count:
             self.render_shadowmaps(shader)            
+            self.shadowmap.use(location=SHADOW_TEXTURE_UNIT)
             shader._members['shadowmap_pass'].value = 2 
-            fbo.use()
 
         else:
             shader._members['shadowmap_pass'].value = 0
@@ -108,19 +169,21 @@ class Scene(Object):
 
         if self.skybox is not None:
             self.skybox.draw(shader)
-            
+
+    @property
+    def shadowmaps_count(self):
+        return sum(l.shadowmaps_count for l in self.lights.values() if l.shadows)
+
     def render_shadowmaps(self, shader):
     
         ctx = get_context()
         ctx.disable(moderngl.CULL_FACE)
+        fb0 = ctx.fbo
 
-        shader.extra['shadowmap_pass'] = 1
-        shader._members['shadowmap_pass'].value = 1
+        width, height = fb0.size 
 
         camera = list(self.cameras.values())[0]
         camera_position = glm.vec4(camera.position, 1.0)
-
-        width, height = ctx.fbo.size 
 
         zfar = camera.zfar
         yfov = math.sin(camera.yfov) * zfar
@@ -133,6 +196,18 @@ class Scene(Object):
             xfov, -yfov, -zfar, 1.
         )
 
+        shader.extra['shadowmap_pass'] = 1
+        shader._members['shadowmap_pass'].value = 1
+        
+        self.shadowmap.allocate(ctx, self.shadowmaps_count)
+        self.shadowmap.fbo.use()
+        self.shadowmap.use(location=SHADOW_TEXTURE_UNIT)
+
+        shader._members['shadowmap_texture'].value = SHADOW_TEXTURE_UNIT
+        shader._members['shadowmap_layers'].value = self.shadowmap.layers
+        shader._members['shadowmap_size'].value = self.shadowmap.size
+        shader._members['shadowmap_pad'].value = self.shadowmap.pad
+        
         for i, light in enumerate(self.lights.values()):
 
             if light.shadows:
@@ -141,8 +216,10 @@ class Scene(Object):
 
                 for j in range(light.shadowmaps_count):
 
-                    light.set_state_shadowmap(
-                        j, shader, camera_position, camera_screen
+                    l = self.shadowmap.next_layer()
+
+                    light.set_state_render_shadowmap(
+                        j, l, shader, camera_position, camera_screen
                     )
 
                     for mesh in self.meshes.values():
@@ -150,6 +227,7 @@ class Scene(Object):
         
         shader.extra['shadowmap_pass'] = 0
 
+        fb0.use()
         ctx.enable(moderngl.CULL_FACE)
     
 
@@ -324,31 +402,8 @@ class Light(Node):
             shadows = shadows,
         )
 
-        size = 1024
-
-        self.shadowmaps_size = size
         self.shadowmaps_depths = [1.0, 0.6, 0.3, 0.1, 0.]
-        self.shadowmaps = []
         
-        ctx = get_context()
-
-        for _ in range(len(self.shadowmaps_depths) - 1):
-            t = ctx.depth_texture((size, size))
-            self.shadowmaps.append(dict(
-                tex = t,
-                smp = ctx.sampler(border_color=(1., 1., 1., 1.)),
-                fbo = ctx.framebuffer(depth_attachment=t),
-                lid = None,
-                slot = None,
-            ))
-
-    def __del__(self):
-
-        for d in self.shadowmaps:
-            d['tex'].release()
-            d['smp'].release()
-            d['fbo'].release()
-
     @property
     def shadowmaps_count(self):
         if self._items['type'] == 'directional':
@@ -364,30 +419,14 @@ class Light(Node):
  
     def set_state(self, shader, shadows):
         
-        prefix = self.get_uniform_name('')
-
-        if shadows and self.shadows:
-
-            for i in range(self.shadowmaps_count):
-
-                sm = self.shadowmaps[i]
-
-                _, sm['lid'], sm['slot'], smnew = _lru_textures.allocate(sm['lid'])
-                
-                if smnew:
-                    
-                    sm['tex'].use(location=sm['slot'])
-                    sm['smp'].use(location=sm['slot'])
-
-                    shader._members['textures[%s].t' % sm['slot']].value = sm['slot']
-                    shader._members[prefix + 'shadowmap_textures[%s].t' % i].value = sm['slot']
-
         _trigger_dirty_flat = self.matrix
 
         if self._dirty:
 
             self._dirty.clear()
                             
+            prefix = self.get_uniform_name('')
+
             shader._members[prefix + 'type'].value = LIGHT_TYPE[self.type]
             shader._members[prefix + 'color'].value = tuple(self.color)
             shader._members[prefix + 'intensity'].value = self.intensity
@@ -406,15 +445,17 @@ class Light(Node):
             shader._members[prefix + 'shadowmap_pcf'].value = self.pcf
             shader._members[prefix + 'shadowmap_bias'].value = self.bias
             shader._members[prefix + 'shadowmap_textures_count'].value = self.shadowmaps_count
-            shader._members[prefix + 'shadowmap_textures_size'].value = self.shadowmaps_size
                         
-    def set_state_shadowmap(self, shadowmap_index, shader, camera_position, camera_screen):
+    def set_state_render_shadowmap(
+        self, 
+        shadowmap_index, 
+        shadowmap_layer, 
+        shader, 
+        camera_position, 
+        camera_screen
+    ):
         
         si = shadowmap_index
-
-        fbo = self.shadowmaps[si]['fbo']
-        fbo.clear()
-        fbo.use()
 
         prefix = self.get_uniform_name('')
 
@@ -469,6 +510,7 @@ class Light(Node):
         
         pv = projection * view
 
+        shader._members[prefix + 'shadowmap_textures[%s].layer' % si].value = shadowmap_layer
         shader._members[prefix + 'shadowmap_textures[%s].depth' % si].value = self.shadowmaps_depths[si]
         shader._members[prefix + 'shadowmap_textures[%s].projection' % si].write(pv)
         shader._members[prefix + 'shadowmap_projection'].write(pv)
@@ -573,7 +615,7 @@ class Mesh(Node):
         if self.hide:
             return 
 
-        shader._members['shadow_bias'].value = self.shadow_bias
+        shader._members['mesh_shadow_bias'].value = self.shadow_bias
         shader._members['model'].write(self.composed_matrix())
         
         for p in self.primitives:
@@ -681,9 +723,6 @@ class Skybox(Object):
         ctx.front_face = 'cw'
         ctx.depth_func = '<='
 
-        #ctx.disable(moderngl.DEPTH_TEST)
-        #glDepthFunc(GL_LEQUAL)   
-        
         shader = shader or get_shader_3d()
         shader._members['skybox.render_skybox'].value = 1
 
@@ -691,10 +730,9 @@ class Skybox(Object):
             
             shader._members['skybox.intensity'].value = self.intensity
             shader._members['skybox.texture_exists'].value = 1
-            shader._members['skybox.texture'].value = 30
+            shader._members['skybox.texture'].value = SKYBOX_TEXTURE_UNIT
 
-            #self.smpl.use(location=30)
-            self.texture.use(location=30)
+            self.texture.use(location=SKYBOX_TEXTURE_UNIT)
 
             self._dirty.clear()
 
@@ -704,7 +742,4 @@ class Skybox(Object):
 
         ctx.depth_func = '<'
         ctx.front_face = ccw
-
-        #ctx.enable(moderngl.DEPTH_TEST)
-        #glDepthFunc(GL_LESS)        
 

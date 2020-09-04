@@ -39,7 +39,7 @@ uniform Camera camera;
 #define MAX_CASCADES 5
 
 struct ShadowmapTexture {
-    int t;
+    int layer;
     float depth;
     mat4 projection;
 };
@@ -66,7 +66,6 @@ struct Light {
     ShadowmapTexture shadowmap_textures[MAX_CASCADES];
     
     int shadowmap_textures_count;
-    int shadowmap_textures_size;
 
     int shadowmap_pcf;
     float shadowmap_bias;
@@ -80,8 +79,6 @@ uniform int nlights;
 
 uniform int shadowmap_pass;
 uniform int shadowmap_light;
-
-//out vec4 shadowmap_frag_position[MAX_LIGHTS];
 
 
 void main()
@@ -146,13 +143,5 @@ void main()
     frag_position = vec3(mp4);
     frag_normal = mat3(transpose(inverse(model))) * in_normal;
     frag_uv = vec2(in_texcoord_0.x, 1.0 - in_texcoord_0.y);
-
-    //if (shadowmap_pass == 2) {
-    //    for (int i = 0; i < nlights; i++) {
-    //        if (lights[i].shadows == 1) {
-    //            shadowmap_frag_position[i] = lights[i].shadowmap_projection * vec4(frag_position, 1.0);
-    //        }
-    //    }
-    //}
 }
 

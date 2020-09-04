@@ -42,7 +42,7 @@ from .utils import glm_dumps, glm_loads
 from .color import c2v
 from .state import State
 from .node import Node, aa2q, q2aa
-from .lru import _lru_textures
+from .lru import SPRITE_TEXTURE_UNIT
 
 
 _empty_array = np.array([])
@@ -117,8 +117,6 @@ class Sprite(Node):
         self.set_anchor(anchor_x, anchor_y)
         self.color = color
 
-        self._tlid, self._tslot = _lru_textures.allocate()[1:3]
-
     def update(self, shader):
         pass
 
@@ -137,10 +135,9 @@ class Sprite(Node):
         shader['flip'] = self.flip
 
         shader['model'].write(self.matrix)
-        shader['texture_id'] = 31 
-        shader['textures[%s].t' % 31] = 31 
+        shader['texture0'] = SPRITE_TEXTURE_UNIT
 
-        self.texture.use(location=31)
+        self.texture.use(location=SPRITE_TEXTURE_UNIT)
         self.geometry.render(shader)
 
     @property

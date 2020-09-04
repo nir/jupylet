@@ -22,14 +22,7 @@ out vec4 fragColor;
 
 in vec2 frag_uv;
 
-struct Texture {
-    sampler2D t;
-};
-
-#define MAX_TEXTURES 32
-
-uniform Texture textures[MAX_TEXTURES];
-uniform int texture_id;
+uniform sampler2D texture0;
 
 uniform vec4 color;
 
@@ -47,13 +40,13 @@ void main() {
     fragColor = color;
 
     if (components == 4) {
-        fragColor *= texture(textures[texture_id].t, uv);
+        fragColor *= texture(texture0, uv);
     }
     else if (components == 1) {
-        fragColor.a *= texture(textures[texture_id].t, uv).x;        
+        fragColor.a *= texture(texture0, uv).x;        
     }
     else {
-        fragColor.rgb *= texture(textures[texture_id].t, uv).rgb;
+        fragColor.rgb *= texture(texture0, uv).rgb;
     }
 }
 

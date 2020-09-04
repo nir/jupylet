@@ -2,7 +2,7 @@
 
 out vec4 FragColor;
 
-uniform float shadow_bias;
+uniform float mesh_shadow_bias;
 
 uniform mat4 model;
 
@@ -73,7 +73,7 @@ uniform Camera camera;
 #define MAX_CASCADES 5
 
 struct ShadowmapTexture {
-    int t;
+    int layer;
     float depth;
     mat4 projection;
 };
@@ -100,7 +100,6 @@ struct Light {
     ShadowmapTexture shadowmap_textures[MAX_CASCADES];
 
     int shadowmap_textures_count;
-    int shadowmap_textures_size;
 
     int shadowmap_pcf;
     float shadowmap_bias;
@@ -112,10 +111,13 @@ struct Light {
 uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
 
+uniform sampler2D shadowmap_texture;
+uniform int shadowmap_layers;
+uniform int shadowmap_size;
+uniform int shadowmap_pad;
+
 uniform int shadowmap_pass;
 uniform int shadowmap_light;
-
-//in vec4 shadowmap_frag_position[MAX_LIGHTS];
 
 
 //
@@ -177,7 +179,6 @@ float compute_shadow(int light_index) {
         return 0.0;
     }
 
-    float texture_size = lights[light_index].shadowmap_textures_size;
     float depth = -frag_view.z / camera.zfar;
 
     for (int n = lights[light_index].shadowmap_textures_count - 1; n >= 0; n--) {
@@ -187,7 +188,15 @@ float compute_shadow(int light_index) {
             vec4 frag_pos4 = lights[light_index].shadowmap_textures[n].projection * vec4(frag_position, 1.0);
             vec3 frag_pos3 = (frag_pos4.xyz / frag_pos4.w) * 0.5 + 0.5;
 
-            int texture0 = lights[light_index].shadowmap_textures[n].t;
+            frag_pos3.xy *= shadowmap_size - 2 * shadowmap_pad;
+            frag_pos3.xy += shadowmap_pad;
+            frag_pos3.xy = clamp(frag_pos3.xy, 0, shadowmap_size);
+            frag_pos3.xy /= shadowmap_size;
+
+            frag_pos3.x += lights[light_index].shadowmap_textures[n].layer;
+            frag_pos3.x /= shadowmap_layers;
+
+            vec2 shadowmap_size0 = vec2(shadowmap_size * shadowmap_layers, shadowmap_size);
             float shadow = 0;
 
             int n = 0;
@@ -197,11 +206,11 @@ float compute_shadow(int light_index) {
                 for (int j = -pcf; j <= pcf; j++) {
 
                     float shadow_depth = texture(
-                        textures[texture0].t, 
-                        frag_pos3.xy + vec2(i, j) / texture_size
+                        shadowmap_texture, 
+                        frag_pos3.xy + vec2(i, j) / shadowmap_size0
                     ).r;
 
-                    shadow += (frag_pos3.z - shadow_bias >= shadow_depth && frag_pos3.z <= 1.0) ? 1.0 : 0.0;
+                    shadow += (frag_pos3.z - mesh_shadow_bias >= shadow_depth && frag_pos3.z <= 1.0) ? 1.0 : 0.0;
                     n++;
                 }
             }

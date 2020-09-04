@@ -25,13 +25,20 @@
 """
 
 
+SPRITE_TEXTURE_UNIT = 0
+SKYBOX_TEXTURE_UNIT = 1
+SHADOW_TEXTURE_UNIT = 2
+
+
+
 class LRU(object):
     """Mechanism to allocate least recently used slot in array."""
 
-    def __init__(self, max_items):
+    def __init__(self, max_items, min_items=0):
         
+        self.mini = min_items
         self.step = max_items
-        self.items = {i: [i, i, i, 0] for i in range(max_items)}
+        self.items = {i: [i, i, i, 0] for i in range(min_items, max_items)}
         
     def allocate(self, lid=None):
         """Allocate slot.
@@ -68,13 +75,10 @@ class LRU(object):
         return r
 
 
+_MIN_TEXTURES = 3
 _MAX_TEXTURES = 30
-_lru_textures = LRU(_MAX_TEXTURES)
+_lru_textures = LRU(_MAX_TEXTURES, _MIN_TEXTURES)
 
 _MAX_MATERIALS = 24
 _lru_materials = LRU(_MAX_MATERIALS)
-
-
-#viewport = (0, 0, id_, texture.width, texture.height, 1)
-#texture.write(data, viewport)
 
