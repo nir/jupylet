@@ -30,16 +30,21 @@ SKYBOX_TEXTURE_UNIT = 1
 SHADOW_TEXTURE_UNIT = 2
 
 
-
 class LRU(object):
     """Mechanism to allocate least recently used slot in array."""
 
-    def __init__(self, max_items, min_items=0):
+    def __init__(self, min_items, max_items):
         
         self.mini = min_items
         self.step = max_items
         self.items = {i: [i, i, i, 0] for i in range(min_items, max_items)}
         
+    def reset(self, min_items, max_items):
+
+        self.mini = min_items
+        self.step = max_items
+        self.items = {i: [i, i, i, 0] for i in range(min_items, max_items)}
+
     def allocate(self, lid=None):
         """Allocate slot.
         
@@ -77,8 +82,8 @@ class LRU(object):
 
 _MIN_TEXTURES = 3
 _MAX_TEXTURES = 16
-_lru_textures = LRU(_MAX_TEXTURES, _MIN_TEXTURES)
+_lru_textures = LRU(_MIN_TEXTURES, _MAX_TEXTURES)
 
 _MAX_MATERIALS = 12
-_lru_materials = LRU(_MAX_MATERIALS)
+_lru_materials = LRU(0, _MAX_MATERIALS)
 

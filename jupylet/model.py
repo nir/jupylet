@@ -355,10 +355,9 @@ class Material(Object):
         for k in cner0:
             setattr(self, '_' + k, ki.get(k, -1))
 
-        #if self._tarr is not None:
-            #self._tarr.build_mipmaps(0, 4)
-            #self._tarr.filter = (moderngl.LINEAR_MIPMAP_NEAREST, moderngl.LINEAR)
-            #self._tarr.anisotropy = 8.
+        if self._tarr is not None:
+            self._tarr.build_mipmaps()
+            self._tarr.anisotropy = 8.
 
         return True
 
@@ -396,14 +395,17 @@ class Material(Object):
             self._dirty.clear()
 
             if self._tarr is not None:
-                shader._members['textures[%s].t' % self._tslot].value = self._tslot
+                shader._members['textures[%s].t' % (self._tslot - _MIN_TEXTURES)].value = self._tslot
 
                 get_context().clear_samplers(self._tslot, self._tslot+1)
                 self._tarr.use(location=self._tslot)
 
             material = 'materials[%s].' % self._mslot
 
-            shader._members[material + 'tarr'].value = self._tslot or -1
+            if self._tslot is not None:
+                shader._members[material + 'tarr'].value = self._tslot - _MIN_TEXTURES
+            else:
+                shader._members[material + 'tarr'].value = -1
 
             shader._members[material + 'color_texture'].value = self._color
             if self._color < 0:
