@@ -35,7 +35,7 @@ import os
 import numpy as np
 
 from .utils import abspath
-from .resource import load_texture, find_path, unresolve_path
+from .resource import load_texture, load_image, find_path, unresolve_path
 from .model import Scene, Material, Light, Camera, Mesh, Primitive
 
 
@@ -85,16 +85,16 @@ def load_blender_gltf(path):
 
 def _load_blender_gltf_material(g0, m0):
     
-    lbt = _load_blender_gltf_texture
+    lbi = _load_blender_gltf_image
     pbr = m0.pbrMetallicRoughness
     
-    c = lbt(g0, pbr.baseColorTexture) if pbr.baseColorTexture else pbr.baseColorFactor
+    c = lbi(g0, pbr.baseColorTexture) if pbr.baseColorTexture else pbr.baseColorFactor
     m = pbr.metallicFactor
-    r = lbt(g0, pbr.metallicRoughnessTexture) if pbr.metallicRoughnessTexture else pbr.roughnessFactor
+    r = lbi(g0, pbr.metallicRoughnessTexture) if pbr.metallicRoughnessTexture else pbr.roughnessFactor
     s = 0.1
-    e = lbt(g0, m0.emissiveTexture) if m0.emissiveTexture else m0.emissiveFactor
-    o = lbt(g0, m0.occlusionTexture)
-    n = lbt(g0, m0.normalTexture)
+    e = lbi(g0, m0.emissiveTexture) if m0.emissiveTexture else m0.emissiveFactor
+    o = lbi(g0, m0.occlusionTexture)
+    n = lbi(g0, m0.normalTexture)
     
     ns = getattr(m0.normalTexture, 'scale', 1.)
 
@@ -115,6 +115,19 @@ def _load_blender_gltf_texture(g0, ti):
         dirname = unresolve_path(r0._basepath)
 
         return load_texture(os.path.join(dirname, r0.filename), flip=True)
+
+
+def _load_blender_gltf_image(g0, ti):
+    
+    if ti is not None:
+        
+        t0 = g0.model.textures[getattr(ti, 'index', ti)]
+        i0 = g0.model.images[t0.source]
+        r0 = [r for r in g0.resources if r._uri == i0.uri][0]
+            
+        dirname = unresolve_path(r0._basepath)
+
+        return load_image(os.path.join(dirname, r0.filename), flip=True)
 
 
 def _is_blender_gltf_light(g0, n0):

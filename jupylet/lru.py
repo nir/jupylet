@@ -76,9 +76,9 @@ class LRU(object):
 
 
 _MIN_TEXTURES = 3
-_MAX_TEXTURES = 30
+_MAX_TEXTURES = 16
 _lru_textures = LRU(_MAX_TEXTURES, _MIN_TEXTURES)
 
-_MAX_MATERIALS = 24
+_MAX_MATERIALS = 12
 _lru_materials = LRU(_MAX_MATERIALS)
 

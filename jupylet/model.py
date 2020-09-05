@@ -39,7 +39,7 @@ import PIL.Image
 import moderngl_window.geometry as geometry
 import numpy as np
 
-from .lru import _lru_textures, _lru_materials, _MAX_TEXTURES, _MAX_MATERIALS
+from .lru import _lru_textures, _lru_materials, _MIN_TEXTURES
 from .lru import SKYBOX_TEXTURE_UNIT, SHADOW_TEXTURE_UNIT
 from .node import Object, Node
 from .resource import get_shader_3d, pil_from_texture, get_context
@@ -234,6 +234,60 @@ class Scene(Object):
         ctx.enable(moderngl.CULL_FACE)
     
 
+def pil_convert(im, mode):
+    
+    if im.mode == mode:
+        return im
+    
+    return im.convert(mode)
+
+
+def pil_resize(im, size, resample=PIL.Image.BICUBIC):
+    
+    if im.size == size:
+        return im
+    
+    return im.resize(size, resample=resample)
+
+
+m2c = dict(
+    L = 1,
+    RGB = 3, 
+    RGBA = 4,
+)
+
+
+def images2ta(ctx, **kwargs):
+    
+    kwargs = {k: v for k, v in kwargs.items() if isinstance(v, PIL.Image.Image)}
+    
+    if not kwargs:
+        return {}, None, None
+    
+    iml = list(kwargs.values())
+
+    if any(im.mode == 'RGBA' for im in iml):
+        iml = [pil_convert(im, 'RGBA') for im in iml]
+    
+    if any(im.mode == 'RGB' for im in iml):
+        iml = [pil_convert(im, 'RGB') for im in iml]
+    
+    m = m2c[iml[0].mode]
+    w = max(im.size[0] for im in iml)
+    h = max(im.size[1] for im in iml)
+
+    iml = [pil_resize(im, (w, h)) for im in iml]
+    ta0 = ctx.texture_array((w, h, len(iml)), m)
+    
+    for i, im in enumerate(iml):
+        w, h = im.size
+        ta0.write(im.tobytes(), (0, 0, i, w, h, 1))
+
+    kwargs = {k: i for i, k in enumerate(kwargs.keys())}
+    
+    return kwargs, ta0, (w, h, m)
+
+    
 class Material(Object):
     
     def __init__(
@@ -265,94 +319,109 @@ class Material(Object):
             normals_gamma = self.compute_normals_gamma(normals),
         )
 
-        self._mlid, self._mslot = _lru_materials.allocate()[1:3]
-        self._clid, self._cslot = self.allocate_texture(self._items['color'])[1:3]
-        self._nlid, self._nslot = self.allocate_texture(self._items['normals'])[1:3]
-        self._elid, self._eslot = self.allocate_texture(self._items['emissive'])[1:3]
-        self._rlid, self._rslot = self.allocate_texture(self._items['roughness'])[1:3]
+        self._color = -1
+        self._normals = -1
+        self._emissive = -1
+        self._roughness = -1
         
+        self._cner = None
+        self._tarr = None
+
+        self.load_texture_array()
+
+        self._mlid, self._mslot = None, None
+        self._tlid, self._tslot = None, None
+
+    def load_texture_array(self):
+
+        cner0 = dict(
+            color=self.color,
+            normals=self.normals,
+            emissive=self.emissive,
+            roughness=self.roughness,
+        )
+        cner = {k: v for k, v in cner0.items() if isinstance(v, PIL.Image.Image)}
+
+        if self._cner == cner:
+            return False
+
+        self._cner = cner
+
+        if self._tarr is not None:
+            self._tarr.release()
+            
+        ki, self._tarr, dim = images2ta(get_context(), **cner)
+
+        for k in cner0:
+            setattr(self, '_' + k, ki.get(k, -1))
+
+        #if self._tarr is not None:
+            #self._tarr.build_mipmaps(0, 4)
+            #self._tarr.filter = (moderngl.LINEAR_MIPMAP_NEAREST, moderngl.LINEAR)
+            #self._tarr.anisotropy = 8.
+
+        return True
+
     def allocate_texture(self, t, lid=None):
-        if isinstance(t, moderngl.texture.Texture):
+        if isinstance(t, moderngl.texture_array.TextureArray):
             return _lru_textures.allocate(lid)
         return None, None, None, None
 
     def compute_normals_gamma(self, normals):
 
-        if not isinstance(normals, moderngl.texture.Texture):
+        if isinstance(normals, PIL.Image.Image):
+            na = np.array(normals)
+        elif isinstance(normals, np.ndarray):
+            na = normals
+        else:
             return 1.
 
-        na = np.array(pil_from_texture(normals))
         nm = na[...,:2].mean() / 255
 
         return math.log(0.5) / math.log(nm)        
 
     def set_state(self, shader):
             
-        ctx = get_context()
+        if self._dirty:
+            self.load_texture_array()
+
+        _, self._mlid, self._mslot, mnew = _lru_materials.allocate(self._mlid)
+        _, self._tlid, self._tslot, tnew = self.allocate_texture(self._tarr, self._tlid)
 
         shader._members['material'].value = self._mslot
 
-        _, _, self._mslot, mnew = _lru_materials.allocate(self._mlid)
-        _, _, self._cslot, cnew = self.allocate_texture(self._items['color'], self._clid)
-        _, _, self._nslot, nnew = self.allocate_texture(self._items['normals'], self._nlid)
-        _, _, self._eslot, enew = self.allocate_texture(self._items['emissive'], self._elid)
-        _, _, self._rslot, rnew = self.allocate_texture(self._items['roughness'], self._rlid)
-
-        dirty = self._dirty or mnew or cnew or nnew or enew or rnew
+        dirty = self._dirty or mnew or tnew
 
         if dirty:
-
             self._dirty.clear()
+
+            if self._tarr is not None:
+                shader._members['textures[%s].t' % self._tslot].value = self._tslot
+
+                get_context().clear_samplers(self._tslot, self._tslot+1)
+                self._tarr.use(location=self._tslot)
 
             material = 'materials[%s].' % self._mslot
 
-            if isinstance(self.color, moderngl.texture.Texture):
-                
-                ctx.clear_samplers(self._cslot, self._cslot+1)
-                self.color.use(location=self._cslot)
-                
-                shader._members['textures[%s].t' % self._cslot].value = self._cslot
-                shader._members[material + 'color_texture'].value = self._cslot
-            else:
-                shader._members[material + 'color_texture'].value = -1
-                shader._members[material + 'color'].value = tuple(self.color)
-                    
-            if isinstance(self.normals, moderngl.texture.Texture):
-                
-                shader._members[material + 'normals_scale'].value = self.normals_scale
-                shader._members[material + 'normals_gamma'].value = self.normals_gamma
+            shader._members[material + 'tarr'].value = self._tslot or -1
 
-                ctx.clear_samplers(self._nslot, self._nslot+1)
-                self.normals.use(location=self._nslot)
-                
-                shader._members['textures[%s].t' % self._nslot].value = self._nslot
-                shader._members[material + 'normals_texture'].value = self._nslot
-            else:
-                shader._members[material + 'normals_texture'].value = -1
+            shader._members[material + 'color_texture'].value = self._color
+            if self._color < 0:
+                shader._members[material + 'color'].value = tuple(self.color) 
+                                    
+            shader._members[material + 'normals_texture'].value = self._normals
+            shader._members[material + 'normals_scale'].value = self.normals_scale
+            shader._members[material + 'normals_gamma'].value = self.normals_gamma
                     
-            if isinstance(self.emissive, moderngl.texture.Texture):
-                
-                ctx.clear_samplers(self._eslot, self._eslot+1)
-                self.emissive.use(location=self._eslot)
-                
-                shader._members['textures[%s].t' % self._eslot].value = self._eslot
-                shader._members[material + 'emissive_texture'].value = self._eslot
-            else:
-                shader._members[material + 'emissive_texture'].value = -1
+            shader._members[material + 'emissive_texture'].value = self._emissive
+            if self._emissive < 0:
                 shader._members[material + 'emissive'].value = tuple(self.emissive)
 
-            if isinstance(self.roughness, moderngl.texture.Texture):
-                
-                ctx.clear_samplers(self._rslot, self._rslot+1)
-                self.roughness.use(location=self._rslot)
-                
-                shader._members['textures[%s].t' % self._rslot].value = self._rslot
-                shader._members[material + 'roughness_texture'].value = self._rslot
-            else:
-                shader._members[material + 'roughness_texture'].value = -1
+            shader._members[material + 'roughness_texture'].value = self._roughness
+            if self._roughness < 0:
                 shader._members[material + 'roughness'].value = self.roughness
-                shader._members[material + 'metallic'].value = self.metallic
-                    
+
+            shader._members[material + 'metallic'].value = self.metallic        
             shader._members[material + 'specular'].value = self.specular
         
 

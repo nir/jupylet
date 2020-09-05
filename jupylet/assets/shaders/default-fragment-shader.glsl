@@ -22,19 +22,19 @@ struct Skybox {
 
 uniform Skybox skybox;
 
-// Python code to dynamically retreive max units.
-// mt = ctypes.c_int()
-// glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, mt)
 
 struct Texture {
-    sampler2D t;
+    sampler2DArray t;
 };
 
-#define MAX_TEXTURES 30
+#define MAX_TEXTURES 16
 
 uniform Texture textures[MAX_TEXTURES];
 
+
 struct Material { 
+
+    int tarr;
 
     vec4 color; // Expected as linear - physical.
     int color_texture;
@@ -53,7 +53,7 @@ struct Material {
     int emissive_texture;
 };  
 
-#define MAX_MATERIALS 24
+#define MAX_MATERIALS 12
 
 uniform Material materials[MAX_MATERIALS];
 uniform int material;
@@ -112,6 +112,7 @@ uniform Light lights[MAX_LIGHTS];
 uniform int nlights;
 
 uniform sampler2D shadowmap_texture;
+
 uniform int shadowmap_width;
 uniform int shadowmap_size;
 uniform int shadowmap_pad;
@@ -248,8 +249,9 @@ void compute_light0() {
     if (materials[mi].normals_texture >= 0) {
 
         mat3 TBN = cotangent_frame(l0.normal, -l0.view_direction, frag_uv); 
-       
-        l0.normal = texture(textures[materials[mi].normals_texture].t, frag_uv).rgb;
+        int layer = materials[mi].normals_texture;
+
+        l0.normal = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer)).rgb;
         l0.normal = pow(l0.normal, vec3(materials[mi].normals_gamma)) * 2 - 1;
         l0.normal.xy *= materials[mi].normals_scale;
         l0.normal = normalize(TBN * normalize(l0.normal)); 
@@ -258,7 +260,8 @@ void compute_light0() {
     l0.color = materials[mi].color.xyz;
 
     if (materials[mi].color_texture >= 0) {
-        l0.color = texture(textures[materials[mi].color_texture].t, frag_uv).xyz;
+        int layer = materials[mi].color_texture;
+        l0.color = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer)).xyz;
         l0.color = pow(l0.color, vec3(2.2));
     }
 
@@ -266,7 +269,8 @@ void compute_light0() {
     l0.roughness = materials[mi].roughness;
 
     if (materials[mi].roughness_texture >= 0) {
-        vec4 r4 = texture(textures[materials[mi].roughness_texture].t, frag_uv);
+        int layer = materials[mi].roughness_texture;
+        vec4 r4 = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer));
         l0.roughness = r4.y;
         l0.metallic = 1.0 - r4.w;
     }
@@ -356,7 +360,8 @@ void main() {
     vec3 color = materials[mi].emissive;
 
     if (materials[mi].emissive_texture >= 0) {
-        color = texture(textures[materials[mi].emissive_texture].t, frag_uv).xyz;
+        int layer = materials[mi].emissive_texture;
+        color = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer)).xyz;
         color = pow(color, vec3(2.2));
     }
 

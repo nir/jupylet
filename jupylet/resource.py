@@ -55,7 +55,7 @@ def set_context(context):
 
 def get_context():
 
-    assert _context is not None, 'First, create an App() instance!'
+    assert _context is not None, 'First create an App() instance!'
     return _context
 
 
@@ -230,6 +230,23 @@ def load_texture(
     mipmap=True, 
     flip=False, 
 ):
+
+    return mglw.resources.textures.load(
+        TextureDescription(
+            path=None, 
+            flip=flip, 
+            mipmap=mipmap, 
+            anisotropy=anisotropy, 
+            image=load_image(o, autocrop)
+        )
+    )
+
+
+def load_image(
+    o, 
+    autocrop=False,
+    flip=False, 
+):
     
     if type(o) is str:
         d0 = mglw.resources.data.load(DataDescription(path=o, kind='binary'))
@@ -243,19 +260,27 @@ def load_texture(
         im = o
     
     if autocrop:
-        pil_autocrop(im)
+        im = pil_autocrop(im)
 
-    return mglw.resources.textures.load(
-        TextureDescription(
-            path=None, 
-            flip=flip, 
-            mipmap=mipmap, 
-            anisotropy=anisotropy, 
-            image=im
-        )
+    if flip:
+        im = im.transpose(PIL.Image.FLIP_TOP_BOTTOM)
+
+    return im
+
+
+def pil_from_texture_array(ta, layer=0):
+
+    b0 = ta.read()
+    nl = len(b0) // ta.layers
+    b1 = b0[layer * nl: layer * nl + nl]
+    
+    return PIL.Image.frombuffer(
+        {1: 'L', 3: 'RGB', 4: 'RGBA'}[ta.components], 
+        (ta.width, ta.height), 
+        b1
     )
 
-    
+   
 def pil_from_texture(t):
 
     return PIL.Image.frombuffer(
