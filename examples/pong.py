@@ -166,7 +166,7 @@ def key_event(key, action, modifiers):
             state.key_d = False
 
 
-@app.run_me_many(1/120)
+@app.run_me_every(1/120)
 def update_pads(ct, dt):
         
     if state.right:
@@ -194,7 +194,7 @@ def update_pads(ct, dt):
     padl.clip_position(app.width, app.height)
 
 
-@app.run_me_many(1/60)
+@app.run_me_every(1/60)
 def update_ball(ct, dt):
     
     bs0 = state.bvx ** 2 + state.bvy ** 2

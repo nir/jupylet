@@ -124,7 +124,7 @@ linear_acceleration = 1 / 2
 angular_acceleration = 1 / 24
 
 
-@app.run_me_many(1/48)
+@app.run_me_every(1/48)
 def move_object(ct, dt):
         
     global obj

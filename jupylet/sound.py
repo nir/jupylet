@@ -200,7 +200,7 @@ def _start_sound_stream():
     # adding a mechanism to schedule the start of new sounds to a particular 
     # frame in the output stream buffer.
     #
-    with sd.OutputStream(channels=2, callback=_stream_callback, latency=0.066):
+    with sd.OutputStream(channels=2, callback=_stream_callback, latency='low'):#0.066):
         _workerq.get()
         
     global _worker_tid
@@ -460,7 +460,7 @@ def get_oscilloscope_as_image(
     w1, h1 = int(w0 // scale), int(h0 // scale)
 
     a0, ts, te = get_oscilloscope_as_array(fps, ms, amp, color, (w1, h1))
-    im = PIL.Image.fromarray(a0).resize(size)
+    im = PIL.Image.fromarray(a0).resize(size).transpose(PIL.Image.FLIP_TOP_BOTTOM)
 
     return im, ts, te
 
