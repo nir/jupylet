@@ -1094,11 +1094,10 @@ _shape_foo = {
 }
 
 
-@functools.lru_cache(maxsize=1024)
 def get_note_wave(note, shape='sine', channels=2):
     
-    foo = _shape_foo[shape]
-
+    if freq is not None:
+        return 
     if isinstance(note, np.generic):
         note = float(note)
 
@@ -1107,8 +1106,16 @@ def get_note_wave(note, shape='sine', channels=2):
     else:
         freq = get_note_freq(note)
         
+    return get_freq_wave(freq, shape, channels)
+
+
+@functools.lru_cache(maxsize=1024)
+def get_freq_wave(freq, shape='sine', channels=2):
+
     cycles, frames = get_freq_cycles(freq)[:2]
     
+    foo = _shape_foo[shape]
+
     wave = foo(cycles)
     wave = scipy.signal.resample(wave, frames)
 
@@ -1191,7 +1198,12 @@ class Synth(Sample):
     @proxy(return_self=True)
     def load(self, channels=2):
         
-        self.buffer = get_note_wave(self.note, self.shape, channels)
+        self.buffer = get_note_wave(
+            note=self.note, 
+            shape=self.shape, 
+            channels=channels
+        )
+        
         self.channels = int(self.buffer.shape[-1])
         self.dtype = self.buffer.dtype
 
