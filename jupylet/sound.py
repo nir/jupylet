@@ -991,19 +991,19 @@ def sleep(dt=0):
 
 
 @functools.lru_cache(maxsize=32)
-def get_sine_wave(cycles=1, frames=256):
+def _get_sine_wave(cycles=1, frames=256):
     a0 = np.sin(np.linspace(0, 2 * np.pi, frames, dtype='float32'))
     return np.concatenate([a0] * cycles)
 
 
 @functools.lru_cache(maxsize=32)
-def get_saw_wave(cycles=1, frames=256):
+def _get_saw_wave(cycles=1, frames=256):
     a0 = np.linspace(-1, 1, frames, dtype='float32')
     return np.concatenate([a0] * cycles)    
 
 
 @functools.lru_cache(maxsize=32)
-def get_triangle_wave(cycles=1, frames=256):
+def _get_triangle_wave(cycles=1, frames=256):
     a0 = np.linspace(-1, 1, frames//2, dtype='float32')
     a1 = np.linspace(1, -1, frames - frames//2, dtype='float32')
     a2 = np.concatenate((a0, a1)) 
@@ -1011,7 +1011,7 @@ def get_triangle_wave(cycles=1, frames=256):
 
 
 @functools.lru_cache(maxsize=32)
-def get_pulse_wave(cycles=1, frames=256):
+def _get_pulse_wave(cycles=1, frames=256):
     a0 = np.ones((frames,), dtype='float32')
     a0[:frames//2] *= -1.
     return np.concatenate([a0] * cycles)
@@ -1087,10 +1087,10 @@ def get_freq_cycles(f, fps=44100, max_cycles=32):
 
 
 _shape_foo = {
-    'sine': get_sine_wave,
-    'saw': get_saw_wave,
-    'tri': get_triangle_wave,
-    'pulse': get_pulse_wave,
+    'sine': _get_sine_wave,
+    'saw': _get_saw_wave,
+    'tri': _get_triangle_wave,
+    'pulse': _get_pulse_wave,
 }
 
 
@@ -1211,3 +1211,217 @@ class Synth(Sample):
         self._stop = False
         self.index = 0
  
+
+# ------------------------
+
+
+class Sound(object):
+    
+    def __init__(self):
+        
+        self.frames = 1024
+        self.channels = 2
+        
+        self._buffers = []
+        
+    def _rset(self, key, value, force=False):
+        
+        if force or self.__dict__.get(key, '__NONE__') != value:
+            for s in self.__dict__.values():
+                if isinstance(s, Sound):
+                    s._rset(key, value, force=True)
+            
+        self.__dict__[key] = value
+            
+    def __call__(self, *args, **kwargs):
+        return self.consume(self.frames, *args, **kwargs)
+        
+    def consume(self, frames, *args, **kwargs):
+        
+        assert getattr(self, '_buffers', None) is not None, 'You must call the super() from your sound class constructor'
+        
+        while sum(len(b) for b in self._buffers) < frames:
+            
+            a0 = self.forward(*args, **kwargs)
+            a0 = self._expand_channels(a0)
+
+            self._buffers.append(a0)
+            
+        if len(self._buffers) == 1:
+            a0 = self._buffers[0]
+        else:
+            a0 = np.concatenate(self._buffers)
+        
+        if len(a0) == frames:
+            self._buffers = []
+            return a0
+        
+        self._buffers = [a0[frames:]]
+        
+        return a0[:frames]
+        
+    def _expand_channels(self, a0):
+
+        if len(a0.shape) == 1:
+            a0 = np.expand_dims(a0, -1)
+
+        if a0.shape[1] < self.channels:
+            a0 = a0.repeat(self.channels, 1)
+
+        if a0.shape[1] > self.channels:
+            a0 = a0[:,:self.channels]
+
+        return a0
+    
+    def clear(self):
+        self._buffers.clear()
+        
+    def forward(self, *args, **kwargs):
+        return np.zeros((self.frames, self.channels))
+    
+
+def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
+    
+    dt = frames / FPS
+    cycles = dt * freq
+
+    x0 = cycles * 2 * math.pi + phase
+    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+
+    a0 = np.sin(l0)
+    
+    return a0, x0 % (2 * math.pi)
+
+
+def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
+    
+    dt = frames / FPS
+    cycles = dt * freq
+
+    x0 = cycles * 2 * math.pi + phase
+    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+
+    a0 = l0 % (2 * math.pi)
+    a1 = a0 / math.pi - 1
+    a2 = a1 * np.sign(-a1)
+    a3 = a2 * 2 + 1
+
+    return a3, x0 % (2 * math.pi)
+
+
+def get_saw_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
+    
+    dt = frames / FPS
+    cycles = dt * freq
+
+    x0 = cycles * 2 * math.pi + phase
+    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+
+    a0 = l0 % (2 * math.pi) * sign / math.pi - 1
+    
+    return a0, x0 % (2 * math.pi)
+
+
+def get_pulse_wave(freq, phase=0, frames=8192, width=0.5, **kwargs):
+    
+    dt = frames / FPS
+    cycles = dt * freq
+
+    x0 = cycles * 2 * math.pi + phase
+    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+
+    a0 = l0 % (2 * math.pi) < (2 * math.pi * width)    
+    a1 = a0 * 2 - 1
+    
+    return a1, x0 % (2 * math.pi)
+
+_foo = {
+    'sine': get_sine_wave,
+    'tri': get_triangle_wave,
+    'saw': get_saw_wave,
+    'pulse': get_pulse_wave,
+}
+
+class Oscillator(Sound):
+    
+    def __init__(self, shape='sine', freq=262., phase=0., width=0.5, sign=1.):
+        
+        super(Oscillator, self).__init__()
+        
+        self.shape = shape
+        self.phase = phase
+        self.freq = freq
+        
+        self.width = width
+        self.sign = sign
+        
+    def forward(self):
+        
+        foo = _foo[self.shape]
+        a0, self.phase = foo(self.freq, self.phase, width=self.width, sign=self.sign)
+        
+        return a0
+    
+
+class ButterFilter(Sound):
+    
+    def __init__(self, order=15, freq=8192, btype='lowpass'):
+        
+        super(ButterFilter, self).__init__()
+        
+        self.order = order
+        self.freq = freq
+        self.btype = btype
+        
+        self._watch = None
+        
+        self.b = None
+        self.a = None
+        self.z = None
+        
+    def forward(self, x):
+        
+        if self._watch != (self.order, self.freq, self.btype):
+            self._watch = (self.order, self.freq, self.btype)
+            self.b, self.a = signal.butter(self.order, self.freq / FPS * 2, self.btype)
+            self.z = signal.lfilter_zi(self.b, self.a)[:,None]
+           
+        if self.z.shape[1] != x.shape[1]:
+            self.z = self.z.repeat(x.shape[1], -1)[:,:x.shape[1]]
+        
+        x, self.z = signal.lfilter(self.b, self.a, x, 0, zi=self.z)
+            
+        return x
+    
+
+class PhaseModulator(Sound):
+    
+    def __init__(self, beta=1.):
+        """A sort of phase modulator."""
+        
+        super(PhaseModulator, self).__init__()
+        
+        self.beta = beta
+        
+        self._buffer = None
+        
+    def forward(self, c, s):
+        
+        beta = int(self.beta) + 1
+        
+        if self._buffer is None:
+            self._buffer = np.zeros((2 * beta, c.shape[1]), dtype=c.dtype)
+            
+        t1 = np.arange(beta, beta + len(c)) + self.beta * s.mean(-1).clip(-1, 1)
+        t2 = t1.astype('int32')
+        t3 = (t1 - t2)[:, None]
+        
+        a0 = np.concatenate((self._buffer, c))
+        a1 = a0[t2]
+        a2 = a0[t2 + 1]
+        a3 = a2 * t3 + a1 * (1 - t3)
+        
+        self._buffer = a0[-2 * beta:]
+        
+        return a3
+
