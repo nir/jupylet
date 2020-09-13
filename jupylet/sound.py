@@ -34,6 +34,7 @@ import random
 import queue
 import copy
 import loky
+import math
 import time
 import sys
 import os
@@ -1422,7 +1423,7 @@ class Envelope(Sound):
 _NP_ZERO = np.zeros((1,), dtype='float32')
 
 
-def get_radians(freq, phase=0, frames=8192, log_scale):
+def get_radians(freq, phase=0, frames=8192):
     
     pt = 2 * math.pi / FPS * freq
     
@@ -1472,6 +1473,9 @@ def get_saw_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
 
 def get_pulse_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
     
+    if isinstance(duty, np.ndarray):
+        duty = duty.reshape(-1)
+        
     radians, phase_o = get_radians(freq, phase, frames)
 
     a0 = radians % (2 * math.pi) < (2 * math.pi * duty)    
@@ -1517,8 +1521,11 @@ class Oscillator(Sound):
         self.duty = duty
         self.sign = sign
         
-    def forward(self, osc=None):
+    def forward(self, osc=None, duty=None):
         
+        if duty is None:
+            duty = self.duty
+            
         if osc is not None:
             freq = key2freq(self.key + osc)
         else:
@@ -1535,7 +1542,7 @@ class Oscillator(Sound):
             freq, 
             self.phase, 
             self.frames, 
-            duty=self.duty, 
+            duty=duty, 
             sign=self.sign
         )
         
