@@ -50,7 +50,7 @@ Head to [examples/22-pong-RL.ipynb](examples/22-pong-RL.ipynb) to see how to pro
 of sound synthesis to easily let you create sound synthesizers as wild as you
 can dream up. In addition it draws inspiration from the wonderful [Sonic Pi](https://sonic-pi.net/)
 and brings live music coding to Jupyter and Python. Hook up your MIDI keyboard 
-and take off with Python's built in [anti-gravity!](https://xkcd.com/353/)
+and take off with Python's built in [anti-gravity!](https://xkcd.com/353/#comic)
 
 ## Requirements
 
