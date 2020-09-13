@@ -1215,70 +1215,206 @@ class Synth(Sample):
 # ------------------------
 
 
+FPS = 44100
+
 class Sound(object):
     
     def __init__(self):
-        
-        self.frames = 1024
-        self.channels = 2
-        
-        self._buffers = []
-        
-    def _rset(self, key, value, force=False):
+                
+        self.frames = 1024        
+        self.index = 0
+                
+    def rset(self, key, value, force=False):
         
         if force or self.__dict__.get(key, '__NONE__') != value:
             for s in self.__dict__.values():
                 if isinstance(s, Sound):
-                    s._rset(key, value, force=True)
+                    s.rset(key, value, force=True)
             
         self.__dict__[key] = value
             
     def __call__(self, *args, **kwargs):
-        return self.consume(self.frames, *args, **kwargs)
         
-    def consume(self, frames, *args, **kwargs):
+        assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
         
-        assert getattr(self, '_buffers', None) is not None, 'You must call the super() from your sound class constructor'
+        a0 = self.forward(*args, **kwargs)
+        self.index += self.frames
         
-        while sum(len(b) for b in self._buffers) < frames:
-            
-            a0 = self.forward(*args, **kwargs)
-            a0 = self._expand_channels(a0)
-
-            self._buffers.append(a0)
-            
-        if len(self._buffers) == 1:
-            a0 = self._buffers[0]
-        else:
-            a0 = np.concatenate(self._buffers)
-        
-        if len(a0) == frames:
-            self._buffers = []
-            return a0
-        
-        self._buffers = [a0[frames:]]
-        
-        return a0[:frames]
-        
-    def _expand_channels(self, a0):
-
-        if len(a0.shape) == 1:
-            a0 = np.expand_dims(a0, -1)
-
-        if a0.shape[1] < self.channels:
-            a0 = a0.repeat(self.channels, 1)
-
-        if a0.shape[1] > self.channels:
-            a0 = a0[:,:self.channels]
-
         return a0
-    
-    def clear(self):
-        self._buffers.clear()
+
         
     def forward(self, *args, **kwargs):
         return np.zeros((self.frames, self.channels))
+
+def _expand_channels(a0, channels):
+
+    if len(a0.shape) == 1:
+        a0 = np.expand_dims(a0, -1)
+
+    if a0.shape[1] < channels:
+        a0 = a0.repeat(channels, 1)
+
+    if a0.shape[1] > channels:
+        a0 = a0[:,:channels]
+
+    return a0
+
+
+class Gate(Sound):
     
+    def __init__(self):
+        
+        super(Gate, self).__init__()
+        
+        self.states = []
+        
+    def forward(self):
+        
+        states = []
+        end = self.index + self.frames
+        
+        while self.states:
+            if self.states[0][0] >= end:
+                break
+            states.append(self.states.pop(0))
+        
+        return states
+        
+    def open(self, t):
+        self._append(t, 'open')
+        
+    def release(self, t):
+        self._append(t, 'release')
+        
+    def _append(self, t, event):
+        
+        lasti = self.index
+        if self.states:
+            lasti = self.states[-1][0]
+
+        frame = max(int(t * FPS), lasti)
+        self.states.append((frame, event))
+
+
+def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01, eps=1e-6):
+    
+    df = max(math.ceil(dt * FPS), eps)
+    end = min(df + 1, end or 60 * FPS)
+        
+    a0 = np.arange(start/df, end/df - eps, 1/df, dtype='float32')
+    a1 = np.exp(a0 * math.log(th))
+    a2 = (1. - a1) / (1. - th)
+    
+    return a2
+
+
+def get_linear_adsr_curve(dt, start=0, end=None, eps=1e-6):
+    
+    df = max(math.ceil(dt * FPS), eps)
+    end = min(df + 1, end or 60 * FPS)
+
+    a0 = np.arange(start/df, end/df, 1/df, dtype='float32')
+    
+    return a0
+
+
+class Envelope(Sound):
+    
+    def __init__(
+        self, 
+        attack=0.,
+        decay=0., 
+        sustain=1., 
+        release=0.,
+        linear=True,
+    ):
+        
+        super(Envelope, self).__init__()
+        
+        self.attack = attack
+        self.decay = decay
+        self.sustain = sustain
+        self.release = release
+        self.linear = linear
+        
+        self._state = None
+        self._start = 0
+        self._valu0 = 0
+        self._valu1 = 0
+        
+    def forward(self, states):
+        
+        end = self.index + self.frames
+        index = self.index
+        states = states + [(end, 'continue')]
+        curves = []
+        
+        for frame, event in states:
+            #print(frame, event)
+            
+            while True:
+                curves.append(self.get_curve(index, frame))
+                index += len(curves[-1])
+                if index >= frame:
+                    break
+                    
+            if event == 'open':
+                self._state = 'attack'
+                self._start = index
+                self._valu0 = self._valu1
+            
+            if event == 'release':
+                self._state = 'release'
+                self._start = index
+                self._valu0 = self._valu1
+            
+        return np.concatenate(curves)[:,None]
+    
+
+    def get_curve(self, start, end):
+        
+        if self._state in (None, 'sustain'):
+            return np.ones((end - start,), dtype='float32') * self._valu0
+        
+        start = start - self._start
+        end = end - self._start
+        dt = getattr(self, self._state)
+                    
+        if self.linear:
+            curve = get_linear_adsr_curve(dt, start, end)
+        else:
+            curve = get_exponential_adsr_curve(dt, start, end)
+    
+        #print(dt, start, end, len(curve), curve[-1])
+        done = curve[-1] >= 0.9999
+        
+        if self._state == 'attack':
+            target = 1.
+            next_state = 'decay'
+            
+        if self._state == 'decay':
+            target = self.sustain * self._valu0
+            next_state = 'sustain'
+            
+        if self._state == 'release':
+            target = 0.
+            next_state = None
+            
+        curve = (target - self._valu0) * curve  + self._valu0
+        
+        if done:
+            self._state = next_state
+            self._start += start + len(curve)
+            self._valu0 = curve[-1]
+            
+        self._valu1 = curve[-1]
+        
+        return curve
+    
+    @property
+    def done(self):
+        return self._state is None and self._start > 0
+
 
 def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
     
@@ -1286,8 +1422,8 @@ def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
     cycles = dt * freq
 
     x0 = cycles * 2 * math.pi + phase
-    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
-
+    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
+    
     a0 = np.sin(l0)
     
     return a0, x0 % (2 * math.pi)
@@ -1299,7 +1435,7 @@ def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
     cycles = dt * freq
 
     x0 = cycles * 2 * math.pi + phase
-    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
 
     a0 = l0 % (2 * math.pi)
     a1 = a0 / math.pi - 1
@@ -1315,36 +1451,30 @@ def get_saw_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
     cycles = dt * freq
 
     x0 = cycles * 2 * math.pi + phase
-    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
 
-    a0 = l0 % (2 * math.pi) * sign / math.pi - 1
+    a0 = (l0 + math.pi) % (2 * math.pi) * sign / math.pi - 1
     
     return a0, x0 % (2 * math.pi)
 
 
-def get_pulse_wave(freq, phase=0, frames=8192, width=0.5, **kwargs):
+def get_pulse_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
     
     dt = frames / FPS
     cycles = dt * freq
 
     x0 = cycles * 2 * math.pi + phase
-    l0 = np.linspace(phase, x0, frames + 1, dtype='float32')[:-1]
+    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
 
-    a0 = l0 % (2 * math.pi) < (2 * math.pi * width)    
+    a0 = l0 % (2 * math.pi) < (2 * math.pi * duty)    
     a1 = a0 * 2 - 1
     
     return a1, x0 % (2 * math.pi)
 
-_foo = {
-    'sine': get_sine_wave,
-    'tri': get_triangle_wave,
-    'saw': get_saw_wave,
-    'pulse': get_pulse_wave,
-}
 
 class Oscillator(Sound):
     
-    def __init__(self, shape='sine', freq=262., phase=0., width=0.5, sign=1.):
+    def __init__(self, shape='sine', freq=262., phase=0., duty=0.5, sign=1.):
         
         super(Oscillator, self).__init__()
         
@@ -1352,16 +1482,22 @@ class Oscillator(Sound):
         self.phase = phase
         self.freq = freq
         
-        self.width = width
+        self.duty = duty
         self.sign = sign
         
     def forward(self):
         
-        foo = _foo[self.shape]
-        a0, self.phase = foo(self.freq, self.phase, width=self.width, sign=self.sign)
+        get_wave = dict(
+            sine = get_sine_wave,
+            tri = get_triangle_wave,
+            saw = get_saw_wave,
+            pulse = get_pulse_wave,
+        )[self.shape]
         
-        return a0
-    
+        a0, self.phase = get_wave(self.freq, self.phase, self.frames, duty=self.duty, sign=self.sign)
+        
+        return a0[:,None]
+
 
 class ButterFilter(Sound):
     
@@ -1382,22 +1518,31 @@ class ButterFilter(Sound):
     def forward(self, x):
         
         if self._watch != (self.order, self.freq, self.btype):
+            
             self._watch = (self.order, self.freq, self.btype)
             self.b, self.a = signal.butter(self.order, self.freq / FPS * 2, self.btype)
             self.z = signal.lfilter_zi(self.b, self.a)[:,None]
            
-        if self.z.shape[1] != x.shape[1]:
-            self.z = self.z.repeat(x.shape[1], -1)[:,:x.shape[1]]
-        
+            if self.z.shape[1] != x.shape[1]:
+                self.z = self.z.repeat(x.shape[1], -1)[:,:x.shape[1]]
+            
+            # Warmup
+            self.z = signal.lfilter(self.b, self.a, x * 0, 0, zi=self.z)[-1]
+            
         x, self.z = signal.lfilter(self.b, self.a, x, 0, zi=self.z)
             
-        return x
+        return x.astype('float32')
     
 
 class PhaseModulator(Sound):
     
     def __init__(self, beta=1.):
-        """A sort of phase modulator."""
+        """A sort of phase modulator.
+        
+        It can be used for aproximate frequency modulation by using the 
+        normalized cumsum of the modulated signal, but the signal should be 
+        balanced so its cumsum does not drift.
+        """
         
         super(PhaseModulator, self).__init__()
         
@@ -1412,9 +1557,9 @@ class PhaseModulator(Sound):
         if self._buffer is None:
             self._buffer = np.zeros((2 * beta, c.shape[1]), dtype=c.dtype)
             
-        t1 = np.arange(beta, beta + len(c)) + self.beta * s.mean(-1).clip(-1, 1)
+        t1 = np.arange(beta, beta + len(c), dtype='float32') + self.beta * s.mean(-1).clip(-1, 1)
         t2 = t1.astype('int32')
-        t3 = (t1 - t2)[:, None]
+        t3 = (t1 - t2.astype('float32'))[:, None]
         
         a0 = np.concatenate((self._buffer, c))
         a1 = a0[t2]
@@ -1425,3 +1570,4 @@ class PhaseModulator(Sound):
         
         return a3
 
+        
