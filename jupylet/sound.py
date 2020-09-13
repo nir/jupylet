@@ -1416,65 +1416,94 @@ class Envelope(Sound):
         return self._state is None and self._start > 0
 
 
+#
+# Do not change this "constant"!
+#
+_NP_ZERO = np.zeros((1,), dtype='float32')
+
+
+def get_radians(freq, phase=0, frames=8192, log_scale):
+    
+    pt = 2 * math.pi / FPS * freq
+    
+    if isinstance(pt, np.ndarray):
+        pt = pt.reshape(-1)
+    else:
+        pt = pt * np.ones((frames,), dtype='float32')
+            
+    p0 = phase % (2 * math.pi) + _NP_ZERO
+    p1 = np.concatenate((p0, pt))
+    p2 = np.cumsum(p1)
+    
+    radians = p2[:-1]
+    phase_o = p2[-1] % (2 * math.pi)
+    
+    return radians, phase_o
+
 def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
     
-    dt = frames / FPS
-    cycles = dt * freq
-
-    x0 = cycles * 2 * math.pi + phase
-    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
+    radians, phase_o = get_radians(freq, phase, frames)
     
-    a0 = np.sin(l0)
+    a0 = np.sin(radians)
     
-    return a0, x0 % (2 * math.pi)
+    return a0, phase_o
 
 
 def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
     
-    dt = frames / FPS
-    cycles = dt * freq
+    radians, phase_o = get_radians(freq, phase, frames)
 
-    x0 = cycles * 2 * math.pi + phase
-    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
-
-    a0 = l0 % (2 * math.pi)
+    a0 = radians % (2 * math.pi)
     a1 = a0 / math.pi - 1
     a2 = a1 * np.sign(-a1)
     a3 = a2 * 2 + 1
 
-    return a3, x0 % (2 * math.pi)
+    return a3, phase_o
 
 
 def get_saw_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
     
-    dt = frames / FPS
-    cycles = dt * freq
+    radians, phase_o = get_radians(freq, phase, frames)
 
-    x0 = cycles * 2 * math.pi + phase
-    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
-
-    a0 = (l0 + math.pi) % (2 * math.pi) * sign / math.pi - 1
+    a0 = (radians + math.pi) % (2 * math.pi) * sign / math.pi - 1
     
-    return a0, x0 % (2 * math.pi)
+    return a0, phase_o
 
 
 def get_pulse_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
     
-    dt = frames / FPS
-    cycles = dt * freq
+    radians, phase_o = get_radians(freq, phase, frames)
 
-    x0 = cycles * 2 * math.pi + phase
-    l0 = np.arange(phase, x0, (x0 - phase) / frames, dtype='float32')
-
-    a0 = l0 % (2 * math.pi) < (2 * math.pi * duty)    
+    a0 = radians % (2 * math.pi) < (2 * math.pi * duty)    
     a1 = a0 * 2 - 1
     
-    return a1, x0 % (2 * math.pi)
+    return a1, phase_o
 
+
+_LOG_C4 = math.log(262)
+_LOG_CC = math.log(2) / 12
+_LOG_CX = _LOG_C4 - 60 * _LOG_CC
+
+
+def key2freq(key):
+    
+    if isinstance(key, np.ndarray):
+        return np.exp(key * _LOG_CC + _LOG_CX)
+    else:
+        return math.exp(key * _LOG_CC + _LOG_CX)
+    
+ 
+def freq2key(freq):
+    
+    if isinstance(freq, np.ndarray):
+        return (np.log(freq) - _LOG_CX) / _LOG_CC
+    else:
+        return (math.log(freq) - _LOG_CX) / _LOG_CC
+        
 
 class Oscillator(Sound):
     
-    def __init__(self, shape='sine', freq=262., phase=0., duty=0.5, sign=1.):
+    def __init__(self, shape='sine', freq=262., phase=0., duty=0.5, sign=1., key=None):
         
         super(Oscillator, self).__init__()
         
@@ -1482,10 +1511,18 @@ class Oscillator(Sound):
         self.phase = phase
         self.freq = freq
         
+        if key is not None:
+            self.key = key
+        
         self.duty = duty
         self.sign = sign
         
-    def forward(self):
+    def forward(self, osc=None):
+        
+        if osc is not None:
+            freq = key2freq(self.key + osc)
+        else:
+            freq = self.freq
         
         get_wave = dict(
             sine = get_sine_wave,
@@ -1494,9 +1531,23 @@ class Oscillator(Sound):
             pulse = get_pulse_wave,
         )[self.shape]
         
-        a0, self.phase = get_wave(self.freq, self.phase, self.frames, duty=self.duty, sign=self.sign)
+        a0, self.phase = get_wave(
+            freq, 
+            self.phase, 
+            self.frames, 
+            duty=self.duty, 
+            sign=self.sign
+        )
         
         return a0[:,None]
+    
+    @property
+    def key(self):
+        return freq2key(self.freq)
+    
+    @key.setter
+    def key(self, value):
+        self.freq = key2freq(value)
 
 
 class ButterFilter(Sound):
