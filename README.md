@@ -1,10 +1,12 @@
 # Jupylet
 
-*Jupylet* is a Python library that lets you create and run games interactively
-in a Jupyter notebook. It is intended for two types of audiences:
+*Jupylet* is a Python library that lets you create 2D and 3D games, music 
+and sound synthesizers, interactively in a Jupyter notebook. It is intended 
+for three types of audiences:
 
-* Kids and their parents interested in learning to program,
 * Computer scientists, researchers, and students of deep reinforcement learning.
+* Music hobbyists, interested in sound synthesis and live music coding.
+* Kids and their parents interested in learning to program.
 
 ## TL;DR
 
@@ -22,7 +24,9 @@ environment for playing around with code, experimenting, and exploring ideas.
 It is used by professional machine learning scientists who come every day to
 play at work, so why not by kids?
 
-*Jupylet* is wonderfully easy to use for creating simple 2D and 3D games interactively and experimentally. Change a variable or a function and see how the game is affected immediately while it is running.
+*Jupylet* is wonderfully easy to use for creating simple 2D and 3D games and 
+music interactively and experimentally. Change a variable or a function and 
+see how the game is affected immediately while running.
 
 ## Jupylet for Deep Reinforcement Learning
 
@@ -39,6 +43,14 @@ can modify the game interactively in Jupyter this process is not only easy but
 also fun.  
 
 Head to [examples/22-pong-RL.ipynb](examples/22-pong-RL.ipynb) to see how to programmatically control a 2-player version of pong.
+
+## Jupylet for Music Hobbyists
+
+*Jupylet* imports ideas and methods from machine learning into the domain
+of sound synthesis to easily let you create sound synthesizers as wild as you
+can dream up. In addition it draws inspiration from the wonderful [Sonic Pi](https://sonic-pi.net/)
+and brings live music coding to Jupyter and Python. Hook up your MIDI keyboard 
+and take off with Python's built in [anti-gravity!](https://xkcd.com/353/)
 
 ## Requirements
 
