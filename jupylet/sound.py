@@ -1521,13 +1521,13 @@ class Oscillator(Sound):
         self.duty = duty
         self.sign = sign
         
-    def forward(self, osc=None, duty=None):
+    def forward(self, key_modulation=None, duty=None):
         
         if duty is None:
             duty = self.duty
             
-        if osc is not None:
-            freq = key2freq(self.key + osc)
+        if key_modulation is not None:
+            freq = key2freq(self.key + key_modulation)
         else:
             freq = self.freq
         
