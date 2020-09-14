@@ -1299,10 +1299,11 @@ class Gate(Sound):
 
 def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01, eps=1e-6):
     
-    df = max(math.ceil(dt * FPS), eps)
-    end = min(df + 1, end or 60 * FPS)
+    df = max(math.ceil(dt * FPS), 1)
+    end = min(df, end or 60 * FPS)
+    start = start + 1
         
-    a0 = np.arange(start/df, end/df - eps, 1/df, dtype='float32')
+    a0 = np.arange(start/df, end/df + eps, 1/df, dtype='float32')
     a1 = np.exp(a0 * math.log(th))
     a2 = (1. - a1) / (1. - th)
     
@@ -1311,10 +1312,11 @@ def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01, eps=1e-6):
 
 def get_linear_adsr_curve(dt, start=0, end=None, eps=1e-6):
     
-    df = max(math.ceil(dt * FPS), eps)
-    end = min(df + 1, end or 60 * FPS)
-
-    a0 = np.arange(start/df, end/df, 1/df, dtype='float32')
+    df = max(math.ceil(dt * FPS), 1)
+    end = min(df, end or 60 * FPS)
+    start = start + 1
+    
+    a0 = np.arange(start/df, end/df + eps, 1/df, dtype='float32')
     
     return a0
 
@@ -1353,26 +1355,25 @@ class Envelope(Sound):
         for frame, event in states:
             #print(frame, event)
             
-            while True:
+            while index < frame:
                 curves.append(self.get_curve(index, frame))
                 index += len(curves[-1])
-                if index >= frame:
-                    break
                     
-            if event == 'open':
+            if event == 'open' and self._state != 'attack':
                 self._state = 'attack'
                 self._start = index
                 self._valu0 = self._valu1
             
-            if event == 'release':
+            if event == 'release' and self._state not in ('release', None):
                 self._state = 'release'
                 self._start = index
                 self._valu0 = self._valu1
             
         return np.concatenate(curves)[:,None]
     
-
     def get_curve(self, start, end):
+        
+        assert start < end
         
         if self._state in (None, 'sustain'):
             return np.ones((end - start,), dtype='float32') * self._valu0
@@ -1414,7 +1415,19 @@ class Envelope(Sound):
     
     @property
     def done(self):
-        return self._state is None and self._start > 0
+        
+        if self._state is None:
+            return self._start > 0
+        
+        if self._state != 'attack':
+            
+            if self.linear and self._valu1 < 0:
+                return True
+        
+            if not self.linear and self._valu1 <= 1e-5:
+                return True
+            
+        return False
 
 
 #
@@ -1423,7 +1436,7 @@ class Envelope(Sound):
 _NP_ZERO = np.zeros((1,), dtype='float32')
 
 
-def get_radians(freq, phase=0, frames=8192):
+def get_radians(freq, start=0, frames=8192):
     
     pt = 2 * math.pi / FPS * freq
     
@@ -1432,14 +1445,14 @@ def get_radians(freq, phase=0, frames=8192):
     else:
         pt = pt * np.ones((frames,), dtype='float32')
             
-    p0 = phase % (2 * math.pi) + _NP_ZERO
+    p0 = start + _NP_ZERO
     p1 = np.concatenate((p0, pt))
     p2 = np.cumsum(p1)
     
     radians = p2[:-1]
-    phase_o = p2[-1] % (2 * math.pi)
+    next_start = p2[-1] 
     
-    return radians, phase_o
+    return radians, next_start
 
 def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
     
@@ -1507,7 +1520,7 @@ def freq2key(freq):
 
 class Oscillator(Sound):
     
-    def __init__(self, shape='sine', freq=262., phase=0., duty=0.5, sign=1., key=None):
+    def __init__(self, shape='sine', freq=262., key=None, phase=0., sign=1, duty=0.5, **kwargs):
         
         super(Oscillator, self).__init__()
         
@@ -1518,32 +1531,41 @@ class Oscillator(Sound):
         if key is not None:
             self.key = key
         
-        self.duty = duty
         self.sign = sign
+        self.duty = duty
+        self.kwargs = kwargs
         
-    def forward(self, key_modulation=None, duty=None):
+    def forward(self, key_modulation=None, sign=None, duty=None, **kwargs):
         
-        if duty is None:
-            duty = self.duty
-            
         if key_modulation is not None:
             freq = key2freq(self.key + key_modulation)
         else:
             freq = self.freq
+            
+        if sign is None:
+            sign = self.sign
+            
+        if duty is None:
+            duty = self.duty
+            
+        if self.kwargs:
+            kwargs = dict(kwargs)
+            kwargs.update(self.kwargs)
         
         get_wave = dict(
             sine = get_sine_wave,
             tri = get_triangle_wave,
             saw = get_saw_wave,
             pulse = get_pulse_wave,
-        )[self.shape]
+        ).get(self.shape, self.shape)
         
         a0, self.phase = get_wave(
             freq, 
             self.phase, 
             self.frames, 
+            sign=self.sign,
             duty=duty, 
-            sign=self.sign
+            **kwargs
         )
         
         return a0[:,None]
