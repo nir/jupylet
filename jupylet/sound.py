@@ -28,19 +28,15 @@
 import functools
 import _thread
 import asyncio
-import inspect
 import logging
 import random
 import queue
 import copy
-import loky
 import math
 import time
 import sys
 import os
 
-import loky.backend.context
-import loky.backend.queues
 import skimage.draw
 import scipy.signal
 import PIL.Image
@@ -88,83 +84,6 @@ def frames2t(frames):
         float: The time duration in seconds.
     """
     return frames  / FPS
-
-
-#
-# The sound server runs in a dedicated worker process 
-# (living in a pool of size 1).
-#
-_pool0 = None
-
-#
-# This queue can be used to communicate information asynchronously
-# from the sound server to the client process.
-#
-_queue = None
-
-
-def _submit(foo, *args, **kwargs):
-    """Submit a job to the sound server.
-
-    Args:
-        foo (function): The function to run at the sound server process.
-        *args: Positional arguments for the function.
-        **kwargs: Keyword arguments for the function.
-
-    Returns:
-        A future object representing the submitted job.
-    """
-    logger.debug('Enter _submit(foo=%r, *args=%r, **kwargs=%r).', foo, args, kwargs)
-
-    global _pool0
-    global _queue
-
-    assert not _is_worker, '_submit() should not be called by worker process.'
-        
-    if sd is None:
-        return MockFuture()
-        
-    if _pool0 is None:
-        _ctx00 = loky.backend.context.get_context('loky')
-        _queue = loky.backend.queues.Queue(ctx=_ctx00)
-        _pool0 = loky.get_reusable_executor(
-            max_workers=1, 
-            context = _ctx00,
-            timeout=2**20,
-            initializer=_init_worker,
-            initargs=(_queue, get_logging_level())
-        )
-
-    return _pool0.submit(foo, *args, **kwargs)
-
-
-class MockFuture(object):
-    """Mock future objects for remote headless servers. 
-
-    We don't want them to start playing sounds in their remote server rack.
-    """
-    def result(self):
-        pass
-
-
-# 
-# This flag is used to determine if code is running at server or
-# client process.
-#
-_is_worker = False
-
-
-def _init_worker(q, logging_level=logging.WARNING):
-    """Init the sound server worker."""
-
-    global _is_worker
-    global _queue
-
-    _is_worker = True
-    _queue = q
-
-    setup_basic_logging(logging_level)
-    _init_worker_thread()
     
 
 _worker_tid = None
@@ -177,7 +96,6 @@ def _init_worker_thread():
     if not _worker_tid:
         _worker_tid = _thread.start_new_thread(_start_sound_stream, ())
         
-
 #
 # This queue is only used to keep the sound stream running.
 #
@@ -317,121 +235,7 @@ def _mix_sounds(sounds, frames):
     return np.sum(d, 0).clip(-1, 1)
 
 
-def proxy(wait=False, write_only=False, return_self=False, return_async=False):
-    """Decorate function or sound object method to transparently run it in the 
-    sound server process.
-
-    Args:
-        wait (bool): Emulate a regular function call.
-        write_only (bool): Submit function to run in the server and return None
-            immediately. Should take about 50-100 usec to run.
-        return_self (bool): Submit function to run in the server and return self
-            immediately. Should take about 50-100 usec to run.
-        return_async (bool): Submit function to run in the server and return a
-            waitable future object.
-    """
-    assert write_only or wait or return_async or return_self
-
-    def proxy1(foo):
-
-        #
-        # Figure out if foo is a regular function or a sound object method.
-        #
-        s0 = inspect.getfullargspec(foo)
-        is_class_method = s0.args and s0.args[0] == 'self'
-
-        @functools.wraps(foo)
-        def proxy0(*args, **kwargs):
-
-            #
-            # If on sound server, call the function and return its result.
-            # 
-            if _is_worker:
-                return foo(*args, **kwargs)
-
-            if is_class_method:
-                self, args = args[0], args[1:]
-                self_uid = self.uid
-            else:
-                self = None
-                self_uid = None
-            
-            #
-            # On remote servers or in headless mode bypass the sound module,
-            # since we do not want sound in these scenarios.
-            #
-            if is_remote() or get_app_mode() == 'hidden':
-                return self if return_self else None
-
-            fuu = _submit(_proxy_server, self_uid, foo.__name__, *args, **kwargs)
-
-            if return_self:
-                return self
-
-            if write_only:
-                return
-
-            if wait:
-                return fuu.result()
-
-            return asyncio.wrap_future(fuu)
-        
-        return proxy0
-
-    return proxy1
-
-
-#
-# A server-side dictionary for all sound objects currently referenced by the 
-# client process.
-#
-_soundsd = {}
-
-
-_debug_level_names = {
-    'get_output_as_array': 0,
-}
-
-
-def _proxy_server(_uid, name, *args, **kwargs):
-    """Run submitted function by its name (and object uid).
-    
-    If _uid is not None but curresponding object is not found in the sound 
-    objects dictionary, silently ignore the request.
-    """
-    if name not in _debug_level_names:
-        logging.info('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
-    else:
-        logging.debug('Enter _proxy_server(_uid=%r, name=%r, *args=%r, **kwargs=%r).', _uid, name, args, kwargs)
-        if not _debug_level_names[name]:
-            _debug_level_names[name] = 1
-            logging.info('Messages for %s() will only be shown in DEBUG logging level.' % name)
-
-    if _uid is None:
-        foo = globals().get(name)
-    elif _uid in _soundsd:
-        foo = getattr(_soundsd[_uid], name)
-    else:
-        return
-
-    if callable(foo):
-        return foo(*args, **kwargs) 
-    
-    return foo
-
-
-@proxy(wait=True)
-def _eval(x, _repr_=True):
-    """Debug function to evaluate arbitrary expressions in the sound server."""
-    logging.info('Enter _eval(x=%r, _repr_=%r).', x, _repr_)
-    
-    try:
-        if _repr_:
-            return repr(eval(x))
-        else:
-            return eval(x)
-    except:
-        return trimmed_traceback()
+_init_worker_thread()
 
 
 def get_oscilloscope_as_image(
@@ -528,7 +332,6 @@ def get_oscilloscope_as_array(
     return a5, ts, te
 
 
-@proxy(wait=True)
 def get_output_as_array(start=-FPS, end=None, resample=None):
 
     if not _dt or not _al:
@@ -567,35 +370,6 @@ def load_sound(path, channels=2):
     return data, fs
 
 
-def _create_sound(classname, *args, **kwargs):
-    logger.info('Enter _create_sound(classname=%r, *args=%r, **kwargs=%r).', classname, args, kwargs)
-
-    _cls = globals()[classname]
-    _sound = _cls(*args, **kwargs)
-    _soundsd[_sound.uid] = _sound
-
-
-def _delete_sound(uid):
-    logger.info('Enter _delete_sound().')
-    _soundsd.pop(uid, None)
-
-
-def _getattr(uid, key):
-    logger.info('Enter _getattr(uid=%r, key=%r).', uid, key)
-    return getattr(_soundsd[uid], key)
-    
-    
-def _setattr(uid, key, value):
-    logger.info('Enter _setattr(uid=%r, key=%r, value=%r).', uid, key, value)
-    return setattr(_soundsd[uid], key, value)
-    
-
-def _generate_uid():
-    """Generate unique sound object id."""
-    logger.debug('Enter _generate_uid().')
-    return o2h((random.random(), time.time()))
-
-
 class Sample(object):
     
     def __init__(
@@ -627,44 +401,6 @@ class Sample(object):
             release (float): Time in seconds to decay volume to 0. once play
                 duration is up.
         """
-        uid = kwargs.pop('uid', None)
-        
-        #
-        # This code runs on the client, when the server is about to create
-        # a copy of an existing sound. See the copy() method below.
-        #
-        if not _is_worker and uid is not None:
-            self.__dict__['uid'] = uid
-            return
-
-        #
-        # This code runs on the client to create a new sound object on the 
-        # sound server. The client sound object will serve as its proxy.
-        #
-        if not _is_worker:
-            path = str(find_path(path)) if path else None
-            self.__dict__['uid'] = _generate_uid()
-            _submit(
-                _create_sound, 
-                'Sample',
-                path, 
-                amp, 
-                pan, 
-                loop,
-                duration,
-                attack,
-                decay,
-                sustain,
-                release,
-                uid=self.__dict__['uid'],
-            )
-            return
-
-        #
-        # This code runs on the sound server
-        #
-
-        self.uid = uid
         self.path = path
 
         self.amp = amp
@@ -694,45 +430,6 @@ class Sample(object):
         self.index = 0
         self.freq = FPS
 
-    def __del__(self):
-
-        try:
-            if not _is_worker and self.__dict__.get('uid', -1) != -1:
-                _submit(_delete_sound, self.uid)
-        
-        except RuntimeError:
-            pass
-
-        except TypeError:
-            pass
-
-    def __getattr__(self, key):
-        
-        if key in self.__dict__:
-            return self.__dict__[key]
-            
-        if not _is_worker:
-            return _submit(_getattr, self.uid, key).result()
-
-        return super(Sample, self).__getattribute__(key)
-
-    def __setattr__(self, key, value):
-
-        if key in self.__dict__:
-            self.__dict__[key] = value
-            return
-
-        if not _is_worker:
-            _submit(_setattr, self.uid, key, value)
-            return
-            
-        return super(Sample, self).__setattr__(key, value)
-
-    @proxy(wait=True)
-    def __dir__(self):
-        return super(Sample, self).__dir__()
-    
-    @proxy(write_only=True)
     def set_envelope(
         self, 
         min_duration=None, 
@@ -757,7 +454,6 @@ class Sample(object):
         if release is not None:
             self.release = release
 
-    @proxy(wait=True)
     def get_adsr(self):
         
         #if self.duration <= 0:
@@ -801,7 +497,6 @@ class Sample(object):
 
         return self.adsr1
 
-    @proxy(write_only=True)
     def play_release(self, release=None):
 
         if release is not None:
@@ -817,7 +512,6 @@ class Sample(object):
         """
         return self.copy().play(note, **kwargs)
 
-    @proxy(return_self=True)
     def play(self, note=None, **kwargs):
         logger.info('Enter Sample.play(note=%r, **kwargs=%r).', note, kwargs)
         
@@ -836,19 +530,13 @@ class Sample(object):
         #
         if self.playing:  
             self.reset = True
-            return
+            return self
 
         self.playing = True
         _soundsq.put(self)
+        return self
             
     def copy(self, **kwargs):
-
-        uid = _generate_uid()
-        self._copy(uid, **kwargs)
-        return type(self)(uid=uid)
-
-    @proxy(write_only=True)
-    def _copy(self, uid, **kwargs):
 
         o = copy.copy(self)
 
@@ -856,15 +544,13 @@ class Sample(object):
         o.reset = False
         o._stop = False
         o.index = 0
-        o.uid = uid
         
-        _soundsd[o.uid] = o
-
         for k, v in kwargs.items():
             if k in o.__dict__:
                 setattr(o, k, v)
 
-    @proxy(return_self=True)
+        return o
+
     def load(self, channels=2):
         
         self.buffer, self.freq = load_sound(self.path, channels)
@@ -875,12 +561,12 @@ class Sample(object):
         self._stop = False
         self.index = 0
 
-    @proxy(write_only=True)
+        return self
+
     def stop(self):
         self._stop = True
 
     @property
-    @proxy(wait=True)
     def done(self):
         
         if self._stop:
@@ -917,7 +603,6 @@ class Sample(object):
         
         return data0
     
-    @proxy(return_async=True)
     def _consume(self, frames):
         
         ix = self.index
@@ -951,8 +636,6 @@ class Sample(object):
 
         return b0
 
-
-@functools.lru_cache(maxsize=1024)
 def _ampan(amp, pan, dtype='float32'):
     a0 = np.array([1 - pan, 1 + pan]) * (amp / 2)
     return a0.astype(dtype)
@@ -1097,8 +780,6 @@ _shape_foo = {
 
 def get_note_wave(note, shape='sine', channels=2):
     
-    if freq is not None:
-        return 
     if isinstance(note, np.generic):
         note = float(note)
 
@@ -1157,30 +838,6 @@ class Synth(Sample):
                 duration is up.
             note (str or float):  
         """
-        uid = kwargs.pop('uid', None)
-
-        if not _is_worker and uid is not None:
-            self.__dict__['uid'] = uid
-            return
-
-        if not _is_worker:
-            self.__dict__['uid'] = _generate_uid()
-            _submit(
-                _create_sound, 
-                'Synth',
-                shape, 
-                amp, 
-                pan, 
-                duration,
-                attack,
-                decay,
-                sustain,
-                release,
-                note,
-                uid=self.__dict__['uid'],
-            )
-            return
-
         super(Synth, self).__init__(
             amp=amp, 
             pan=pan, 
@@ -1190,13 +847,11 @@ class Synth(Sample):
             decay=decay,
             sustain=sustain,
             release=release,
-            uid=uid,
         )
 
         self.shape = shape
         self.note = note
 
-    @proxy(return_self=True)
     def load(self, channels=2):
         
         self.buffer = get_note_wave(
@@ -1212,40 +867,14 @@ class Synth(Sample):
         self._stop = False
         self.index = 0
  
+        return self
 
 # ------------------------
 
 
+'''
 FPS = 44100
 
-class Sound(object):
-    
-    def __init__(self):
-                
-        self.frames = 1024        
-        self.index = 0
-                
-    def rset(self, key, value, force=False):
-        
-        if force or self.__dict__.get(key, '__NONE__') != value:
-            for s in self.__dict__.values():
-                if isinstance(s, Sound):
-                    s.rset(key, value, force=True)
-            
-        self.__dict__[key] = value
-            
-    def __call__(self, *args, **kwargs):
-        
-        assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
-        
-        a0 = self.forward(*args, **kwargs)
-        self.index += self.frames
-        
-        return a0
-
-        
-    def forward(self, *args, **kwargs):
-        return np.zeros((self.frames, self.channels))
 
 def _expand_channels(a0, channels):
 
@@ -1259,6 +888,163 @@ def _expand_channels(a0, channels):
         a0 = a0[:,:channels]
 
     return a0
+
+
+@functools.lru_cache(maxsize=1024)
+def _ampan(amp, pan, dtype='float32'):
+    a0 = np.array([1 - pan, 1 + pan]) * (amp / 2)
+    return a0.astype(dtype)
+
+_LOG_C4 = math.log(262)
+_LOG_CC = math.log(2) / 12
+_LOG_CX = _LOG_C4 - 60 * _LOG_CC
+
+
+def key2freq(key):
+    
+    if isinstance(key, np.ndarray):
+        return np.exp(key * _LOG_CC + _LOG_CX)
+    else:
+        return math.exp(key * _LOG_CC + _LOG_CX)
+    
+ 
+def freq2key(freq):
+    
+    if isinstance(freq, np.ndarray):
+        return (np.log(freq) - _LOG_CX) / _LOG_CC
+    else:
+        return (math.log(freq) - _LOG_CX) / _LOG_CC
+        
+
+_notes = dict(
+    C = 1,
+    Cs = 2, Db = 2,
+    D = 3,
+    Ds = 4, Eb = 4,
+    E = 5,
+    F = 6,
+    Fs = 7, Gb = 7,
+    G = 8, 
+    Gs = 9, Ab = 9,
+    A = 10,
+    As = 11, Bb = 11,
+    B = 12,
+)
+
+
+class note(object):
+    pass
+
+
+for o in range(8):
+    for k in _notes:
+        ko = (k + str(o)).rstrip('0')
+        setattr(note, ko, ko)
+
+
+def note2key(note):
+    
+    if note[-1].isdigit():
+        octave = int(note[-1])
+        note = note[:-1]
+    else:
+        octave = 4
+        
+    note = note.replace('#', 's')
+    return _notes[note] + octave * 12 + 11
+
+
+def key2note(key):
+    
+    i = (key - 11) % 12 
+
+    octave = (key - 11) // 12
+
+    n0, i0 = 'B', 0
+
+    for n1, i1 in _notes.items():
+        if i <= i1:
+            break
+        n0, i0 = n1, i1
+    
+    note = n0 if i1 - i > 0.5 else n1
+    
+    return note + str(int(octave))
+
+
+class Sound(object):
+    
+    def __init__(self):
+        
+        self.freq = 262.
+        
+        self.amp = 1.
+        self.pan = 1.
+        
+        self.frames = 1024        
+        self.index = 0
+        
+        self._a0 = None
+                
+    def _rset(self, key, value, force=False):
+        
+        if force or self.__dict__.get(key, '__NONE__') != value:
+            for s in self.__dict__.values():
+                if isinstance(s, Sound):
+                    s._rset(key, value, force=True)
+            
+        self.__dict__[key] = value
+    
+    def _consume(self, frames, channels=2, *args, **kwargs):
+        
+        self._rset('frames', frames)
+        self._a0 = self(*args, **kwargs)
+        
+        a0 = _expand_channels(self._a0, channels)
+        
+        if channels == 2:
+            return a0 * _ampan(self.amp, self.pan)
+        
+        return a0 * self.amp
+    
+    @property
+    def done(self):
+        
+        if self.index < FPS / 8:
+            return False
+        
+        if self._a0 is None:
+            return False
+        
+        return np.count_nonzero(self._a0) == 0
+        
+    def __call__(self, *args, **kwargs):
+        
+        assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
+        
+        a0 = self.forward(*args, **kwargs)
+        self.index += self.frames
+        
+        return a0
+
+    def forward(self, *args, **kwargs):
+        return np.zeros((self.frames, self.channels))
+    
+    @property
+    def key(self):
+        return freq2key(self.freq)
+    
+    @key.setter
+    def key(self, value):
+        self.freq = key2freq(value)
+        
+    @property
+    def note(self):
+        return key2note(self.key)
+    
+    @note.setter
+    def note(self, value):
+        self.key = note2key(value)
 
 
 class Gate(Sound):
@@ -1649,5 +1435,6 @@ class PhaseModulator(Sound):
         self._buffer = a0[-2 * beta:]
         
         return a3
+'''
 
         
