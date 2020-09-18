@@ -998,9 +998,9 @@ class Sound(object):
     def _consume(self, frames, channels=2, *args, **kwargs):
         
         self._rset('frames', frames)
-        self._a0 = self(*args, **kwargs)
         
-        a0 = _expand_channels(self._a0, channels)
+        a0 = self(*args, **kwargs)
+        a0 = _expand_channels(a0, channels)
         
         if channels == 2:
             return a0 * _ampan(self.amp, self.pan)
@@ -1022,10 +1022,10 @@ class Sound(object):
         
         assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
         
-        a0 = self.forward(*args, **kwargs)
+        self._a0 = self.forward(*args, **kwargs)
         self.index += self.frames
         
-        return a0
+        return self._a0
 
     def forward(self, *args, **kwargs):
         return np.zeros((self.frames, self.channels))
@@ -1240,6 +1240,7 @@ def get_radians(freq, start=0, frames=8192):
     
     return radians, next_start
 
+
 def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
     
     radians, phase_o = get_radians(freq, phase, frames)
@@ -1277,32 +1278,11 @@ def get_pulse_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
         
     radians, phase_o = get_radians(freq, phase, frames)
 
-    a0 = radians % (2 * math.pi) < (2 * math.pi * duty)    
-    a1 = a0 * 2 - 1
+    a0 = radians % (2 * math.pi) < (2 * math.pi * duty)
+    a1 = a0.astype('float32') * 2. - 1.
     
     return a1, phase_o
 
-
-_LOG_C4 = math.log(262)
-_LOG_CC = math.log(2) / 12
-_LOG_CX = _LOG_C4 - 60 * _LOG_CC
-
-
-def key2freq(key):
-    
-    if isinstance(key, np.ndarray):
-        return np.exp(key * _LOG_CC + _LOG_CX)
-    else:
-        return math.exp(key * _LOG_CC + _LOG_CX)
-    
- 
-def freq2key(freq):
-    
-    if isinstance(freq, np.ndarray):
-        return (np.log(freq) - _LOG_CX) / _LOG_CC
-    else:
-        return (math.log(freq) - _LOG_CX) / _LOG_CC
-        
 
 class Oscillator(Sound):
     
@@ -1355,14 +1335,6 @@ class Oscillator(Sound):
         )
         
         return a0[:,None]
-    
-    @property
-    def key(self):
-        return freq2key(self.freq)
-    
-    @key.setter
-    def key(self, value):
-        self.freq = key2freq(value)
 
 
 class ButterFilter(Sound):
@@ -1416,18 +1388,19 @@ class PhaseModulator(Sound):
         
         self._buffer = None
         
-    def forward(self, c, s):
+    def forward(self, carrier, signal):
         
+        signal = signal.mean(-1).clip(-1, 1)
         beta = int(self.beta) + 1
         
         if self._buffer is None:
-            self._buffer = np.zeros((2 * beta, c.shape[1]), dtype=c.dtype)
+            self._buffer = np.zeros((2 * beta, carrier.shape[1]), dtype=carrier.dtype)
             
-        t1 = np.arange(beta, beta + len(c), dtype='float32') + self.beta * s.mean(-1).clip(-1, 1)
+        t1 = np.arange(beta, beta + len(carrier), dtype='float32') + self.beta * signal
         t2 = t1.astype('int32')
         t3 = (t1 - t2.astype('float32'))[:, None]
         
-        a0 = np.concatenate((self._buffer, c))
+        a0 = np.concatenate((self._buffer, carrier))
         a1 = a0[t2]
         a2 = a0[t2 + 1]
         a3 = a2 * t3 + a1 * (1 - t3)
@@ -1435,6 +1408,136 @@ class PhaseModulator(Sound):
         self._buffer = a0[-2 * beta:]
         
         return a3
+
+
+_SFCACHE_THRESHOLD = 10 * FPS
+_SFCACHE_SIZE = 64
+
+_sfcache = {}
+
+
+def soundfile_read(path, zero_pad=False):
+    """Read sound file as a numpy array."""
+    logger.info('Enter soundfile_read(path=%r).', path)
+
+    data, fps = _sfcache.get(path, (None, None))
+    
+    if data is None:
+    
+        data, fps = sf.read(path, dtype='float32') 
+        data = np.pad(data, ((0, 1), (0, 0))[:len(data.shape)])
+        
+        if len(data) <= _SFCACHE_THRESHOLD:
+
+            if len(_sfcache) >= _SFCACHE_SIZE:
+                _sfcache.pop(random.choice(list(_sfcache.keys())))
+
+            _sfcache[path] = (data, fps)
+
+    if not zero_pad:
+        data = data[:-1]
+        
+    return data, fps
+
+
+def get_indices(intervals=1, start=0, frames=8192):
+        
+    if isinstance(intervals, np.ndarray):
+        pt = intervals.reshape(-1)
+    else:
+        pt = intervals * np.ones((frames,), dtype='float32')
+            
+    p0 = start + _NP_ZERO
+    p1 = np.concatenate((p0, pt))
+    p2 = np.cumsum(p1)
+    
+    indices = p2[:-1]
+    next_start = p2[-1] 
+    
+    return indices, next_start
+
+
+def compute_loop(indices, buff_end, loop=False, loop_start=0, loop_end=0):
+    
+    indices = indices.astype('int32')
+    
+    if not loop or loop_end <= 0:
+        return indices.clip(0, buff_end-1)
+    
+    il = indices < loop_start
+    i0 = indices * il
+    i1 = ((indices - loop_start) % (loop_end - loop_start) + loop_start) * (1 - il)
+    
+    return i0 + i1
+
+
+class Sample(Sound):
+    
+    def __init__(
+        self, 
+        path, 
+        freq=262., 
+        key=None, 
+        phase=0.,
+        loop=False,
+        loop_start=0, 
+        loop_end=0
+    ):
+        
+        super(Sample, self).__init__()
+        
+        self.path = path
+        self.buff = None
+        
+        self.phase = 0        
+        self.freq = freq
+        
+        if key is not None:
+            self.key = key
+
+        self.loop = loop
+        self.loop_start = loop_start 
+        self.loop_end = loop_end 
+
+    def forward(self, key_modulation=None):
+        
+        self.load()
+           
+        lb = len(self.buff)
+        
+        if key_modulation is None:
+            indices, self.phase = get_indices(1., self.phase, self.frames)
+            indices = compute_loop(indices, lb, self.loop, self.loop_start, self.loop_end)
+            return self.buff[indices]
+            
+        interval = key2freq(self.key + key_modulation) / self.freq
+        indices, self.phase = get_indices(interval, self.phase, self.frames)
+
+        t3 = (indices % 1.)[:, None]
+        
+        indices0 = compute_loop(indices, lb, self.loop, self.loop_start, self.loop_end)
+        indices1 = compute_loop(indices + 1, lb, self.loop, self.loop_start, self.loop_end)
+        
+        a0 = self.buff
+        a1 = a0[indices0]
+        a2 = a0[indices1]
+        a3 = a2 * t3 + a1 * (1 - t3)
+        
+        return a3
+
+    def load(self):
+        
+        if self.buff is None:
+            
+            self.buff = soundfile_read(self.path, zero_pad=True)[0]
+            
+            if len(self.buff.shape) == 1:
+                self.buff = self.buff[:,None]
+           
+            if self.loop_end == 0:
+                self.loop_end = len(self.buff) - 1
+            
+        return self
 '''
 
         
