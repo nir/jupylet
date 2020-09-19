@@ -27,7 +27,6 @@
 
 import functools
 import _thread
-import asyncio
 import logging
 import random
 import queue
@@ -36,6 +35,7 @@ import math
 import time
 import sys
 import os
+import re
 
 import skimage.draw
 import scipy.signal
@@ -47,17 +47,22 @@ except:
     sd = None
 
 import soundfile as sf
-
 import numpy as np
 
+from scipy import signal
+
 from .resource import find_path
-from .utils import o2h, callerframe, trimmed_traceback
+from .utils import o2h, callerframe, trimmed_traceback, auto
 from .utils import setup_basic_logging, get_logging_level
 from .env import get_app_mode, is_remote
 
 
 logger = logging.getLogger(__name__)
 
+
+DEBUG = False
+
+EPSILON = 1e-6
 
 FPS = 44100
 
@@ -161,7 +166,6 @@ def _stream_callback(outdata, frames, _time, status):
     else: 
         a0 = _mix_sounds(sounds, frames)
         outdata[:] = a0
-        _put_sounds(sounds)
 
     # 
     # Aggregate the output data and timers for the oscilloscope.
@@ -180,47 +184,29 @@ def _stream_callback(outdata, frames, _time, status):
         _time.currentTime,
     ))
 
-
-#def _quit_sound_worker():
-#    _soundsq.put('QUIT')
+    time.sleep(0.)
 
 
 #
-# A server-side queue for all currently playing sound objects.
+# A set of all currently playing sound objects.
 #
-_soundsq = queue.Queue()
+_sounds = set()
 
 
 def _get_sounds():
-    """Get all sound objects from the queue of currently playing sounds."""
+    """Get currently playing sound objects."""
 
-    sounds = []
-    
-    while not _soundsq.empty():
-        
-        sound = _soundsq.get()
-        if sound == 'QUIT':
-            return
-        
-        if not sound.done:
-            sounds.append(sound)
-        else:
-            sound.playing = False
+    for s in list(_sounds):
+        if s.done:
+            _sounds.discard(s)
 
-    return sounds
+    return list(_sounds)
       
-    
-def _put_sounds(sounds):
-    """Put sound objects into the queue of currently playing sounds."""
-    
-    for sound in sounds:
 
-        if not sound.done:
-            _soundsq.put(sound)
-        else:
-            sound.playing = False
+def _put_sound(sound):
+    _sounds.add(sound)
 
-     
+         
 def _mix_sounds(sounds, frames):
     """Mix sound data from given sounds into a single numpy array.
 
@@ -351,152 +337,7 @@ def get_output_as_array(start=-FPS, end=None, resample=None):
     return a0, tstart, tend
 
 
-@functools.lru_cache(maxsize=128)
-def load_sound(path, channels=2):
-    """Load sound file as a numpy array with given number of sound channels."""
-    logger.info('Enter load_sound(path=%r, channels=%r).', path, channels)
-    
-    data, fs = sf.read(path, dtype='float32') 
-
-    if len(data.shape) == 1:
-        data = data.reshape(-1, 1)
-            
-    if data.shape[-1] == 1 and channels > 1:
-        data = data.repeat(channels, -1)
-
-    if data.shape[-1] > channels:
-        data = data[:, :channels]
-
-    return data, fs
-
-
-class Sample(object):
-    
-    def __init__(
-        self, 
-        path=None, 
-        amp=0.5, 
-        pan=0., 
-        loop=False,
-        duration=0.,
-        attack=0.,
-        decay=0.,
-        sustain=1.,
-        release=0.,
-        **kwargs,
-    ):
-        """A sound sample.
-
-        Args:
-            path (str): Path to a WAV, OGG, or FLAC sound file.
-            amp (float): Sound volume with a value between 0. and 1.
-            pan (float): Balance between left (-1.) and right (1.) speakers.
-            loop (bool): Play sound in an endless loop (default False).
-            duration (float): Duration in seconds to play sound (0. plays entire 
-                sound sample).
-            attack (float): Time in seconnds to reach maximum volume.
-            decay (float): Time in seconnds to decay volume to sustain level.
-            sustain (float): Volume level at which sound is sustained for its 
-                duration.
-            release (float): Time in seconds to decay volume to 0. once play
-                duration is up.
-        """
-        self.path = path
-
-        self.amp = amp
-        self.pan = pan
-        
-        self.loop = loop or duration > 0
-        self.duration = duration
-
-        self.min_duration = 0
-        self.attack = attack
-        self.decay = decay
-        self.sustain = sustain
-        self.release = release
-
-        self.adsr0 = None
-        self.adsr1 = None
-
-        self.playing = False
-        self.reset = False
-        self._stop = False
-
-        self.channels = 0
-        self.buffer = []
-        self.dtype = 'float32'
-
-        #self.level0 = 0
-        self.index = 0
-        self.freq = FPS
-
-    def set_envelope(
-        self, 
-        min_duration=None, 
-        attack=None, 
-        decay=None, 
-        sustain=None, 
-        release=None
-    ):
-
-        if min_duration is not None:
-            self.min_duration = min_duration
-
-        if attack is not None:
-            self.attack = attack
-
-        if decay is not None:
-            self.decay = decay
-
-        if sustain is not None:
-            self.sustain = sustain
-
-        if release is not None:
-            self.release = release
-
-    def get_adsr(self):
-        
-        #if self.duration <= 0:
-        #    return
-
-        adsr = (
-            self.duration, 
-            self.min_duration, 
-            self.attack, 
-            self.decay, 
-            self.sustain, 
-            self.release
-        )
-
-        if self.adsr0 != adsr:
-            self.adsr0 = adsr
-            
-            dn, md, a0, d0, sv, r0 = adsr
-            
-            ds = int(FPS * max(dn, md))
-
-            a0 = max(a0, 0.01)
-            a1 = np.linspace(0., 1., int(FPS * a0), dtype='float32')
-            a2 = a1[:max(1, ds)]
-            av = a2[-1]
-
-            d0 = max(d0, 0.01)
-            d1 = np.linspace(av, sv, int(FPS * d0), dtype='float32')
-            d2 = d1[:max(1, ds - len(a2))]
-            dv = d2[-1]
-
-            s0 = ds + 128 if dv > 0 else 1
-            s1 = np.linspace(dv, dv, s0, dtype='float32')
-            s2 = s1[:max(1, ds - len(a2) - len(d2))]
-
-            r0 = max(r0, 0.01)
-            r1 = np.linspace(dv, 0., int(FPS * r0), dtype='float32')
-            p0 = np.linspace(0., 0., 4096, dtype='float32')
-            
-            self.adsr1 = np.concatenate((a2, d2, s2, r1, p0)).reshape(-1, 1)
-
-        return self.adsr1
-
+'''
     def play_release(self, release=None):
 
         if release is not None:
@@ -550,95 +391,7 @@ class Sample(object):
                 setattr(o, k, v)
 
         return o
-
-    def load(self, channels=2):
-        
-        self.buffer, self.freq = load_sound(self.path, channels)
-        self.channels = int(self.buffer.shape[-1])
-        self.dtype = self.buffer.dtype
-
-        self.reset = False
-        self._stop = False
-        self.index = 0
-
-        return self
-
-    def stop(self):
-        self._stop = True
-
-    @property
-    def done(self):
-        
-        if self._stop:
-            return True
-        
-        if not self.loop:
-            return self.index >= len(self.buffer)
-    
-        if not self.duration:
-            return False
-
-        adsr = self.get_adsr()
-        if adsr is None:
-            return False
-
-        if len(adsr) <= self.index:
-            return True
-
-        if self.index < 8:
-            return False
-
-        return adsr[self.index].max() == 0
-
-    def _consume0(self, frames):
-        
-        if self.reset:
-            self.reset = False
-            self.index = 0
-
-        index = self.index % len(self.buffer)
-        data0 = self.buffer[index: index + frames]
-
-        self.index += len(data0)
-        
-        return data0
-    
-    def _consume(self, frames):
-        
-        ix = self.index
-        bl = []
-        
-        while frames > 0:
-                        
-            if self.done:
-                bl.append(np.zeros((frames, self.channels), dtype=self.dtype))
-            else:
-                bl.append(self._consume0(frames))
-                
-            frames -= len(bl[-1])
-            
-        b0 = np.concatenate(bl, 0)
-        b0 = b0 * _ampan(self.amp, self.pan)
-
-        if self.duration:
-            b0 = b0 * self.get_adsr()[ix: ix + len(b0)]
-        
-        #
-        # Interpolate start of play with previous last amplitude level.
-        #
-        #if self.index == 0:
-        #    il = min(32, len(data0))
-        #    ip = np.linspace(0, 1, il).reshape(-1, 1)
-        #    data0 = data0 * 1.
-        #    data0[:il] = ip * data0[:il] + (1. - ip) * self.level0
-        # ?  self.level0 = data0[-1]
-        #
-
-        return b0
-
-def _ampan(amp, pan, dtype='float32'):
-    a0 = np.array([1 - pan, 1 + pan]) * (amp / 2)
-    return a0.astype(dtype)
+'''
 
 
 dtd = {}
@@ -674,206 +427,7 @@ def sleep(dt=0):
     return asyncio.sleep(t1 - tt)
 
 
-@functools.lru_cache(maxsize=32)
-def _get_sine_wave(cycles=1, frames=256):
-    a0 = np.sin(np.linspace(0, 2 * np.pi, frames, dtype='float32'))
-    return np.concatenate([a0] * cycles)
-
-
-@functools.lru_cache(maxsize=32)
-def _get_saw_wave(cycles=1, frames=256):
-    a0 = np.linspace(-1, 1, frames, dtype='float32')
-    return np.concatenate([a0] * cycles)    
-
-
-@functools.lru_cache(maxsize=32)
-def _get_triangle_wave(cycles=1, frames=256):
-    a0 = np.linspace(-1, 1, frames//2, dtype='float32')
-    a1 = np.linspace(1, -1, frames - frames//2, dtype='float32')
-    a2 = np.concatenate((a0, a1)) 
-    return np.concatenate([a2] * cycles)    
-
-
-@functools.lru_cache(maxsize=32)
-def _get_pulse_wave(cycles=1, frames=256):
-    a0 = np.ones((frames,), dtype='float32')
-    a0[:frames//2] *= -1.
-    return np.concatenate([a0] * cycles)
-
-
-_notes = dict(
-    C = 1,
-    Cs = 2, Db = 2,
-    D = 3,
-    Ds = 4, Eb = 4,
-    E = 5,
-    F = 6,
-    Fs = 7, Gb = 7,
-    G = 8, 
-    Gs = 9, Ab = 9,
-    A = 10,
-    As = 11, Bb = 11,
-    B = 12,
-)
-
-
-class note(object):
-    pass
-
-
-for o in range(8):
-    for k in _notes:
-        ko = (k + str(o)).rstrip('0')
-        setattr(note, ko, ko)
-
-
-def get_note_key(note):
-    
-    if note[-1].isdigit():
-        octave = int(note[-1])
-        note = note[:-1]
-    else:
-        octave = 4
-        
-    note = note.replace('#', 's')
-    return _notes[note] + octave * 12 + 11
-
-
-def get_note_freq(note):
-    return get_key_freq(get_note_key(note))
-
-
-def get_key_freq(key, a4=440):
-    return a4 * 2 ** ((key - 69) / 12)
-
-
-def get_freq_cycles(f, fps=44100, max_cycles=32):
-    
-    f0 = fps / f
-    mr = 1000
-    mc = 1
-    
-    for i in range(1, 1 + max_cycles):
-        
-        fi = f0 * i
-        fr = fi % 1
-        fr = min(fr, 1 - fr)
-        #print(fr, fi)
-        
-        if mr > fr / fi / 0.06:
-            mr = fr / fi / 0.06
-            mc = i
-            
-            if mr < 0.003:# or f0 * mc > 2000:
-                break
-            
-    return mc, round(f0 * mc), round(mr, 4)
-
-
-_shape_foo = {
-    'sine': _get_sine_wave,
-    'saw': _get_saw_wave,
-    'tri': _get_triangle_wave,
-    'pulse': _get_pulse_wave,
-}
-
-
-def get_note_wave(note, shape='sine', channels=2):
-    
-    if isinstance(note, np.generic):
-        note = float(note)
-
-    if type(note) in (int, float):
-        freq = get_key_freq(note) if note < 100 else note
-    else:
-        freq = get_note_freq(note)
-        
-    return get_freq_wave(freq, shape, channels)
-
-
-@functools.lru_cache(maxsize=1024)
-def get_freq_wave(freq, shape='sine', channels=2):
-
-    cycles, frames = get_freq_cycles(freq)[:2]
-    
-    foo = _shape_foo[shape]
-
-    wave = foo(cycles)
-    wave = scipy.signal.resample(wave, frames)
-
-    data = wave.reshape(-1, 1)
-    data = data.repeat(channels, -1)
-
-    return data.astype('float32')
-
-
-class Synth(Sample):
-    
-    def __init__(
-        self,
-        shape='sine',
-        amp=0.5, 
-        pan=0., 
-        duration=0.5,
-        attack=0.,
-        decay=0.,
-        sustain=1.,
-        release=0.,
-        note='C',
-        **kwargs,
-    ):
-        """A simple single voice synthesizer.
-
-        Args:
-            shape (str): Waveform shape - one of sine, tri, saw, and pulse.
-            amp (float): Sound volume with a value between 0. and 1.
-            pan (float): Balance between left (-1.) and right (1.) speakers.
-            duration (float): Duration in seconds to play sound (0. plays entire 
-                sound sample).
-            attack (float): Time in seconnds to reach maximum volume.
-            decay (float): Time in seconnds to decay volume to sustain level.
-            sustain (float): Volume level at which sound is sustained for its 
-                duration.
-            release (float): Time in seconds to decay volume to 0. once play
-                duration is up.
-            note (str or float):  
-        """
-        super(Synth, self).__init__(
-            amp=amp, 
-            pan=pan, 
-            loop=True,
-            duration=duration,
-            attack=attack,
-            decay=decay,
-            sustain=sustain,
-            release=release,
-        )
-
-        self.shape = shape
-        self.note = note
-
-    def load(self, channels=2):
-        
-        self.buffer = get_note_wave(
-            note=self.note, 
-            shape=self.shape, 
-            channels=channels
-        )
-        
-        self.channels = int(self.buffer.shape[-1])
-        self.dtype = self.buffer.dtype
-
-        self.reset = False
-        self._stop = False
-        self.index = 0
- 
-        return self
-
-# ------------------------
-
-
-'''
-FPS = 44100
+#--------------------------------------------------
 
 
 def _expand_channels(a0, channels):
@@ -891,7 +445,7 @@ def _expand_channels(a0, channels):
 
 
 @functools.lru_cache(maxsize=1024)
-def _ampan(amp, pan, dtype='float32'):
+def _ampan(amp, pan, dtype='float64'):
     a0 = np.array([1 - pan, 1 + pan]) * (amp / 2)
     return a0.astype(dtype)
 
@@ -985,6 +539,7 @@ class Sound(object):
         self.index = 0
         
         self._a0 = None
+        self._al = []
                 
     def _rset(self, key, value, force=False):
         
@@ -1001,6 +556,50 @@ class Sound(object):
             if isinstance(s, Sound):
                 getattr(s, name)(*args, **kwargs)
                 
+    def play_release(self, release=None):
+        """
+        if release is not None:
+            self.release = release
+            
+        self.duration = frames2t(self.index)
+        """
+        pass
+        
+    def play_new(self, note=None, **kwargs):
+        """Play new copy of sound.
+
+        If sound is already playing it will play the new copy in parallel. 
+        This function returns the new sound object.
+        """
+        o = self.copy()
+        o.play(note, **kwargs)
+
+        return o
+
+    def play(self, note=None, **kwargs):
+        #logger.info('Enter Sample.play(note=%r, **kwargs=%r).', note, kwargs)
+        
+        self.reset()
+        
+        if note is not None:
+            self.note = note
+
+        for k, v in kwargs.items():
+            if k in self.__dict__:
+                setattr(self, k, v)
+              
+        _put_sound(self)
+                
+    def copy(self):
+        
+        o = copy.copy(self)
+        
+        for k, v in o.__dict__.items():
+            if isinstance(v, Sound):
+                setattr(o, k, v.copy())
+                
+        return o
+       
     def reset(self):
         
         self.index = 0
@@ -1029,7 +628,7 @@ class Sound(object):
         if self._a0 is None:
             return False
         
-        return np.count_nonzero(self._a0) == 0
+        return np.abs(self._a0).max() < EPSILON
         
     def __call__(self, *args, **kwargs):
         
@@ -1038,7 +637,14 @@ class Sound(object):
         self._a0 = self.forward(*args, **kwargs)
         self.index += self.frames
         
+        if DEBUG and isinstance(self._a0, np.ndarray):
+            self._al = self._al[-255:] + [self._a0]
+
         return self._a0
+
+    @property
+    def _a1(self):
+        return np.concatenate(self._al)
 
     def forward(self, *args, **kwargs):
         return np.zeros((self.frames, self.channels))
@@ -1096,26 +702,26 @@ class Gate(Sound):
         self.states.append((frame, event))
 
 
-def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01, eps=1e-6):
+def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01):
     
     df = max(math.ceil(dt * FPS), 1)
     end = min(df, end or 60 * FPS)
     start = start + 1
         
-    a0 = np.arange(start/df, end/df + eps, 1/df, dtype='float32')
+    a0 = np.arange(start/df, end/df + EPSILON, 1/df, dtype='float64')
     a1 = np.exp(a0 * math.log(th))
     a2 = (1. - a1) / (1. - th)
     
     return a2
 
 
-def get_linear_adsr_curve(dt, start=0, end=None, eps=1e-6):
+def get_linear_adsr_curve(dt, start=0, end=None):
     
     df = max(math.ceil(dt * FPS), 1)
     end = min(df, end or 60 * FPS)
     start = start + 1
     
-    a0 = np.arange(start/df, end/df + eps, 1/df, dtype='float32')
+    a0 = np.arange(start/df, end/df + EPSILON, 1/df, dtype='float64')
     
     return a0
 
@@ -1175,7 +781,7 @@ class Envelope(Sound):
         assert start < end
         
         if self._state in (None, 'sustain'):
-            return np.ones((end - start,), dtype='float32') * self._valu0
+            return np.ones((end - start,), dtype='float64') * self._valu0
         
         start = start - self._start
         end = end - self._start
@@ -1211,28 +817,12 @@ class Envelope(Sound):
         self._valu1 = curve[-1]
         
         return curve
-    
-    @property
-    def done(self):
-        
-        if self._state is None:
-            return self._start > 0
-        
-        if self._state != 'attack':
-            
-            if self.linear and self._valu1 < 0:
-                return True
-        
-            if not self.linear and self._valu1 <= 1e-5:
-                return True
-            
-        return False
 
 
 #
 # Do not change this "constant"!
 #
-_NP_ZERO = np.zeros((1,), dtype='float32')
+_NP_ZERO = np.zeros((1,), dtype='float64')
 
 
 def get_radians(freq, start=0, frames=8192):
@@ -1242,7 +832,7 @@ def get_radians(freq, start=0, frames=8192):
     if isinstance(pt, np.ndarray):
         pt = pt.reshape(-1)
     else:
-        pt = pt * np.ones((frames,), dtype='float32')
+        pt = pt * np.ones((frames,), dtype='float64')
             
     p0 = start + _NP_ZERO
     p1 = np.concatenate((p0, pt))
@@ -1292,7 +882,7 @@ def get_pulse_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
     radians, phase_o = get_radians(freq, phase, frames)
 
     a0 = radians % (2 * math.pi) < (2 * math.pi * duty)
-    a1 = a0.astype('float32') * 2. - 1.
+    a1 = a0.astype('float64') * 2. - 1.
     
     return a1, phase_o
 
@@ -1382,7 +972,7 @@ class ButterFilter(Sound):
             
         x, self.z = signal.lfilter(self.b, self.a, x, 0, zi=self.z)
             
-        return x.astype('float32')
+        return x.astype('float64')
     
 
 class PhaseModulator(Sound):
@@ -1409,9 +999,9 @@ class PhaseModulator(Sound):
         if self._buffer is None:
             self._buffer = np.zeros((2 * beta, carrier.shape[1]), dtype=carrier.dtype)
             
-        t1 = np.arange(beta, beta + len(carrier), dtype='float32') + self.beta * signal
+        t1 = np.arange(beta, beta + len(carrier), dtype='float64') + self.beta * signal
         t2 = t1.astype('int32')
-        t3 = (t1 - t2.astype('float32'))[:, None]
+        t3 = (t1 - t2.astype('float64'))[:, None]
         
         a0 = np.concatenate((self._buffer, carrier))
         a1 = a0[t2]
@@ -1437,7 +1027,7 @@ def soundfile_read(path, zero_pad=False):
     
     if data is None:
     
-        data, fps = sf.read(path, dtype='float32') 
+        data, fps = sf.read(path, dtype='float64') 
         data = np.pad(data, ((0, 1), (0, 0))[:len(data.shape)])
         
         if len(data) <= _SFCACHE_THRESHOLD:
@@ -1458,7 +1048,7 @@ def get_indices(intervals=1, start=0, frames=8192):
     if isinstance(intervals, np.ndarray):
         pt = intervals.reshape(-1)
     else:
-        pt = intervals * np.ones((frames,), dtype='float32')
+        pt = intervals * np.ones((frames,), dtype='float64')
             
     p0 = start + _NP_ZERO
     p1 = np.concatenate((p0, pt))
@@ -1602,8 +1192,8 @@ class Sample(Sound):
         
         if self.loop_power is not None:
             
-            ls = s0.region['loop_start']
-            le = s0.region['loop_end']
+            ls = self.region['loop_start']
+            le = self.region['loop_end']
 
             p0 = ((indices - ls) // (le - ls)).clip(0)
 
@@ -1656,6 +1246,55 @@ class Sample(Sound):
 
         else:
             self.loop_power = None
-'''
 
+
+class Synth(Sound):
+    
+    def __init__(self):
         
+        super(Synth, self).__init__()
+
+        self.gate0 = Gate()
+        self.gate1 = Gate()
+        
+        self.osc0 = Oscillator('sine', 4)
+        self.osc1 = Oscillator('tri')
+        
+        self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
+        self.env1 = Envelope(0., 0.8, 0., 0., linear=False)
+
+        self.filter = ButterFilter(order=5, freq=8192, btype='lowpass')
+        
+    def forward(self):
+        
+        g0 = self.gate0()
+        g1 = self.gate1()
+        
+        e0 = self.env0(g0)
+        e1 = self.env1(g1)
+        
+        o0 = self.osc0()        
+        o1 = self.osc1(key_modulation=o0/2+e1*2)
+        
+        a0 = o1 * e0
+        a1 = self.filter(a0)
+
+        return a0
+
+    def play(self, note=None, **kwargs):
+        #logger.info('Enter Synth.play(note=%r, **kwargs=%r).', note, kwargs)
+
+        super(Synth, self).play(note, **kwargs)
+        
+        self.osc1.freq = self.freq
+        
+        self.gate0.open(0.)
+        self.gate1.open(0.)
+        
+    def play_release(self, release=None):
+        
+        if release is not None:
+            self.env0.release = release
+
+        self.gate0.release(0.)
+
