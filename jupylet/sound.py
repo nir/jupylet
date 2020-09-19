@@ -995,6 +995,19 @@ class Sound(object):
             
         self.__dict__[key] = value
     
+    def _ccall(self, name, *args, **kwargs):
+        
+        for s in self.__dict__.values():
+            if isinstance(s, Sound):
+                getattr(s, name)(*args, **kwargs)
+                
+    def reset(self):
+        
+        self.index = 0
+        self._a0 = None
+        
+        self._ccall('reset')
+        
     def _consume(self, frames, channels=2, *args, **kwargs):
         
         self._rset('frames', frames)
@@ -1006,7 +1019,7 @@ class Sound(object):
             return a0 * _ampan(self.amp, self.pan)
         
         return a0 * self.amp
-    
+
     @property
     def done(self):
         
@@ -1471,6 +1484,39 @@ def compute_loop(indices, buff_end, loop=False, loop_start=0, loop_end=0):
     return i0 + i1
 
 
+@functools.lru_cache(maxsize=1024)
+def get_sfz_region(key, path):
+    
+    rl = read_sfz(path)
+    
+    md = 1e6
+    mr = None
+
+    for r in rl:
+
+        if 'pitch_keycenter' not in r:
+            r['pitch_keycenter'] = r['key']
+            
+        d = abs(key - r['pitch_keycenter'])
+        if  md > d:
+            md = d
+            mr = r
+
+    return mr    
+
+
+@functools.lru_cache(maxsize=32)
+def read_sfz(path):
+    
+    sfz = open(path).read()
+    sfz = '\n' + re.sub(r'//.*', '', sfz)
+    
+    rl0 = re.findall(r'(?s)<region>.*?(?=<|$)', sfz)
+    rl1 = [auto(dict(re.findall('(\w+)=(.*?(?= \w+=|\n|$))', l))) for l in rl0]
+    
+    return rl1
+
+
 class Sample(Sound):
     
     def __init__(
@@ -1478,10 +1524,7 @@ class Sample(Sound):
         path, 
         freq=262., 
         key=None, 
-        phase=0.,
         loop=False,
-        loop_start=0, 
-        loop_end=0
     ):
         
         super(Sample, self).__init__()
@@ -1496,48 +1539,123 @@ class Sample(Sound):
             self.key = key
 
         self.loop = loop
-        self.loop_start = loop_start 
-        self.loop_end = loop_end 
-
+        self.loop_power = None
+        
+        self.region = dict(
+            loop_start = 0,
+            loop_end = 0,
+            pitch_keycenter = None,
+        )
+        
+    def reset(self):
+        
+        super(Sample, self).reset()
+        
+        self.phase = 0
+        
     def forward(self, key_modulation=None):
         
         self.load()
            
         lb = len(self.buff)
+        ls = self.region.get('loop_start', 0)
+        le = self.region.get('loop_end', lb - 1)
         
-        if key_modulation is None:
-            indices, self.phase = get_indices(1., self.phase, self.frames)
-            indices = compute_loop(indices, lb, self.loop, self.loop_start, self.loop_end)
-            return self.buff[indices]
+        pitch_keycenter = self.region['pitch_keycenter']
+        
+        if pitch_keycenter is None and key_modulation is None:
             
-        interval = key2freq(self.key + key_modulation) / self.freq
+            indices, self.phase = get_indices(1., self.phase, self.frames)
+            indices = compute_loop(indices, lb, self.loop, ls, le)
+            
+            return self.buff[indices]
+          
+        if pitch_keycenter is None:
+            interval = key2freq(self.key + key_modulation) / self.freq
+            
+        elif key_modulation is None:
+            interval = self.freq / key2freq(pitch_keycenter)
+            
+        else:
+            interval = key2freq(self.key + key_modulation) / key2freq(pitch_keycenter)         
+            
         indices, self.phase = get_indices(interval, self.phase, self.frames)
-
+        
         t3 = (indices % 1.)[:, None]
         
-        indices0 = compute_loop(indices, lb, self.loop, self.loop_start, self.loop_end)
-        indices1 = compute_loop(indices + 1, lb, self.loop, self.loop_start, self.loop_end)
+        indices0 = compute_loop(indices, lb, self.loop, ls, le)
+        indices1 = compute_loop(indices + 1, lb, self.loop, ls, le)
         
-        a0 = self.buff
+        a0 = self.buff        
         a1 = a0[indices0]
         a2 = a0[indices1]
+        
         a3 = a2 * t3 + a1 * (1 - t3)
+        
+        lp = self.get_loop_power(indices)
+        if lp is not None:
+            a3 = a3 * lp[:, None]
         
         return a3
 
+    def get_loop_power(self, indices):
+        
+        if self.loop_power is not None:
+            
+            ls = s0.region['loop_start']
+            le = s0.region['loop_end']
+
+            p0 = ((indices - ls) // (le - ls)).clip(0)
+
+            return self.loop_power ** p0
+        
     def load(self):
         
-        if self.buff is None:
+        if self.path.endswith('.sfz'):
+            self.load_sfz()
+            return self
             
-            self.buff = soundfile_read(self.path, zero_pad=True)[0]
-            
-            if len(self.buff.shape) == 1:
-                self.buff = self.buff[:,None]
-           
-            if self.loop_end == 0:
-                self.loop_end = len(self.buff) - 1
+        if self.buff is not None:
+            return self
+        
+        self.buff = soundfile_read(self.path, zero_pad=True)[0]
+
+        if len(self.buff.shape) == 1:
+            self.buff = self.buff[:,None]
+
+        if self.region['loop_end'] == 0:
+            self.region['loop_end'] = len(self.buff) - 1
             
         return self
+    
+    def load_sfz(self):
+        
+        region = get_sfz_region(round(self.key), self.path)
+        
+        if region['pitch_keycenter'] == self.region['pitch_keycenter']:
+            return
+        
+        path = os.path.join(os.path.dirname(self.path), region['sample'])
+        
+        self.buff = soundfile_read(path, zero_pad=True)[0] 
+        
+        if len(self.buff.shape) == 1:
+            self.buff = self.buff[:,None]
+
+        self.region = region
+
+        if 'loop_end' in region:
+            
+            ls = region['loop_start']
+            le = region['loop_end']
+
+            rms0 = (self.buff[ls:(ls+le)//2] ** 2).mean() ** 0.5
+            rms1 = (self.buff[(ls+le)//2:le] ** 2).mean() ** 0.5
+
+            self.loop_power = min((rms1 / rms0) ** 2, 1.0)
+
+        else:
+            self.loop_power = None
 '''
 
         
