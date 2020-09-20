@@ -214,3 +214,28 @@ def trimmed_traceback():
     e = re.sub(r'(?s)^.*?The above exception was the direct cause of the following exception:\s*', '', e)
     return e
 
+
+def auto(o):
+    
+    t = type(o)
+    
+    if t in (tuple, list):
+        return t(auto(v) for v in o)
+    
+    if t is dict:
+        return {k: auto(v) for k, v in o.items()}
+    
+    if t is not str:
+        return o
+        
+    if o.isdecimal():
+        return int(o)
+    
+    try:
+        return float(o)
+    except:
+        pass
+    
+    return o
+
+    

@@ -184,8 +184,6 @@ def _stream_callback(outdata, frames, _time, status):
         _time.currentTime,
     ))
 
-    time.sleep(0.)
-
 
 #
 # A set of all currently playing sound objects.
@@ -193,6 +191,18 @@ def _stream_callback(outdata, frames, _time, status):
 _sounds = set()
 
 
+def _add_sound(sound):
+    """Add sound to the set of currently playing sound objects."""
+
+    if sd is None:
+        return
+
+    if _worker_tid is None:
+        _init_worker_thread()
+
+    _sounds.add(sound)
+
+         
 def _get_sounds():
     """Get currently playing sound objects."""
 
@@ -203,10 +213,6 @@ def _get_sounds():
     return list(_sounds)
       
 
-def _put_sound(sound):
-    _sounds.add(sound)
-
-         
 def _mix_sounds(sounds, frames):
     """Mix sound data from given sounds into a single numpy array.
 
@@ -219,9 +225,6 @@ def _mix_sounds(sounds, frames):
     """
     d = np.stack([s._consume(frames) for s in sounds])
     return np.sum(d, 0).clip(-1, 1)
-
-
-_init_worker_thread()
 
 
 def get_oscilloscope_as_image(
@@ -444,10 +447,10 @@ def _expand_channels(a0, channels):
     return a0
 
 
-@functools.lru_cache(maxsize=1024)
-def _ampan(amp, pan, dtype='float64'):
-    a0 = np.array([1 - pan, 1 + pan]) * (amp / 2)
-    return a0.astype(dtype)
+#@functools.lru_cache(maxsize=1024)
+def _ampan(amp, pan):
+    return np.array([1 - pan, 1 + pan]) * (amp / 2)
+
 
 _LOG_C4 = math.log(262)
 _LOG_CC = math.log(2) / 12
@@ -509,16 +512,27 @@ def note2key(note):
 
 
 def key2note(key):
-    
+    """Convert keyboard key to note. e.g. 60 to 'C4'.
+
+    Args:
+        key (float): keyboard key to convert.
+
+    Returns:
+        str: A string representing the note. In the conversion process
+            the floating point key will be rounded in a special way that 
+            preserves the nearest note to the key. e.g. 60.9 and 61.1 
+            will converted to Cs4, Db4 respectively.
+    """ 
     i = (key - 11) % 12 
 
-    octave = (key - 11) // 12
+    octave = (round(key) - 12) // 12
 
     n0, i0 = 'B', 0
 
     for n1, i1 in _notes.items():
         if i <= i1:
             break
+
         n0, i0 = n1, i1
     
     note = n0 if i1 - i > 0.5 else n1
@@ -527,17 +541,27 @@ def key2note(key):
 
 
 class Sound(object):
-    
+    """The base class for all other sound classes, including audio samples, 
+    oscillators and effects.
+    """
+
     def __init__(self):
         
         self.freq = 262.
         
+        # Amplitude (or volume) beween 0 and 1.
         self.amp = 1.
-        self.pan = 1.
         
-        self.frames = 1024        
+        # Left-right audio balance - a value between -1 and 1.
+        self.pan = 0.
+        
+        # The number of frames that the forward() method must return.
+        self.frames = 1024
+
+        # The frame counter.
         self.index = 0
         
+        # The most last frame array returned by the forward() function.
         self._a0 = None
         self._al = []
                 
@@ -588,7 +612,7 @@ class Sound(object):
             if k in self.__dict__:
                 setattr(self, k, v)
               
-        _put_sound(self)
+        _add_sound(self)
                 
     def copy(self):
         
@@ -1000,7 +1024,7 @@ class PhaseModulator(Sound):
             self._buffer = np.zeros((2 * beta, carrier.shape[1]), dtype=carrier.dtype)
             
         t1 = np.arange(beta, beta + len(carrier), dtype='float64') + self.beta * signal
-        t2 = t1.astype('int32')
+        t2 = t1.astype('int64')
         t3 = (t1 - t2.astype('float64'))[:, None]
         
         a0 = np.concatenate((self._buffer, carrier))
@@ -1062,7 +1086,7 @@ def get_indices(intervals=1, start=0, frames=8192):
 
 def compute_loop(indices, buff_end, loop=False, loop_start=0, loop_end=0):
     
-    indices = indices.astype('int32')
+    indices = indices.astype('int64')
     
     if not loop or loop_end <= 0:
         return indices.clip(0, buff_end-1)

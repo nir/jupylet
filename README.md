@@ -5,7 +5,7 @@ and sound synthesizers, interactively in a Jupyter notebook. It is intended
 for three types of audiences:
 
 * Computer scientists, researchers, and students of deep reinforcement learning.
-* Music hobbyists, interested in sound synthesis and live music coding.
+* Musicians interested in sound synthesis and live music coding.
 * Kids and their parents interested in learning to program.
 
 ## TL;DR
@@ -44,7 +44,7 @@ also fun.
 
 Head to [examples/22-pong-RL.ipynb](examples/22-pong-RL.ipynb) to see how to programmatically control a 2-player version of pong.
 
-## Jupylet for Music Hobbyists
+## Jupylet for Musicians
 
 *Jupylet* imports ideas and methods from machine learning into the domain
 of sound synthesis to easily let you create sound synthesizers as wild as you
