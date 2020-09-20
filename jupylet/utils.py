@@ -239,3 +239,15 @@ def auto(o):
     return o
 
     
+def settable(o, name):
+    
+    if name[0] == '_':
+        return False
+    
+    if name in o.__dict__:
+        return True
+    
+    v = getattr(o, name, None)
+    
+    return v is not None and not callable(v)
+

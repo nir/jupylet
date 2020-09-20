@@ -52,7 +52,7 @@ import numpy as np
 from scipy import signal
 
 from .resource import find_path
-from .utils import o2h, callerframe, trimmed_traceback, auto
+from .utils import o2h, callerframe, trimmed_traceback, auto, settable
 from .utils import setup_basic_logging, get_logging_level
 from .env import get_app_mode, is_remote
 
@@ -566,7 +566,11 @@ class Sound(object):
         self._al = []
                 
     def _rset(self, key, value, force=False):
+        """Recursively, but lazily, set property to given value on all child sounds.
         
+        This function is used for example to set number of required frames on the entire
+        tree of sound objects before calling the forward() method.
+        """
         if force or self.__dict__.get(key, '__NONE__') != value:
             for s in self.__dict__.values():
                 if isinstance(s, Sound):
@@ -575,7 +579,9 @@ class Sound(object):
         self.__dict__[key] = value
     
     def _ccall(self, name, *args, **kwargs):
-        
+        """Recursively call given function of each sound object in the tree 
+        of sounds.
+        """
         for s in self.__dict__.values():
             if isinstance(s, Sound):
                 getattr(s, name)(*args, **kwargs)
@@ -593,7 +599,9 @@ class Sound(object):
         """Play new copy of sound.
 
         If sound is already playing it will play the new copy in parallel. 
-        This function returns the new sound object.
+        
+        Returns:
+            Sound object: The newly copied and playing sound object.
         """
         o = self.copy()
         o.play(note, **kwargs)
@@ -609,13 +617,22 @@ class Sound(object):
             self.note = note
 
         for k, v in kwargs.items():
-            if k in self.__dict__:
+            if settable(self, k):
                 setattr(self, k, v)
               
         _add_sound(self)
-                
+    
     def copy(self):
-        
+        """Create a copy of sound object.
+
+        This function is a mixture of shallow and deep copy. It deep-copies 
+        the entire tree of child sound objects, but shallow-copies the other
+        properties of each sound object in the tree. The motivation is to 
+        avoid creating unnecessary of numpy buffers.
+
+        Returns:
+            Sound object: new copy of sound object. 
+        """
         o = copy.copy(self)
         
         for k, v in o.__dict__.items():
@@ -652,7 +669,7 @@ class Sound(object):
         if self._a0 is None:
             return False
         
-        return np.abs(self._a0).max() < EPSILON
+        return np.abs(self._a0).max() < 1e-4
         
     def __call__(self, *args, **kwargs):
         
@@ -661,7 +678,7 @@ class Sound(object):
         self._a0 = self.forward(*args, **kwargs)
         self.index += self.frames
         
-        if DEBUG and isinstance(self._a0, np.ndarray):
+        if DEBUG:
             self._al = self._al[-255:] + [self._a0]
 
         return self._a0
@@ -671,7 +688,7 @@ class Sound(object):
         return np.concatenate(self._al)
 
     def forward(self, *args, **kwargs):
-        return np.zeros((self.frames, self.channels))
+        return np.zeros((self.frames,))
     
     @property
     def key(self):
@@ -691,10 +708,24 @@ class Sound(object):
 
 
 class Gate(Sound):
-    
+    """A synthesizer gate is traditionally an on/off signal that is used to 
+    indicate key presses and other events.
+
+    This gate class functions by producing schedulled on/off events in its
+    output. These events can be fed to other sound objects designed to 
+    consume such events; for example envelopes.
+
+    For more info: https://www.synthesizers.com/gates.html
+    """
     def __init__(self):
         
         super(Gate, self).__init__()
+        
+        self.states = []
+        
+    def reset(self):
+        
+        super(Gate, self).reset()
         
         self.states = []
         
@@ -703,33 +734,48 @@ class Gate(Sound):
         states = []
         end = self.index + self.frames
         
-        while self.states:
-            if self.states[0][0] >= end:
-                break
+        while self.states and self.states[0][0] < end:
             states.append(self.states.pop(0))
         
         return states
         
-    def open(self, t):
-        self._append(t, 'open')
+    def open(self, t=None, dt=None):
+        self.schedule('open', t, dt)
         
-    def release(self, t):
-        self._append(t, 'release')
+    def close(self, t=None, dt=None):
+        self.schedule('close', t, dt)
         
-    def _append(self, t, event):
+    def schedule(self, event, t=None, dt=None):
         
-        lasti = self.index
-        if self.states:
-            lasti = self.states[-1][0]
+        if not self.states:
+            last_index = self.index
+        else:
+            last_index = self.states[-1][0]
 
-        frame = max(int(t * FPS), lasti)
-        self.states.append((frame, event))
+        if dt is not None:
+            index = t2frames(dt) + last_index
+        else:
+            index = t2frames(t)
+
+        index = max(index, last_index)
+
+        self.states.append((index, event))
 
 
 def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01):
+    """Compute a section of an exponential envelope curve.
     
+    Args:
+        dt (float): The time it should take the curve to go from 0. to 1.
+            minus the given threshold (th).
+        start (int): The start frame for the curve.
+        end (int): The end frame for the curve.
+
+    Returns:
+        ndarray: Array with curve values.    
+    """
     df = max(math.ceil(dt * FPS), 1)
-    end = min(df, end or 60 * FPS)
+    end = min(df, end if end is not None else 60 * FPS)
     start = start + 1
         
     a0 = np.arange(start/df, end/df + EPSILON, 1/df, dtype='float64')
@@ -740,9 +786,18 @@ def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01):
 
 
 def get_linear_adsr_curve(dt, start=0, end=None):
+    """Compute a section of a linear envelope curve.
     
+    Args:
+        dt (float): The time it should take the curve to go from 0. to 1.
+        start (int): The start frame for the curve.
+        end (int): The end frame for the curve.
+
+    Returns:
+        ndarray: Array with curve values.    
+    """
     df = max(math.ceil(dt * FPS), 1)
-    end = min(df, end or 60 * FPS)
+    end = min(df, end if end is not None else 60 * FPS)
     start = start + 1
     
     a0 = np.arange(start/df, end/df + EPSILON, 1/df, dtype='float64')
@@ -774,6 +829,15 @@ class Envelope(Sound):
         self._valu0 = 0
         self._valu1 = 0
         
+    def reset(self):
+        
+        super(Envelope, self).reset()
+        
+        self._state = None
+        self._start = 0
+        self._valu0 = 0
+        self._valu1 = 0
+        
     def forward(self, states):
         
         end = self.index + self.frames
@@ -781,11 +845,11 @@ class Envelope(Sound):
         states = states + [(end, 'continue')]
         curves = []
         
-        for frame, event in states:
+        for event_index, event in states:
             #print(frame, event)
             
-            while index < frame:
-                curves.append(self.get_curve(index, frame))
+            while index < event_index:
+                curves.append(self.get_curve(index, event_index))
                 index += len(curves[-1])
                     
             if event == 'open' and self._state != 'attack':
@@ -793,7 +857,7 @@ class Envelope(Sound):
                 self._start = index
                 self._valu0 = self._valu1
             
-            if event == 'release' and self._state not in ('release', None):
+            if event == 'close' and self._state not in ('release', None):
                 self._state = 'release'
                 self._start = index
                 self._valu0 = self._valu1
@@ -801,9 +865,9 @@ class Envelope(Sound):
         return np.concatenate(curves)[:,None]
     
     def get_curve(self, start, end):
-        
-        assert start < end
-        
+
+        end = max(start, end)
+
         if self._state in (None, 'sustain'):
             return np.ones((end - start,), dtype='float64') * self._valu0
         
@@ -816,8 +880,10 @@ class Envelope(Sound):
         else:
             curve = get_exponential_adsr_curve(dt, start, end)
     
-        #print(dt, start, end, len(curve), curve[-1])
-        done = curve[-1] >= 0.9999
+        if len(curve) == 0:
+            return curve
+
+        done = curve[-1] >= 1 - EPSILON
         
         if self._state == 'attack':
             target = 1.
@@ -980,6 +1046,16 @@ class ButterFilter(Sound):
         self.a = None
         self.z = None
         
+    def reset(self):
+        
+        super(ButterFilter, self).reset()
+        
+        self._watch = None
+        
+        self.b = None
+        self.a = None
+        self.z = None
+        
     def forward(self, x):
         
         if self._watch != (self.order, self.freq, self.btype):
@@ -1012,6 +1088,12 @@ class PhaseModulator(Sound):
         super(PhaseModulator, self).__init__()
         
         self.beta = beta
+        
+        self._buffer = None
+        
+    def reset(self):
+        
+        super(PhaseModulator, self).reset()
         
         self._buffer = None
         
@@ -1296,7 +1378,7 @@ class Synth(Sound):
         
         e0 = self.env0(g0)
         e1 = self.env1(g1)
-        
+                
         o0 = self.osc0()        
         o1 = self.osc1(key_modulation=o0/2+e1*2)
         
@@ -1320,5 +1402,5 @@ class Synth(Sound):
         if release is not None:
             self.env0.release = release
 
-        self.gate0.release(0.)
+        self.gate0.close(0.)
 
