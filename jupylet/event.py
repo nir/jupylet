@@ -30,7 +30,6 @@ import platform
 import moderngl
 import inspect
 import logging
-import pyglet
 import sys
 import re
 

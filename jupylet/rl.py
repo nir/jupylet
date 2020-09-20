@@ -149,7 +149,7 @@ class ModuleProcess(object):
         if self.p0.ident is not None:
             return
 
-        assert 'pyglet' not in sys.modules, 'Don\'t import pyglet or jupylet modules except jupylet.rl before starting worker processes.'
+        #assert 'pyglet' not in sys.modules, 'Don\'t import pyglet or jupylet modules except jupylet.rl before starting worker processes.'
 
         self.p0.start()
     

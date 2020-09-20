@@ -29,7 +29,7 @@ import functools
 import asyncio
 import logging
 import random
-import time
+import mido
 import sys
 import os
 
@@ -58,8 +58,8 @@ a0 = np.zeros((256, 512, 4), 'uint8')
 oscilloscope = Sprite(a0, x=256, y=292)
 layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
 
-synth = Synth('tri')
-synth.set_envelope(min_duration=0.05, attack=0.0, decay=0.1, sustain=0.7, release=0.5)
+synth = Synth()
+#synth.set_envelope(min_duration=0.05, attack=0.0, decay=0.1, sustain=0.7, release=0.5)
 
 keys = app.window.keys
 keyboard = {
@@ -137,7 +137,7 @@ def key_event(key, action, modifiers):
         
     if action == keys.ACTION_PRESS and key in keyboard:
         assert key not in pk
-        pk[key] = synth.play_new(note=keyboard[key], duration=20)
+        pk[key] = synth.play_new(note=keyboard[key])
            
     if action == keys.ACTION_RELEASE and key in keyboard:
         pk.pop(key).play_release()
@@ -187,6 +187,27 @@ def render(ct, dt):
     label0.draw()
     label1.draw()
     label2.draw()
+
+
+xylo = Sample(
+    'sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz',
+    loop=False,
+)
+
+xylo.amp = 16
+
+_keyd = {}
+
+def midi_Callback(msg):
+    
+    if msg.type == 'note_on':
+        if msg.velocity != 0:
+            _keyd[msg.note] = xylo.play_new(key=msg.note, velocity=msg.velocity)
+        else:
+            _keyd[msg.note].play_release()
+
+
+_port = mido.open_input(callback=midi_Callback)
 
 
 if __name__ == '__main__':

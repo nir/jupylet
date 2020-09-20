@@ -29,7 +29,6 @@ import ipywidgets
 import asyncio
 import logging
 import pickle
-import pyglet
 import random
 import time
 import glm

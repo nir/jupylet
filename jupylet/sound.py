@@ -49,8 +49,6 @@ except:
 import soundfile as sf
 import numpy as np
 
-from scipy import signal
-
 from .resource import find_path
 from .utils import o2h, callerframe, trimmed_traceback, auto, settable
 from .utils import setup_basic_logging, get_logging_level
@@ -340,63 +338,6 @@ def get_output_as_array(start=-FPS, end=None, resample=None):
     return a0, tstart, tend
 
 
-'''
-    def play_release(self, release=None):
-
-        if release is not None:
-            self.release = release
-            
-        self.duration = frames2t(self.index)
-        
-    def play_new(self, note=None, **kwargs):
-        """Play new copy of sound.
-
-        If sound is already playing it will play the new copy in parallel. 
-        This function returns the new sound object.
-        """
-        return self.copy().play(note, **kwargs)
-
-    def play(self, note=None, **kwargs):
-        logger.info('Enter Sample.play(note=%r, **kwargs=%r).', note, kwargs)
-        
-        if note is not None:
-            self.note = note
-
-        for k, v in kwargs.items():
-            if k in self.__dict__:
-                setattr(self, k, v)
-
-        self.load()
-
-        #
-        # Set the reset flag to avoid synchronization / consistency problems
-        # with the playback thread.
-        #
-        if self.playing:  
-            self.reset = True
-            return self
-
-        self.playing = True
-        _soundsq.put(self)
-        return self
-            
-    def copy(self, **kwargs):
-
-        o = copy.copy(self)
-
-        o.playing = False
-        o.reset = False
-        o._stop = False
-        o.index = 0
-        
-        for k, v in kwargs.items():
-            if k in o.__dict__:
-                setattr(o, k, v)
-
-        return o
-'''
-
-
 dtd = {}
 syd = {}
 
@@ -545,15 +486,19 @@ class Sound(object):
     oscillators and effects.
     """
 
-    def __init__(self):
+    def __init__(self, amp=1., pan=0.):
         
         self.freq = 262.
         
+        # MIDI attribute corresponding to velocity of pressed key,
+        # between 0 and 128.
+        self.velocity = 64
+
         # Amplitude (or volume) beween 0 and 1.
-        self.amp = 1.
+        self.amp = amp
         
         # Left-right audio balance - a value between -1 and 1.
-        self.pan = 0.
+        self.pan = pan
         
         # The number of frames that the forward() method must return.
         self.frames = 1024
@@ -656,9 +601,9 @@ class Sound(object):
         a0 = _expand_channels(a0, channels)
         
         if channels == 2:
-            return a0 * _ampan(self.amp, self.pan)
+            return a0 * _ampan(self.velocity / 128 * self.amp, self.pan)
         
-        return a0 * self.amp
+        return self.velocity / 128 * self.amp * a0
 
     @property
     def done(self):
@@ -757,7 +702,9 @@ class Gate(Sound):
         else:
             index = t2frames(t)
 
-        index = max(index, last_index)
+        # Discard events scheduled to run after this new event.
+        while self.states and self.states[-1][0] > index:
+            self.states.pop(-1)
 
         self.states.append((index, event))
 
@@ -1061,16 +1008,16 @@ class ButterFilter(Sound):
         if self._watch != (self.order, self.freq, self.btype):
             
             self._watch = (self.order, self.freq, self.btype)
-            self.b, self.a = signal.butter(self.order, self.freq / FPS * 2, self.btype)
-            self.z = signal.lfilter_zi(self.b, self.a)[:,None]
+            self.b, self.a = scipy.signal.butter(self.order, self.freq / FPS * 2, self.btype)
+            self.z = scipy.signal.lfilter_zi(self.b, self.a)[:,None]
            
             if self.z.shape[1] != x.shape[1]:
                 self.z = self.z.repeat(x.shape[1], -1)[:,:x.shape[1]]
             
             # Warmup
-            self.z = signal.lfilter(self.b, self.a, x * 0, 0, zi=self.z)[-1]
+            self.z = scipy.signal.lfilter(self.b, self.a, x * 0, 0, zi=self.z)[-1]
             
-        x, self.z = signal.lfilter(self.b, self.a, x, 0, zi=self.z)
+        x, self.z = scipy.signal.lfilter(self.b, self.a, x, 0, zi=self.z)
             
         return x.astype('float64')
     
@@ -1221,9 +1168,11 @@ class Sample(Sound):
         freq=262., 
         key=None, 
         loop=False,
+        amp=1.,
+        pan=0.,
     ):
         
-        super(Sample, self).__init__()
+        super(Sample, self).__init__(amp, pan)
         
         self.path = path
         self.buff = None
@@ -1356,9 +1305,9 @@ class Sample(Sound):
 
 class Synth(Sound):
     
-    def __init__(self):
+    def __init__(self, amp=1., pan=0.):
         
-        super(Synth, self).__init__()
+        super(Synth, self).__init__(amp, pan)
 
         self.gate0 = Gate()
         self.gate1 = Gate()
