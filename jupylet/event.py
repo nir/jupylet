@@ -470,20 +470,23 @@ class EventLeg(mglw.WindowConfig):
         if len(args) == 0:                      # @window.event()
             def decorator(func):
                 name = func.__name__
-                self._event_handlers[name] = func
+                self.set_event_handler(name, func)
                 return func
             return decorator
         
         elif inspect.isroutine(args[0]):        # @window.event
             func = args[0]
             name = func.__name__
-            self._event_handlers[name] = func
+            self.set_event_handler(name, func)
             return args[0]
         
         elif isinstance(args[0], str):          # @window.event('on_resize')
             name = args[0]
             def decorator(func):
-                self._event_handlers[name] = func
+                self.set_event_handler(name, func)
                 return func
             return decorator        
+
+    def set_event_handler(self, name, func):
+        self._event_handlers[name] = func
 

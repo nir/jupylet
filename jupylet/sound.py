@@ -1309,27 +1309,21 @@ class Synth(Sound):
         
         super(Synth, self).__init__(amp, pan)
 
-        self.gate0 = Gate()
-        self.gate1 = Gate()
+        self.gate = Gate()
+        self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
         
         self.osc0 = Oscillator('sine', 4)
         self.osc1 = Oscillator('tri')
         
-        self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
-        self.env1 = Envelope(0., 0.8, 0., 0., linear=False)
-
         self.filter = ButterFilter(order=5, freq=8192, btype='lowpass')
         
     def forward(self):
         
-        g0 = self.gate0()
-        g1 = self.gate1()
-        
+        g0 = self.gate()        
         e0 = self.env0(g0)
-        e1 = self.env1(g1)
                 
         o0 = self.osc0()        
-        o1 = self.osc1(key_modulation=o0/2+e1*2)
+        o1 = self.osc1(key_modulation=o0/2)
         
         a0 = o1 * e0
         a1 = self.filter(a0)
@@ -1341,15 +1335,9 @@ class Synth(Sound):
 
         super(Synth, self).play(note, **kwargs)
         
-        self.osc1.freq = self.freq
+        self.osc1.freq = self.freq      
+        self.gate.open(0.)
         
-        self.gate0.open(0.)
-        self.gate1.open(0.)
-        
-    def play_release(self, release=None):
-        
-        if release is not None:
-            self.env0.release = release
-
-        self.gate0.close(0.)
+    def play_release(self):
+        self.gate.close(0.)
 

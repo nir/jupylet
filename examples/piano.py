@@ -178,7 +178,7 @@ def render(ct, dt):
         color=255, 
         size=(512, 256)
     )
-    
+
     oscilloscope.image = im    
     oscilloscope.draw()
     
@@ -189,25 +189,21 @@ def render(ct, dt):
     label2.draw()
 
 
-xylo = Sample(
-    'sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz',
-    loop=False,
-)
-
-xylo.amp = 16
+xylo = Sample('sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz')
+xylo.amp = 8
 
 _keyd = {}
 
-def midi_Callback(msg):
+@app.event
+def midi_message(msg):
     
     if msg.type == 'note_on':
+        
         if msg.velocity != 0:
             _keyd[msg.note] = xylo.play_new(key=msg.note, velocity=msg.velocity)
-        else:
+            
+        elif msg.note in _keyd:
             _keyd[msg.note].play_release()
-
-
-_port = mido.open_input(callback=midi_Callback)
 
 
 if __name__ == '__main__':
