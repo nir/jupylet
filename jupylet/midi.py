@@ -49,11 +49,10 @@ def set_midi_callback(callback):
     global _callback
     global _port
 
-    if _port is not None:
-        _port.close()
-        _port = None
-
     _callback = callback
+
+    if _port is not None:
+        _port.callback = callback
 
 
 _port = None
