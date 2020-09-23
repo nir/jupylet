@@ -9,6 +9,9 @@ If you are new to Python, I strongly recommend that you install and use the
 distribution. Download and run the 64-bit installer and stick to the default
 install options.
 
+.. note::
+    On Mac OS X follow carefully the Miniconda `installation instructions <https://conda.io/projects/conda/en/latest/user-guide/install/macos.html>`_.
+
 Once Miniconda is installed start a Miniconda Prompt. To do this on Windows
 click the :guilabel:`⊞ Winkey` then type *Miniconda* and press the
 :guilabel:`Enter` key. This should open a small dark window that programmers
@@ -27,16 +30,16 @@ If you are using Python 3.8 on Windows you also need to run following command:
 
     python -m jupylet postinstall
 
-Next, you need to download the *jupylet* repository since it contains the
-example notebooks. If you have `Git <https://git-scm.com/>`_ installed you
-can use it to clone the *jupylet* repository with:
+Next, if you want to run the example notebooks, download the *jupylet* code 
+base. If you have `Git <https://git-scm.com/>`_ installed type the following
+command:
 
 .. code-block:: bash
 
     git clone https://github.com/nir/jupylet.git
 
-Alternatively, if you don't have Git installed, you can download and unzip
-the *jupylet* archive by typing:
+Alternatively, you can download and unzip the *jupylet* code base by copying
+and pasting the following commands into the console:
 
 .. code-block:: bash
 
@@ -64,6 +67,13 @@ Run the notebook by following the instructions in the notebook and a game
 canvas should appear with the spaceship example:
 
 .. image:: ../images/spaceship.gif
+
+Alternatively, you can run the same game as a Python script from the console 
+with:
+
+.. code-block:: bash
+
+    python spaceship.py
 
 Python Programming Language
 ---------------------------

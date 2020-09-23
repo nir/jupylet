@@ -18,8 +18,8 @@ text:
 
 .. code-block:: python
 
-    from jupylet.label import Label
     from jupylet.app import App
+    from jupylet.label import Label
 
 Next, we create the game object and specify the width and height of the
 game canvas, and then we create the label:
@@ -53,7 +53,7 @@ per second, once the game is run:
 
 The two function arguments *ct* and *dt* will contain the current game time
 and the time since the function was last called (delta time). We can use 
-these arguments to do interesting things, but we can ignore them for now.
+these arguments to do interesting things, but you can ignore them for now.
 
 Note that the function above does not actually draw the label in its new
 position. For that we need the *render()* function. The *render()* function is a 

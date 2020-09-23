@@ -1,16 +1,14 @@
 # Jupylet
 
-*Jupylet* is a Python library that lets you create 2D and 3D games, music 
-and sound synthesizers, interactively in a Jupyter notebook. It is intended 
-for three types of audiences:
+*Jupylet* is a Python library that lets you create 2D and 3D games, graphics,
+music and sound synthesizers, interactively in a Jupyter notebook. It is 
+intended for three types of audiences:
 
 * Computer scientists, researchers, and students of deep reinforcement learning.
 * Musicians interested in sound synthesis and live music coding.
 * Kids and their parents interested in learning to program.
 
-## TL;DR
-
-Here are two examples of 2D and 3D games included in this repository:
+&nbsp;
 
 <p float="left">
     <img src="docs/images/spaceship.gif" width="256" />
@@ -35,7 +33,7 @@ experiment with deep reinforcement learning algorithms and it includes the API
 to programmatically control multiple simultaneous games and render thousands 
 of frames per second.
 
-Consider for example the pong game included in this repository. With a few
+Consider for example the pong game included in this code base. With a few
 lines of code you can modify the colors of the game to experiment with transfer 
 learning, or turn the game into 4-way pong with agents on all four sides of the 
 game court to experiment with cooperation between multiple agents. And since you 
@@ -63,6 +61,9 @@ If you are new to Python, I strongly recommend that you install and use the
 distribution. Download and run the 64-bit installer and stick to the default
 install options.
 
+| `⚠️ NOTE` On Mac OS X follow carefully the Miniconda [installation instructions](https://conda.io/projects/conda/en/latest/user-guide/install/macos.html). |
+| --- |
+
 Once Miniconda is installed start a Miniconda Prompt. To do this on Windows
 click the `⊞ Winkey` then type *Miniconda* and press the
 `Enter` key. This should open a small dark window that programmers
@@ -77,14 +78,14 @@ If you are using Python 3.8 on Windows you also need to run following command:
 
     python -m jupylet postinstall
 
-Next, download the *jupylet* repository since it contains the
-example notebooks. If you have [Git](https://git-scm.com/) installed you
-can use it to clone the *jupylet* repository with:
+Next, if you want to run the example notebooks, download the *jupylet* code 
+base. If you have [Git](https://git-scm.com/) installed type the following
+command:
 
     git clone https://github.com/nir/jupylet.git
 
-Alternatively, if you don't have Git installed, you can download and unzip
-the *jupylet* archive by typing:
+Alternatively, you can download and unzip the *jupylet* code base by copying
+and pasting the following commands into the console:
 
     python -m wget https://github.com/nir/jupylet/archive/master.zip
     python -m zipfile -e jupylet-master.zip .

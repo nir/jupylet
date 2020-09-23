@@ -1,9 +1,14 @@
 PROGRAMMING SOUND AND MUSIC
 ===========================
 
-Jupylet is a Python library that lets you create and run games interactively
-in a Jupyter notebook. It is intended for two types of audiences:
+Da-Da-Da-DUM!
+-------------
 
-* Kids and their parents interested in learning to program,
-* Researchers and students of deep reinforcement learning.
+*Jupylet* is full of sound. Here is a list of features:
+
+* Playback audio tracks and samples in WAV, FLAC, and OGG formats.
+* Basic support of `SFZ format <https://sfzformat.com/>`_ for playing multi-sampled instruments.
+* Simple to use MIDI support - just hook your piano keyboard and play.
+* Live loops and music coding in the spirit of `Sonic Pi <https://sonic-pi.net/>`_.
+* A Novel Framework for creating sound synthesizers.
 
