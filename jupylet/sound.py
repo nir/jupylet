@@ -435,9 +435,9 @@ class note(object):
 
 
 for o in range(8):
-    for k in _notes:
-        ko = (k + str(o)).rstrip('0')
-        setattr(note, ko, ko)
+    for n, k in _notes.items():
+        no = (n + str(o)).rstrip('0')
+        setattr(note, no, k + 11 + 12 * (o if o else 4))
 
 
 def note2key(note):
@@ -506,7 +506,7 @@ class Sound(object):
         # The frame counter.
         self.index = 0
         
-        # The most last frame array returned by the forward() function.
+        # The lastest output array of the forward() function.
         self._a0 = None
         self._al = []
                 
@@ -649,7 +649,7 @@ class Sound(object):
     
     @note.setter
     def note(self, value):
-        self.key = note2key(value)
+        self.key = note2key(value) if type(value) is str else value
 
 
 class Gate(Sound):
@@ -836,14 +836,18 @@ class Envelope(Sound):
             target = 1.
             next_state = 'decay'
             
-        if self._state == 'decay':
+        elif self._state == 'decay':
             target = self.sustain * self._valu0
             next_state = 'sustain'
             
-        if self._state == 'release':
+        elif self._state == 'release':
             target = 0.
             next_state = None
-            
+        
+        else:
+            target = 0.
+            next_state = None
+
         curve = (target - self._valu0) * curve  + self._valu0
         
         if done:
@@ -977,50 +981,120 @@ class Oscillator(Sound):
         return a0[:,None]
 
 
-class ButterFilter(Sound):
+class BaseFilter(Sound):
     
-    def __init__(self, order=15, freq=8192, btype='lowpass'):
+    def __init__(self, freq=8192):
         
-        super(ButterFilter, self).__init__()
+        super(BaseFilter, self).__init__()
         
-        self.order = order
         self.freq = freq
-        self.btype = btype
-        
-        self._watch = None
-        
-        self.b = None
-        self.a = None
-        self.z = None
-        
+
+        self._f = None
+        self._x = None
+        self._z = None
+
     def reset(self):
         
-        super(ButterFilter, self).reset()
+        super(BaseFilter, self).reset()
+
+        self._f = None
+        self._x = None
+        self._z = None
         
-        self._watch = None
+    def forward(self, x, key_modulation=None):
         
-        self.b = None
-        self.a = None
-        self.z = None
-        
-    def forward(self, x):
-        
-        if self._watch != (self.order, self.freq, self.btype):
+        if self._x is None:
+            self._x = x * 0
+
+        if key_modulation is None:
+            freq = self.freq
+        elif isinstance(key_modulation, np.ndarray):
+            freq = key2freq(self.key + np.mean(key_modulation[-1]).item())
+        else:
+            freq = key2freq(self.key + key_modulation)
+
+        freq = int(freq)
+
+        if self._f == freq:
+
+            sos, ___ = self.compute_baz(self._f, x.shape[-1])
+            a0, self._z = scipy.signal.sosfilt(sos, x, 0, self._z)
+            self._f = freq
+            self._x = x
+            return a0
+
+        if self._f is None:
+
+            xx = np.concatenate((self._x, x))
+            sos, zzz = self.compute_baz(freq, x.shape[-1])
+            a1, self._z = scipy.signal.sosfilt(sos, xx, 0, zzz)
+            a1 = a1[-len(x):]
+            self._f = freq
+            self._x = x
+            return a1
+
+        sos, ___ = self.compute_baz(self._f, x.shape[-1])
+        a0, self._z = scipy.signal.sosfilt(sos, x, 0, self._z)
+
+        xx = np.concatenate((self._x, x))
+        sos, zzz = self.compute_baz(freq, x.shape[-1])
+        a1, self._z = scipy.signal.sosfilt(sos, xx, 0, zzz)
+        a1 = a1[-len(x):]
+        self._f = freq
+        self._x = x
+
+        ww = linspace(0., 1., len(x))[:,None]
+        a1 = a1 * ww + a0 * (1. - ww)
+        return a1
             
-            self._watch = (self.order, self.freq, self.btype)
-            self.b, self.a = scipy.signal.butter(self.order, self.freq / FPS * 2, self.btype)
-            self.z = scipy.signal.lfilter_zi(self.b, self.a)[:,None]
-           
-            if self.z.shape[1] != x.shape[1]:
-                self.z = self.z.repeat(x.shape[1], -1)[:,:x.shape[1]]
-            
-            # Warmup
-            self.z = scipy.signal.lfilter(self.b, self.a, x * 0, 0, zi=self.z)[-1]
-            
-        x, self.z = scipy.signal.lfilter(self.b, self.a, x, 0, zi=self.z)
-            
-        return x.astype('float64')
+    def compute_baz(self, freq, channels):
+        raise NotImplementedError()
     
+
+@functools.lru_cache(maxsize=16)
+def linspace(start, stop, num):
+    return np.linspace(start, stop, num)
+
+
+class ButterFilter(BaseFilter):
+    
+    def __init__(self, freq=8192, btype='lowpass'):
+        
+        super(ButterFilter, self).__init__(freq)
+        
+        self.order = 8
+        self.btype = btype
+           
+    def compute_baz(self, freq, channels):
+        sos, z = signal_butter(self.order, int(freq), self.btype)
+        return sos, z#_expand_channels(z, channels)
+    
+
+@functools.lru_cache(maxsize=4096)
+def signal_butter(N, Wn, btype, fs=FPS):
+    Wn = max(0.01, min(0.99, Wn / fs * 2))
+    sos = scipy.signal.butter(N, Wn, btype, output='sos')
+    z = scipy.signal.sosfilt_zi(sos)[:,:,None]
+    return sos, z
+
+
+class ResonanceFilter(BaseFilter):
+    
+    def __init__(self, freq=8192, q=10):
+        
+        super(ResonanceFilter, self).__init__(freq)
+        
+        self.q = q
+           
+    def compute_ba(self, freq):
+        return signal_iirpeak(int(freq), self.q)
+    
+
+@functools.lru_cache(maxsize=4096)
+def signal_iirpeak(w0, Q, fs=FPS):
+    w0 = max(0.01, min(0.99, w0 / fs * 2))
+    return scipy.signal.iirpeak(w0, Q)
+
 
 class PhaseModulator(Sound):
     
@@ -1315,7 +1389,7 @@ class Synth(Sound):
         self.osc0 = Oscillator('sine', 4)
         self.osc1 = Oscillator('tri')
         
-        self.filter = ButterFilter(order=5, freq=8192, btype='lowpass')
+        self.filter = ButterFilter(freq=8192, btype='lowpass')
         
     def forward(self):
         
@@ -1336,6 +1410,52 @@ class Synth(Sound):
         super(Synth, self).play(note, **kwargs)
         
         self.osc1.freq = self.freq      
+        self.gate.open(0.)
+        
+    def play_release(self):
+        self.gate.close(0.)
+
+
+class TB303(Sound):
+    
+    def __init__(self, amp=1., pan=0.):
+        
+        super(TB303, self).__init__(amp, pan)
+
+        self.gate = Gate()
+        
+        self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
+        self.env1 = Envelope(0.1, 1., 0., 0., linear=False)
+        
+        self.osc0 = Oscillator('saw')
+        
+        self.lowpass = ButterFilter(btype='lowpass')
+        self.highpass = ButterFilter(btype='highpass')
+        
+    def forward(self):
+        
+        g0 = self.gate()
+        
+        e0 = self.env0(g0)
+        e1 = self.env1(g0)
+                
+        a0 = self.osc0() * e0     
+        
+        a1 = self.lowpass(a0, key_modulation=8*12*e1)
+        a2 = self.highpass(a1, key_modulation=8*12*e1)
+        
+        return a1 + a2 / 5
+
+    def play(self, note=None, **kwargs):
+        #logger.info('Enter Synth.play(note=%r, **kwargs=%r).', note, kwargs)
+
+        super().play(note, **kwargs)
+        
+        self.osc0.freq = self.freq
+        
+        self.lowpass.key = self.key + 1 * 12
+        self.highpass.key = self.key - 1 * 12
+        
         self.gate.open(0.)
         
     def play_release(self):
