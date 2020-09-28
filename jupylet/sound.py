@@ -27,6 +27,7 @@
 
 import functools
 import _thread
+import asyncio
 import logging
 import random
 import queue
@@ -129,6 +130,7 @@ def _start_sound_stream():
     _worker_tid = None
     
 
+_al_seconds = 1
 _al = []
 _dt = []
 
@@ -169,7 +171,7 @@ def _stream_callback(outdata, frames, _time, status):
     # Aggregate the output data and timers for the oscilloscope.
     #
 
-    if len(_al) * frames > FPS:
+    if len(_al) * frames > _al_seconds * FPS:
         _al.pop(0)
         _dt.pop(0)
 
@@ -345,7 +347,7 @@ syd = {}
 def use(synth, **kwargs):
 
     if kwargs:
-        synth = synth.copy(**kwargs)
+        synth = synth.copy().set(**kwargs)
 
     cf = hash(callerframe())
     syd[cf] = synth
@@ -361,13 +363,16 @@ def play(note, **kwargs):
 
 def sleep(dt=0):
     
-    dt = max(0, dt)
-    cf = hash(callerframe())
-
     tt = time.time()
+    cc = callerframe()
+    
+    if cc.f_code.co_name == '<module>':
+        return asyncio.sleep(tt + dt - time.time())
+    
+    cf = hash(cc)
     t0 = dtd.get(cf) or tt
     t1 = dtd[cf] = max(t0 + dt, tt)
-    
+
     return asyncio.sleep(t1 - tt)
 
 
@@ -500,13 +505,13 @@ class Sound(object):
         # Left-right audio balance - a value between -1 and 1.
         self.pan = pan
         
-        # The number of frames that the forward() method must return.
+        # The number of frames the forward() method is expected to return.
         self.frames = 1024
 
         # The frame counter.
         self.index = 0
         
-        # The lastest output array of the forward() function.
+        # The lastest output arrays of the forward() function.
         self._a0 = None
         self._al = []
                 
@@ -561,19 +566,25 @@ class Sound(object):
         if note is not None:
             self.note = note
 
-        for k, v in kwargs.items():
-            if settable(self, k):
-                setattr(self, k, v)
+        self.set(**kwargs)
               
         _add_sound(self)
+
+    def set(self, **kwargs):
+
+        for k, v in kwargs.items():
+            if settable(self, k):
+                setattr(self, k, v)  
     
+        return self
+
     def copy(self):
         """Create a copy of sound object.
 
         This function is a mixture of shallow and deep copy. It deep-copies 
         the entire tree of child sound objects, but shallow-copies the other
         properties of each sound object in the tree. The motivation is to 
-        avoid creating unnecessary of numpy buffers.
+        avoid creating unnecessary copies of numpy buffers.
 
         Returns:
             Sound object: new copy of sound object. 
@@ -684,10 +695,10 @@ class Gate(Sound):
         
         return states
         
-    def open(self, t=None, dt=None):
+    def open(self, t=None, dt=None, **kwargs):
         self.schedule('open', t, dt)
         
-    def close(self, t=None, dt=None):
+    def close(self, t=None, dt=None, **kwargs):
         self.schedule('close', t, dt)
         
     def schedule(self, event, t=None, dt=None):
@@ -707,6 +718,36 @@ class Gate(Sound):
             self.states.pop(-1)
 
         self.states.append((index, event))
+
+
+class GatedSound(Sound):
+    
+    def __init__(self, amp=1., pan=0., duration=None):
+        
+        super(GatedSound, self).__init__(amp, pan)
+        self.gate = Gate()
+
+        self.duration = duration
+        
+    def play(self, note=None, **kwargs):
+
+        t = kwargs.pop('t', None)
+        dt = kwargs.pop('dt', 0)
+        dur = kwargs.pop('duration', self.duration)
+
+        super().play(note, **kwargs)
+        self.gate.open(t, dt)
+
+        if dur is not None:
+            self.gate.close(dt=dur)
+        
+    def play_release(self, **kwargs):
+
+        t = kwargs.pop('t', None)
+        dt = kwargs.pop('dt', 0)
+
+        self.set(**kwargs)
+        self.gate.close(t, dt)
 
 
 def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01):
@@ -906,26 +947,106 @@ def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
     return a3, phase_o
 
 
-def get_saw_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
+@functools.lru_cache(maxsize=256)
+def get_sawtooth_cycle(nharmonics, size=1024):
+    
+    k = nharmonics
+    radians = 2 * math.pi * np.arange(0, 1, 1 / size)
+    harmonic = - 2 / math.pi * ((-1) ** k) / k * np.sin(k * radians)
+
+    if k == 1:
+        return harmonic
+
+    return harmonic + get_sawtooth_cycle(nharmonics - 1, size)
+    
+# Warmup
+len(get_sawtooth_cycle(128))
+
+
+def get_sawtooth_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
     
     radians, phase_o = get_radians(freq, phase, frames)
 
-    a0 = (radians + math.pi) % (2 * math.pi) * sign / math.pi - 1
+    size = 1024
+
+    # Use mean frequency for the purpose of determining number of 
+    # harmonics to use - this may introduce some aliasing.
+    if type(freq) not in (int, float):
+        freq = float(np.mean(freq))
+
+    nharmonics = max(1, min(128, FPS / 2 // freq))
+    nharmonics = kwargs.get('nharmonics', nharmonics)
+
+    sawtooth = get_sawtooth_cycle(nharmonics, size)
+
+    indices = (size / 2 / math.pi * radians).astype('int32') % size
+    samples = sawtooth[indices]
     
-    return a0, phase_o
+    if sign != 1.:
+        samples = samples * sign
+
+    return samples, phase_o
 
 
-def get_pulse_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
+_nduties = 64
+_nharmonics = 128
+
+_km = np.arange(0, _nharmonics+1)[:, None, None] 
+_dm = np.linspace(0, 1, _nduties+1)[None, :, None]
+_kdm = _km * _dm
+
+
+@functools.lru_cache(maxsize=256)
+def get_square_cycle(nharmonics, size=1024):
+    
+    k = nharmonics
+    radians = 2 * math.pi * np.arange(0, 1, 1 / size)
+    harmonic = 4 / math.pi / k * np.sin(math.pi * _kdm[k]) * np.cos(k * radians)[None, :]
+    
+    if k == 1:
+        return harmonic + 2 * _kdm[1] - 1
+
+    return harmonic + get_square_cycle(nharmonics - 1, size)
+
+# Warmup
+len(get_square_cycle(128))
+
+
+def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
     
     if isinstance(duty, np.ndarray):
         duty = duty.reshape(-1)
         
     radians, phase_o = get_radians(freq, phase, frames)
 
-    a0 = radians % (2 * math.pi) < (2 * math.pi * duty)
-    a1 = a0.astype('float64') * 2. - 1.
-    
-    return a1, phase_o
+    # Use mean frequency for the purpose of determining number of 
+    # harmonics to use - this may introduce some aliasing.
+    if type(freq) not in (int, float):
+        freq = float(np.mean(freq))
+
+    nharmonics = max(1, min(128, FPS / 2 // freq))
+    nharmonics = kwargs.get('nharmonics', nharmonics)
+
+    size = 1024
+
+    square0 = get_square_cycle(nharmonics, size)
+
+    indices = (size / 2 / math.pi * radians).astype('int32') % size
+
+    #
+    # When duty is a modulating array, the following simple scheme
+    # may result in aliasing. It would be preferable to find
+    # a scheme that can efficiently sync changes in duty with the
+    # begining of wave cycles.
+    #
+    if type(duty) in (int, float):
+        duty = int(duty * _nduties)
+    else:
+        duty = (duty * _nduties).astype('int32')
+
+    samples = square0[duty, indices]
+
+    return samples, phase_o
 
 
 class Oscillator(Sound):
@@ -965,8 +1086,8 @@ class Oscillator(Sound):
         get_wave = dict(
             sine = get_sine_wave,
             tri = get_triangle_wave,
-            saw = get_saw_wave,
-            pulse = get_pulse_wave,
+            saw = get_sawtooth_wave,
+            pulse = get_square_wave,
         ).get(self.shape, self.shape)
         
         a0, self.phase = get_wave(
@@ -1017,8 +1138,8 @@ class BaseFilter(Sound):
 
         if self._f == freq:
 
-            sos, ___ = self.compute_baz(self._f, x.shape[-1])
-            a0, self._z = scipy.signal.sosfilt(sos, x, 0, self._z)
+            a0, self._z = self.filter(x, self._f, self._z)
+
             self._f = freq
             self._x = x
             return a0
@@ -1026,74 +1147,106 @@ class BaseFilter(Sound):
         if self._f is None:
 
             xx = np.concatenate((self._x, x))
-            sos, zzz = self.compute_baz(freq, x.shape[-1])
-            a1, self._z = scipy.signal.sosfilt(sos, xx, 0, zzz)
+            a1, self._z = self.filter(xx, freq)
             a1 = a1[-len(x):]
+
             self._f = freq
             self._x = x
             return a1
 
-        sos, ___ = self.compute_baz(self._f, x.shape[-1])
-        a0, self._z = scipy.signal.sosfilt(sos, x, 0, self._z)
-
+        a0, self._z = self.filter(x, self._f, self._z)
+        
         xx = np.concatenate((self._x, x))
-        sos, zzz = self.compute_baz(freq, x.shape[-1])
-        a1, self._z = scipy.signal.sosfilt(sos, xx, 0, zzz)
+        a1, self._z = self.filter(xx, freq)
         a1 = a1[-len(x):]
+
         self._f = freq
         self._x = x
 
-        ww = linspace(0., 1., len(x))[:,None]
+        ww = np.arange(0., 1., 1/len(x))[:,None]
         a1 = a1 * ww + a0 * (1. - ww)
         return a1
             
-    def compute_baz(self, freq, channels):
-        raise NotImplementedError()
+    def filter(self, x, freq, z=None):
+        return x, None
     
 
-@functools.lru_cache(maxsize=16)
-def linspace(start, stop, num):
-    return np.linspace(start, stop, num)
+def fround(freq):
+    return key2freq(round(freq2key(freq), 1))
 
 
 class ButterFilter(BaseFilter):
     
-    def __init__(self, freq=8192, btype='lowpass'):
+    def __init__(self, freq=8192, btype='lowpass', db=24, bandwidth=500, output='ba'):
         
         super(ButterFilter, self).__init__(freq)
         
-        self.order = 8
-        self.btype = btype
-           
-    def compute_baz(self, freq, channels):
-        sos, z = signal_butter(self.order, int(freq), self.btype)
-        return sos, z#_expand_channels(z, channels)
+        self.bandwidth = bandwidth
+        self.output = output
+        self.btype = {'l': 'lowpass', 'h': 'highpass', 'b': 'bandpass'}[btype[0]]
+        self.db = db
+
+        self.warmup()
+
+    def warmup(self):
+
+        for freq in sorted(set(fround(f) for f in range(1, FPS//2))):
+            signal_butter(self.get_wp(freq), 3, self.db, self.btype, self.output)
+            time.sleep(0)
+
+    def get_wp(self, freq):
+
+        freq = key2freq(round(freq2key(freq), 1))
+
+        nyq = FPS // 2
+
+        if self.btype[:3] in ('low', 'hig'):
+            return max(1, min(nyq-1, freq))
+
+        lc = max(1, min(nyq-1, freq - self.bandwidth / 2))
+        hc = max(1, min(nyq-1, freq + self.bandwidth / 2))
+        
+        return (lc, hc)
+
+    def filter(self, x, freq, z=None):
+        
+        wp = self.get_wp(freq)
+
+        if self.output == 'ba':
+            b, a, z0 = signal_butter(wp, 3, self.db, self.btype, self.output)
+            return scipy.signal.lfilter(b, a, x, 0, z0 if z is None else z)
+            
+        else:
+            sos, z0 = signal_butter(wp, 3, self.db, self.btype, self.output)
+            return scipy.signal.sosfilt(sos, x, 0, z0 if z is None else z)
     
 
 @functools.lru_cache(maxsize=4096)
-def signal_butter(N, Wn, btype, fs=FPS):
-    Wn = max(0.01, min(0.99, Wn / fs * 2))
-    sos = scipy.signal.butter(N, Wn, btype, output='sos')
-    z = scipy.signal.sosfilt_zi(sos)[:,:,None]
-    return sos, z
+def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FPS):
 
+    nyq = FPS // 2
 
-class ResonanceFilter(BaseFilter):
-    
-    def __init__(self, freq=8192, q=10):
-        
-        super(ResonanceFilter, self).__init__(freq)
-        
-        self.q = q
-           
-    def compute_ba(self, freq):
-        return signal_iirpeak(int(freq), self.q)
-    
+    if btype[:3] == 'low':
+        wp = min(wp, nyq - 1)
+        ws = min(wp * 2, nyq)
+    elif btype[:4] == 'high':
+        wp = max(wp, 1)
+        ws = wp / 2
+    else:
+        wp = [max(wp[0], 1), min(wp[1], nyq - 1)]
+        ws = [wp[0] / 2, min(wp[1] * 2, nyq)]
 
-@functools.lru_cache(maxsize=4096)
-def signal_iirpeak(w0, Q, fs=FPS):
-    w0 = max(0.01, min(0.99, w0 / fs * 2))
-    return scipy.signal.iirpeak(w0, Q)
+    N, Wn = scipy.signal.buttord(wp, ws, gpass, gstop, fs=fs)
+
+    if output == 'ba':
+        b, a = scipy.signal.butter(N, Wn, btype, output='ba', fs=fs)
+        z = scipy.signal.lfilter_zi(b, a)[:,None]
+        return b, a, z
+
+    else:
+        sos = scipy.signal.butter(N, Wn, btype, output='sos', fs=fs)
+        z = scipy.signal.sosfilt_zi(sos)[:,:,None]
+        return sos, z
 
 
 class PhaseModulator(Sound):
@@ -1234,7 +1387,7 @@ def read_sfz(path):
     return rl1
 
 
-class Sample(Sound):
+class Sample(GatedSound):
     
     def __init__(
         self, 
@@ -1248,6 +1401,8 @@ class Sample(Sound):
         
         super(Sample, self).__init__(amp, pan)
         
+        self.env0 = Envelope(0., 0., 1., 1., linear=False)
+
         self.path = path
         self.buff = None
         
@@ -1315,7 +1470,10 @@ class Sample(Sound):
         if lp is not None:
             a3 = a3 * lp[:, None]
         
-        return a3
+        g0 = self.gate()
+        e0 = self.env0(g0)
+
+        return a3 * e0
 
     def get_loop_power(self, indices):
         
@@ -1377,20 +1535,16 @@ class Sample(Sound):
             self.loop_power = None
 
 
-class Synth(Sound):
+class Synth(GatedSound):
     
     def __init__(self, amp=1., pan=0.):
         
         super(Synth, self).__init__(amp, pan)
 
-        self.gate = Gate()
         self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
-        
         self.osc0 = Oscillator('sine', 4)
         self.osc1 = Oscillator('tri')
-        
-        self.filter = ButterFilter(freq=8192, btype='lowpass')
-        
+                
     def forward(self):
         
         g0 = self.gate()        
@@ -1399,33 +1553,25 @@ class Synth(Sound):
         o0 = self.osc0()        
         o1 = self.osc1(key_modulation=o0/2)
         
-        a0 = o1 * e0
-        a1 = self.filter(a0)
-
-        return a0
+        return o1 * e0
 
     def play(self, note=None, **kwargs):
         #logger.info('Enter Synth.play(note=%r, **kwargs=%r).', note, kwargs)
 
-        super(Synth, self).play(note, **kwargs)
-        
+        super(Synth, self).play(note, **kwargs)        
         self.osc1.freq = self.freq      
-        self.gate.open(0.)
         
-    def play_release(self):
-        self.gate.close(0.)
 
-
-class TB303(Sound):
+class TB303(GatedSound):
     
-    def __init__(self, amp=1., pan=0.):
+    def __init__(self, resonance=1., amp=1., pan=0.):
         
         super(TB303, self).__init__(amp, pan)
 
-        self.gate = Gate()
-        
+        self.resonance = resonance
+                
         self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
-        self.env1 = Envelope(0.1, 1., 0., 0., linear=False)
+        self.env1 = Envelope(0.1, 1., 0., 1., linear=False)
         
         self.osc0 = Oscillator('saw')
         
@@ -1444,20 +1590,13 @@ class TB303(Sound):
         a1 = self.lowpass(a0, key_modulation=8*12*e1)
         a2 = self.highpass(a1, key_modulation=8*12*e1)
         
-        return a1 + a2 / 5
+        return a1 + a2 * self.resonance
 
     def play(self, note=None, **kwargs):
-        #logger.info('Enter Synth.play(note=%r, **kwargs=%r).', note, kwargs)
 
         super().play(note, **kwargs)
         
         self.osc0.freq = self.freq
-        
-        self.lowpass.key = self.key + 1 * 12
-        self.highpass.key = self.key - 1 * 12
-        
-        self.gate.open(0.)
-        
-    def play_release(self):
-        self.gate.close(0.)
+        self.lowpass.key = self.key + 12
+        self.highpass.key = self.key - 12
 

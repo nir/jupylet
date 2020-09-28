@@ -247,7 +247,7 @@ def settable(o, name):
     if name in o.__dict__:
         return True
     
-    v = getattr(o, name, None)
+    v = getattr(o, name, '__NONE__')
     
-    return v is not None and not callable(v)
+    return v != '__NONE__' and not callable(v)
 

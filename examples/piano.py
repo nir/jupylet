@@ -25,16 +25,8 @@
 """
 
 
-import functools
-import asyncio
-import logging
-import random
-import mido
 import sys
 import os
-
-import PIL.ImageDraw
-import PIL.Image 
 
 import numpy as np
 
@@ -43,59 +35,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import jupylet.color
 
 from jupylet.app import App
-from jupylet.sound import Sample, Synth, sleep, get_oscilloscope_as_image
+from jupylet.sound import Sample, get_oscilloscope_as_image, TB303
+from jupylet.sound import use, play, sleep, note
 from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
 
 
-logger = logging.getLogger()
-
-
 app = App(width=512, height=420)#, log_level=logging.INFO)
 
-a0 = np.zeros((256, 512, 4), 'uint8')
-oscilloscope = Sprite(a0, x=256, y=292)
-layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
+oscilloscope = Sprite(np.zeros((256, 512, 4), 'uint8'), x=256, y=292)
 
-synth = Synth()
-#synth.set_envelope(min_duration=0.05, attack=0.0, decay=0.1, sustain=0.7, release=0.5)
+keyboard_layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
 
-keys = app.window.keys
-keyboard = {
-
-    keys.Z: 'C',
-    keys.S: 'Cs',
-    keys.X: 'D',
-    keys.D: 'Ds',
-    keys.C: 'E',
-    keys.V: 'F',
-    keys.G: 'Fs',
-    keys.B: 'G',
-    keys.H: 'Gs',
-    keys.N: 'A',
-    keys.J: 'As',
-    keys.M: 'B',
-
-    keys.Q: 'C5',
-    50: 'Cs5',
-    keys.W: 'D5',
-    51: 'Ds5',
-    keys.E: 'E5',
-    keys.R: 'F5',
-    53: 'Fs5',
-    keys.T: 'G5',
-    54: 'Gs5',
-    keys.Y: 'A5',
-    55: 'As5',
-    keys.U: 'B5',
-
-    keys.I: 'C6',
-    57: 'Cs6',
-    keys.O: 'D6',
-    48: 'Ds6',
-    keys.P: 'E6',
-}
 
 
 state = State(
@@ -109,13 +61,52 @@ state = State(
     right = False,
 )
 
-
 label0 = Label('amp: %.1f' % state.amp, x=10, y=194)
 label1 = Label('span: %.1f ms' % state.ms, x=10, y=174)
 label2 = Label('use ← → ↑ ↓ to modify', anchor_x='right', x=app.width - 10, y=174)
 
 
-pk = {}
+tb303 = TB303()
+
+keys = app.window.keys
+
+keyboard = {
+
+    keys.Z: note.C,
+    keys.S: note.Cs,
+    keys.X: note.D,
+    keys.D: note.Ds,
+    keys.C: note.E,
+    keys.V: note.F,
+    keys.G: note.Fs,
+    keys.B: note.G,
+    keys.H: note.Gs,
+    keys.N: note.A,
+    keys.J: note.As,
+    keys.M: note.B,
+
+    keys.Q: note.C5,
+    50: note.Cs5,
+    keys.W: note.D5,
+    51: note.Ds5,
+    keys.E: note.E5,
+    keys.R: note.F5,
+    53: note.Fs5,
+    keys.T: note.G5,
+    54: note.Gs5,
+    keys.Y: note.A5,
+    55: note.As5,
+    keys.U: note.B5,
+
+    keys.I: note.C6,
+    57: note.Cs6,
+    keys.O: note.D6,
+    48: note.Ds6,
+    keys.P: note.E6,
+}
+
+
+_keyd = {}
 
 @app.event
 def key_event(key, action, modifiers):
@@ -136,11 +127,11 @@ def key_event(key, action, modifiers):
         state.left = value
         
     if action == keys.ACTION_PRESS and key in keyboard:
-        assert key not in pk
-        pk[key] = synth.play_new(note=keyboard[key])
-           
+        assert key not in _keyd
+        _keyd[key] = tb303.play_new(note=keyboard[key])
+        
     if action == keys.ACTION_RELEASE and key in keyboard:
-        pk.pop(key).play_release()
+        _keyd.pop(key).play_release()
 
 
 @app.run_me_every(1/24)
@@ -182,28 +173,48 @@ def render(ct, dt):
     oscilloscope.image = im    
     oscilloscope.draw()
     
-    layout.draw()
+    keyboard_layout.draw()
     
     label0.draw()
     label1.draw()
     label2.draw()
 
 
+app.set_midi_sound(tb303)
+
+
 xylo = Sample('sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz')
 xylo.amp = 8
 
-_keyd = {}
 
-@app.event
-def midi_message(msg):
-    
-    if msg.type == 'note_on':
-        
-        if msg.velocity != 0:
-            _keyd[msg.note] = xylo.play_new(key=msg.note, velocity=msg.velocity)
+@app.sonic_live_loop
+async def loop0():
             
-        elif msg.note in _keyd:
-            _keyd[msg.note].play_release()
+    use(tb303, duration=1.7, amp=0.4)
+
+    play('C2')
+    await sleep(3.)
+
+    play('E2')
+    await sleep(3.)
+
+    play('C2')
+    await sleep(6.)
+
+
+@app.sonic_live_loop
+async def loop1():
+    
+    use(xylo, duration=1., amp=8)
+        
+    play(note.C5)
+    await sleep(1.)
+
+    play(note.E5)
+    await sleep(1.)
+
+    play(note.G5)
+    await sleep(1.)
 
 
 if __name__ == '__main__':

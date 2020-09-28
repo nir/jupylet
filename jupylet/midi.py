@@ -41,20 +41,6 @@ except:
 logger = logging.getLogger(__name__)
 
 
-_callback = None
-
-
-def set_midi_callback(callback):
-
-    global _callback
-    global _port
-
-    _callback = callback
-
-    if _port is not None:
-        _port.callback = callback
-
-
 _port = None
 
 
@@ -82,4 +68,41 @@ def midi_port_handler(*args):
         _port = mido.open_input(name=name, callback=_callback)
     except rtmidi._rtmidi.SystemError:
         pass
+
+
+_callback = None
+
+
+def set_midi_callback(callback):
+
+    global _callback
+    global _port
+
+    _callback = callback
+
+    if _port is not None:
+        _port.callback = callback
+
+
+_sound = None
+
+
+def set_midi_sound(s):
+
+    global _sound
+    _sound = s
+
+
+_keyd = {}
+
+
+def simple_midi_callback(msg):
+
+    if msg.type == 'note_on':
+
+        if msg.velocity != 0 and _sound is not None:
+            _keyd[msg.note] = _sound.play_new(key=msg.note, velocity=msg.velocity)
+            
+        elif msg.note in _keyd:
+            _keyd[msg.note].play_release()
 

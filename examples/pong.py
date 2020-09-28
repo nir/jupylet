@@ -76,7 +76,7 @@ padr = Sprite(a1, y=app.height/2, x=app.width-48)
 
 field = Sprite(a2, y=app.height/2, x=app.width/2, color=background) 
 
-pong_sound = Sample('sounds/pong-blip.wav', amp=0.1).load()
+pong_sound = Sample('sounds/pong-blip.wav', amp=0.2).load()
 
 
 scorel = Label(
