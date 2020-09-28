@@ -1403,7 +1403,7 @@ class Sample(GatedSound):
         
         self.env0 = Envelope(0., 0., 1., 1., linear=False)
 
-        self.path = path
+        self.path = str(find_path(path))
         self.buff = None
         
         self.phase = 0        
