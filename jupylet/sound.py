@@ -349,14 +349,20 @@ def use(synth, **kwargs):
     if kwargs:
         synth = synth.copy().set(**kwargs)
 
-    cf = hash(callerframe())
-    syd[cf] = synth
+    cf = callerframe()
+    cn = cf.f_code.co_name
+    hh = cn if cn == '<module>' else hash(cf) 
+
+    syd[hh] = synth
 
 
 def play(note, **kwargs):
 
-    cf = hash(callerframe())
-    sy = syd[cf]
+    cf = callerframe()
+    cn = cf.f_code.co_name
+    hh = cn if cn == '<module>' else hash(cf) 
+
+    sy = syd[hh]
 
     return sy.play_new(note, **kwargs)
 
@@ -364,14 +370,13 @@ def play(note, **kwargs):
 def sleep(dt=0):
     
     tt = time.time()
-    cc = callerframe()
-    
-    if cc.f_code.co_name == '<module>':
-        return asyncio.sleep(tt + dt - time.time())
-    
-    cf = hash(cc)
-    t0 = dtd.get(cf) or tt
-    t1 = dtd[cf] = max(t0 + dt, tt)
+
+    cf = callerframe()
+    cn = cf.f_code.co_name
+    hh = cn if cn == '<module>' else hash(cf) 
+
+    t0 = dtd.get(hh) or tt
+    t1 = dtd[hh] = max(t0 + dt, tt)
 
     return asyncio.sleep(t1 - tt)
 
@@ -1599,4 +1604,7 @@ class TB303(GatedSound):
         self.osc0.freq = self.freq
         self.lowpass.key = self.key + 12
         self.highpass.key = self.key - 12
+
+
+tb303 = TB303()
 
