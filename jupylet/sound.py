@@ -1254,6 +1254,44 @@ def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FPS):
         return sos, z
 
 
+class PseudoResonantFilter(ButterFilter):
+    
+    def __init__(
+        self, 
+        freq=8192, 
+        btype='lowpass', 
+        db=24, 
+        bandwidth=500, 
+        output='ba',
+        resonance=1., 
+        ):
+        
+        super().__init__(freq, btype, db, bandwidth, output)
+        
+        self.resonance = resonance
+                
+        self.lp = ButterFilter(btype='lowpass')
+        self.hp = ButterFilter(btype='highpass')
+        
+    def forward(self, x, key_modulation=None):
+        
+        a0 = super().forward(x, key_modulation)
+
+        if self.btype[0] == 'b' or self.resonance <= 0:
+            return a0
+
+        self.lp.freq = self.freq
+        self.hp.freq = self.freq
+
+        lp = self.lp(a0, key_modulation)
+        hp = self.hp(a0, key_modulation)
+        
+        if self.btype[0] == 'l':
+            return lp + hp * self.resonance
+        else:
+            return hp + lp * self.resonance
+
+
 class PhaseModulator(Sound):
     
     def __init__(self, beta=1.):
@@ -1572,38 +1610,28 @@ class TB303(GatedSound):
     def __init__(self, resonance=1., amp=1., pan=0.):
         
         super(TB303, self).__init__(amp, pan)
-
-        self.resonance = resonance
                 
         self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
         self.env1 = Envelope(0.1, 1., 0., 1., linear=False)
         
         self.osc0 = Oscillator('saw')
         
-        self.lowpass = ButterFilter(btype='lowpass')
-        self.highpass = ButterFilter(btype='highpass')
+        self.filter = PseudoResonantFilter(btype='lowpass', resonance=resonance)
         
     def forward(self):
         
+        self.osc0.freq = self.freq
+        self.filter.freq = self.freq
+
         g0 = self.gate()
         
         e0 = self.env0(g0)
-        e1 = self.env1(g0)
+        e1 = self.env1(g0) * 12 * 8
                 
         a0 = self.osc0() * e0     
+        a1 = self.filter(a0, key_modulation=e1)
         
-        a1 = self.lowpass(a0, key_modulation=8*12*e1)
-        a2 = self.highpass(a1, key_modulation=8*12*e1)
-        
-        return a1 + a2 * self.resonance
-
-    def play(self, note=None, **kwargs):
-
-        super().play(note, **kwargs)
-        
-        self.osc0.freq = self.freq
-        self.lowpass.key = self.key + 12
-        self.highpass.key = self.key - 12
+        return a1
 
 
 tb303 = TB303()
