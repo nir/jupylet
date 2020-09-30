@@ -1298,7 +1298,7 @@ class ResonantFilter(ButterFilter):
         bandwidth=500, 
         output='ba',
         resonance=1,
-        q=10,
+        q=None,
         ):
         
         super().__init__(freq, btype, db, bandwidth, output)
@@ -1315,12 +1315,14 @@ class ResonantFilter(ButterFilter):
         if self.btype[0] == 'b' or self.resonance <= 0:
             return a0
 
+        resonance = max(0, self.resonance)
+
         self.pf.freq = self.freq
-        self.pf.q = self.q
+        self.pf.q = max(5, self.q if self.q else resonance ** 2)
 
         a1 = self.pf(a0, key_modulation)
         
-        return a0 + a1 * self.resonance
+        return a0 / (resonance / 2 + 1) + a1 * self.resonance
 
 
 class PhaseModulator(Sound):
@@ -1659,10 +1661,10 @@ class TB303(GatedSound):
         e0 = self.env0(g0)
         e1 = self.env1(g0) * 12 * 8
                 
-        a0 = self.osc0() * e0     
+        a0 = self.osc0()      
         a1 = self.filter(a0, key_modulation=e1)
         
-        return a1
+        return a1 * e0
 
 
 tb303 = TB303()
