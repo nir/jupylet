@@ -1229,7 +1229,7 @@ class ButterFilter(BaseFilter):
 @functools.lru_cache(maxsize=4096)
 def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FPS):
 
-    nyq = FPS // 2
+    nyq = fs // 2
 
     if btype[:3] == 'low':
         wp = min(wp, nyq - 1)
@@ -1254,7 +1254,41 @@ def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FPS):
         return sos, z
 
 
-class PseudoResonantFilter(ButterFilter):
+class PeakFilter(BaseFilter):
+    
+    def __init__(self, freq=8192, q=10.):
+        
+        super(PeakFilter, self).__init__(freq)
+        
+        self.q = q
+
+        self.warmup()
+
+    def warmup(self):
+
+        for freq in sorted(set(fround(f) for f in range(1, FPS//2))):
+            signal_iirpeak(freq, self.q)
+            time.sleep(0)
+
+    def filter(self, x, freq, z=None):
+        
+        b, a, z0 = signal_iirpeak(freq, self.q)
+        return scipy.signal.lfilter(b, a, x, 0, z0 if z is None else z) 
+        
+
+@functools.lru_cache(maxsize=4096)
+def signal_iirpeak(w0, q, fs=FPS):
+
+    nyq = fs // 2
+    w0 = max(1, min(w0, nyq - 1))
+
+    b, a = scipy.signal.iirpeak(w0, q, fs=fs)
+    z = scipy.signal.lfilter_zi(b, a)[:,None]
+
+    return b, a, z
+
+
+class ResonantFilter(ButterFilter):
     
     def __init__(
         self, 
@@ -1263,16 +1297,17 @@ class PseudoResonantFilter(ButterFilter):
         db=24, 
         bandwidth=500, 
         output='ba',
-        resonance=1., 
+        resonance=1,
+        q=10,
         ):
         
         super().__init__(freq, btype, db, bandwidth, output)
         
         self.resonance = resonance
-                
-        self.lp = ButterFilter(btype='lowpass')
-        self.hp = ButterFilter(btype='highpass')
-        
+        self.q = q
+
+        self.pf = PeakFilter()
+
     def forward(self, x, key_modulation=None):
         
         a0 = super().forward(x, key_modulation)
@@ -1280,16 +1315,12 @@ class PseudoResonantFilter(ButterFilter):
         if self.btype[0] == 'b' or self.resonance <= 0:
             return a0
 
-        self.lp.freq = self.freq
-        self.hp.freq = self.freq
+        self.pf.freq = self.freq
+        self.pf.q = self.q
 
-        lp = self.lp(a0, key_modulation)
-        hp = self.hp(a0, key_modulation)
+        a1 = self.pf(a0, key_modulation)
         
-        if self.btype[0] == 'l':
-            return lp + hp * self.resonance
-        else:
-            return hp + lp * self.resonance
+        return a0 + a1 * self.resonance
 
 
 class PhaseModulator(Sound):
@@ -1607,7 +1638,7 @@ class Synth(GatedSound):
 
 class TB303(GatedSound):
     
-    def __init__(self, resonance=1., amp=1., pan=0.):
+    def __init__(self, resonance=3., amp=1., pan=0.):
         
         super(TB303, self).__init__(amp, pan)
                 
@@ -1616,7 +1647,7 @@ class TB303(GatedSound):
         
         self.osc0 = Oscillator('saw')
         
-        self.filter = PseudoResonantFilter(btype='lowpass', resonance=resonance)
+        self.filter = ResonantFilter(btype='lowpass', resonance=resonance)
         
     def forward(self):
         
