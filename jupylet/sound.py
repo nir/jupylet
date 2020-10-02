@@ -51,7 +51,7 @@ import soundfile as sf
 import numpy as np
 
 from .resource import find_path
-from .utils import o2h, callerframe, trimmed_traceback, auto, settable
+from .utils import o2h, callerframe, trimmed_traceback, auto, settable, Dict
 from .utils import setup_basic_logging, get_logging_level
 from .env import get_app_mode, is_remote
 
@@ -1107,6 +1107,129 @@ class Oscillator(Sound):
         return a0[:,None]
 
 
+noise_color = Dict(
+    brownian = -6,
+    brown = -6,
+    red = -6,
+    pink = -3,
+    white = 0,
+    blue = 3,
+    violet = 6,
+)
+
+
+class Noise(Sound):
+    
+    def __init__(self, color=noise_color.white):
+        
+        super(Noise, self).__init__()
+        
+        self.color = color
+        self.state = None
+        self.noise = None
+
+        self._color = color
+
+    def forward(self, color_modulation=0):
+        
+        if isinstance(color_modulation, np.ndarray):
+            color = self.color + np.mean(color_modulation[-1]).item()
+        else:
+            color = self.color + color_modulation
+            
+        if self._color != color:
+            self._color = color
+            self.noise = None
+
+        if self.noise is None or len(self.noise) < self.frames:
+
+            a0, self.state = get_noise(
+                self._color, 
+                max(2048, self.frames), 
+                self.state, 
+            )
+
+            if self.noise is None:
+                self.noise = a0
+            else:
+                self.noise = np.concatenate((self.noise, a0))
+
+        a0, self.noise = self.noise[:self.frames], self.noise[self.frames:]
+
+        return a0[:,None]
+
+
+def get_noise(color, frames=4096, state=None, kernel_size=2048, fs=FPS):
+    
+    assert kernel_size % 2 == 0
+    
+    if state is None or len(state) != kernel_size:
+        state = np.random.randn(kernel_size) / math.pi
+        
+    wn = np.random.randn(frames) / math.pi
+    wn = np.concatenate((state, wn))
+
+    if color == noise_color.red:
+        
+        pad = kernel_size // 2
+        
+        c0 = np.cumsum(wn)
+        c1 = np.cumsum(c0)
+
+        c2 = (c1[pad:] - c1[:-pad]) / pad
+        c3 = (c0[2*pad:] - c2[:-pad]) / 30
+    
+        return c3, wn[-kernel_size:]
+    
+    if color == noise_color.white:
+        return wn[-frames:], wn[-kernel_size:]
+    
+    if color == noise_color.violet:
+        return np.diff(wn[-frames-1:]), wn[-kernel_size:]
+    
+    kernel = get_noise_kernel(color, kernel_size, fs)
+    
+    cn = scipy.signal.convolve(
+        wn[1:].astype('float32'), 
+        kernel.astype('float32'), 
+        'valid'
+    ).astype('float64') / 17
+    
+    return cn[:frames], wn[-kernel_size:]
+
+
+@functools.lru_cache(maxsize=128)
+def get_noise_kernel(color, kernel_size=8192, fs=FPS):
+    
+    cc = 6.020599915832349
+    
+    f0 = get_fftfreq(kernel_size, 1/fs, 1)
+    f1 = f0 ** (color / cc)
+    f2 = fftnoise(f1)
+    f3 = (kernel_size / 8 / (f2 ** 2).sum()) ** 0.5 * f2 
+    
+    return f3
+
+
+@functools.lru_cache(maxsize=16)
+def get_fftfreq(n, d=1., clip=0):
+    return np.abs(np.fft.fftfreq(n, d)).clip(clip, 1e6)
+
+
+def fftnoise(freqs):
+    
+    f = np.array(freqs, dtype='complex')
+    n = (len(f) - 1) // 2
+    
+    phases = 2 * math.pi * np.random.rand(n) 
+    phases = np.cos(phases) + 1j * np.sin(phases)
+    
+    f[1:n+1] *= phases
+    f[-1:-1-n:-1] = np.conj(f[1:n+1])
+    
+    return np.fft.ifft(f).real
+
+
 class BaseFilter(Sound):
     
     def __init__(self, freq=8192):
@@ -1298,7 +1421,7 @@ class ResonantFilter(ButterFilter):
         bandwidth=500, 
         output='ba',
         resonance=1,
-        q=None,
+        q=10,
         ):
         
         super().__init__(freq, btype, db, bandwidth, output)
@@ -1322,7 +1445,9 @@ class ResonantFilter(ButterFilter):
 
         a1 = self.pf(a0, key_modulation)
         
-        return a0 / (resonance / 2 + 1) + a1 * self.resonance
+        return a0 + a1 * self.resonance
+        #return a0 / (resonance / 2 + 1) + a1 
+
 
 
 class PhaseModulator(Sound):
@@ -1473,9 +1598,10 @@ class Sample(GatedSound):
         loop=False,
         amp=1.,
         pan=0.,
+        duration=None,
     ):
         
-        super(Sample, self).__init__(amp, pan)
+        super(Sample, self).__init__(amp, pan, duration)
         
         self.env0 = Envelope(0., 0., 1., 1., linear=False)
 
@@ -1613,9 +1739,9 @@ class Sample(GatedSound):
 
 class Synth(GatedSound):
     
-    def __init__(self, amp=1., pan=0.):
+    def __init__(self, amp=1., pan=0., duration=None):
         
-        super(Synth, self).__init__(amp, pan)
+        super(Synth, self).__init__(amp, pan, duration)
 
         self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
         self.osc0 = Oscillator('sine', 4)
@@ -1638,14 +1764,34 @@ class Synth(GatedSound):
         self.osc1.freq = self.freq      
         
 
+class Drums(GatedSound):
+    
+    def __init__(self, amp=2., pan=0., duration=0.02):
+        
+        super(Drums, self).__init__(amp, pan, duration)
+
+        self.env0 = Envelope(0.01, 0., 1., 0.3, linear=False)
+        self.noise = Noise()
+                
+    def forward(self):
+        
+        color = (self.key - note.C1) / (note.B7 - note.C1) * 12 - 6
+        
+        g0 = self.gate()        
+        e0 = self.env0(g0)
+        a0 = self.noise(color)        
+        
+        return a0 * e0
+
+
 class TB303(GatedSound):
     
-    def __init__(self, resonance=3., amp=1., pan=0.):
+    def __init__(self, resonance=1., amp=1., pan=0., duration=None):
         
-        super(TB303, self).__init__(amp, pan)
+        super(TB303, self).__init__(amp, pan, duration)
                 
         self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
-        self.env1 = Envelope(0.1, 1., 0., 1., linear=False)
+        self.env1 = Envelope(0., 2., 0., 2., linear=False)
         
         self.osc0 = Oscillator('saw')
         
