@@ -26,6 +26,7 @@
 
 
 import functools
+import platform
 import _thread
 import asyncio
 import logging
@@ -110,20 +111,12 @@ def _start_sound_stream():
     """Start the sound device output stream handler."""
     logger.info('Enter _start_sound_stream().')
     
-    #
-    # Latency is set to 66ms since on Windows it appears to invoke the callback 
-    # regularly at nearly 10ms which is the effective resolution of sleep 
-    # "wakeups" on Windows.
-    # 
-    # The default 'low' latency appears to be 100ms (which is a little high)
-    # and alternates between calling the callback at 10ms and 20ms intervals.
-    # 
-    # Such alternation would cause (ear) noticable delays with starting the 
-    # playing of repeating sounds. This problem could and should be fixed by 
-    # adding a mechanism to schedule the start of new sounds to a particular 
-    # frame in the output stream buffer.
-    #
-    with sd.OutputStream(channels=2, callback=_stream_callback, latency='low'):#0.066):
+    if platform.system() == 'Windows':
+        latency = 'low'
+    else:
+        latency = None
+
+    with sd.OutputStream(channels=2, callback=_stream_callback, latency=latency)
         _workerq.get()
         
     global _worker_tid
