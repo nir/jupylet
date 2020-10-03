@@ -43,11 +43,10 @@ except:
 
 import numpy as np
 
+from ..audio import FPS
+
 
 logger = logging.getLogger(__name__)
-
-
-FPS = 44100
     
 
 _worker_tid = None
@@ -86,6 +85,8 @@ _al_seconds = 1
 _al = []
 _dt = []
 
+_effects = None
+
 
 def _stream_callback(outdata, frames, _time, status):
     """Compute and set the sound data to be played in a few milliseconds.
@@ -109,15 +110,14 @@ def _stream_callback(outdata, frames, _time, status):
     sounds = _get_sounds()
     
     if not sounds:
-        a0 = np.zeros_like(outdata)
-        outdata[:] = a0
-
-        #_workerq.put('QUIT')
-        #raise sd.CallbackStop
-        
+        a0 = np.zeros_like(outdata)        
     else: 
         a0 = _mix_sounds(sounds, frames)
-        outdata[:] = a0
+
+    if _effects is not None:
+        a0 = _effects(a0)
+
+    outdata[:] = a0
 
     # 
     # Aggregate the output data and timers for the oscilloscope.

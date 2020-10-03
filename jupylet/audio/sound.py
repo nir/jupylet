@@ -38,6 +38,7 @@ import scipy.signal
 import numpy as np
 
 from ..utils import settable, Dict
+from ..audio import FPS
 
 from .device import _add_sound
 
@@ -48,8 +49,6 @@ logger = logging.getLogger(__name__)
 DEBUG = False
 
 EPSILON = 1e-6
-
-FPS = 44100
 
 
 def t2frames(t):

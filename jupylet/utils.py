@@ -38,6 +38,8 @@ import sys
 import re
 import os
 
+import numpy as np
+
 
 LOGGING_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
@@ -250,4 +252,8 @@ def settable(o, name):
     v = getattr(o, name, '__NONE__')
     
     return v != '__NONE__' and not callable(v)
+
+
+def np_is_zero(a):
+    return np.abs(a).sum().item() == 0
 

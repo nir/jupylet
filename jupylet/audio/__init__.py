@@ -31,6 +31,9 @@ import time
 from ..utils import callerframe
 
 
+FPS = 44100
+
+
 dtd = {}
 syd = {}
 

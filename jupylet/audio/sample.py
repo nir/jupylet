@@ -37,14 +37,13 @@ import numpy as np
 from ..resource import find_path
 from ..utils import auto
 
+from ..audio import FPS
+
 from .sound import GatedSound, Envelope, Oscillator, Noise, ResonantFilter
 from .sound import key2freq
 
 
 logger = logging.getLogger(__name__)
-
-
-FPS = 44100
     
 
 _SFCACHE_THRESHOLD = 10 * FPS
