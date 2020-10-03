@@ -45,10 +45,11 @@ import jupylet.color
 
 from jupylet.env import get_app_mode
 from jupylet.app import App
-from jupylet.sound import Sample
 from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
+
+from jupylet.audio.sample import Sample
 
 import moderngl_window.timers.clock as _clock
 
