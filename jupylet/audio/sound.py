@@ -1,5 +1,5 @@
 """
-    jupylet/sound.py
+    jupylet/audio/sound.py
     
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
@@ -50,10 +50,10 @@ except:
 import soundfile as sf
 import numpy as np
 
-from .resource import find_path
-from .utils import o2h, callerframe, trimmed_traceback, auto, settable, Dict
-from .utils import setup_basic_logging, get_logging_level
-from .env import get_app_mode, is_remote
+from ..resource import find_path
+from ..utils import o2h, callerframe, trimmed_traceback, auto, settable, Dict
+from ..utils import setup_basic_logging, get_logging_level
+from ..env import get_app_mode, is_remote
 
 
 logger = logging.getLogger(__name__)
