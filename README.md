@@ -46,9 +46,16 @@ Head to [examples/22-pong-RL.ipynb](examples/22-pong-RL.ipynb) to see how to pro
 
 *Jupylet* imports ideas and methods from machine learning into the domain
 of sound synthesis to easily let you create sound synthesizers as wild as you
-can dream up. In addition it draws inspiration from the wonderful [Sonic Pi](https://sonic-pi.net/)
-and brings live music coding to Jupyter and Python. Hook up your MIDI keyboard 
-and take off with Python's built in [anti-gravity!](https://imgs.xkcd.com/comics/python.png)
+can dream up - it includes impulse response reverb effects, colored noise 
+generators, filters with cutoff frequency sweeping, oscillators with LFO 
+modulation, multi sampled instruments, and much more... And all of it in pure 
+Python for you to modify and experiment with.
+
+In addition *Jupylet* draws inspiration from the wonderful [Sonic Pi](https://sonic-pi.net/)
+and brings live loops and live music coding to Jupyter and Python. Hook up 
+your MIDI keyboard and take off.
+
+See [examples/14-piano.ipynb](examples/14-piano.ipynb) for a basic demo.
 
 ## Requirements
 
