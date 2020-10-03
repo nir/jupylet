@@ -25,3 +25,49 @@
 """
 
 
+import asyncio
+import time
+
+from ..utils import callerframe
+
+
+dtd = {}
+syd = {}
+
+
+def use(synth, **kwargs):
+
+    if kwargs:
+        synth = synth.copy().set(**kwargs)
+
+    cf = callerframe()
+    cn = cf.f_code.co_name
+    hh = cn if cn == '<module>' else hash(cf) 
+
+    syd[hh] = synth
+
+
+def play(note, **kwargs):
+
+    cf = callerframe()
+    cn = cf.f_code.co_name
+    hh = cn if cn == '<module>' else hash(cf) 
+
+    sy = syd[hh]
+
+    return sy.play_new(note, **kwargs)
+
+
+def sleep(dt=0):
+    
+    tt = time.time()
+
+    cf = callerframe()
+    cn = cf.f_code.co_name
+    hh = cn if cn == '<module>' else hash(cf) 
+
+    t0 = dtd.get(hh) or tt
+    t1 = dtd[hh] = max(t0 + dt, tt)
+
+    return asyncio.sleep(t1 - tt)
+

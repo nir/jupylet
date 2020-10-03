@@ -56,8 +56,8 @@ from .event import EventLeg, JupyterWindow
 from .utils import Dict, o2h, abspath, callerpath, patch_method
 from .utils import get_logging_widget, setup_basic_logging
 from .lru import _lru_textures, _MIN_TEXTURES
-from .midi import midi_port_handler, set_midi_callback, set_midi_sound
-from .midi import simple_midi_callback
+
+from .audio import midi
 
 
 #__all__ = ['App']
@@ -215,20 +215,20 @@ class App(EventLeg, ClockLeg):
     def set_event_handler(self, name, func):
 
         if name == 'midi_message':
-            set_midi_callback(func)
-            self.scheduler.unschedule(midi_port_handler)
-            self.scheduler.schedule_interval(midi_port_handler, 1)
+            midi.set_midi_callback(func)
+            self.scheduler.unschedule(midi.midi_port_handler)
+            self.scheduler.schedule_interval(midi.midi_port_handler, 1)
             return
 
         EventLeg.set_event_handler(self, name, func)
 
     def set_midi_sound(self, s):
         
-        set_midi_sound(s)
-        set_midi_callback(simple_midi_callback)
+        midi.set_midi_sound(s)
+        midi.set_midi_callback(midi.simple_midi_callback)
         
-        self.scheduler.unschedule(midi_port_handler)
-        self.scheduler.schedule_interval(midi_port_handler, 1)
+        self.scheduler.unschedule(midi.midi_port_handler)
+        self.scheduler.schedule_interval(midi.midi_port_handler, 1)
 
     @property
     def width(self):

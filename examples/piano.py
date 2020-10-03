@@ -35,11 +35,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import jupylet.color
 
 from jupylet.app import App
-from jupylet.sound import Sample, get_oscilloscope_as_image, TB303
-from jupylet.sound import use, play, sleep, note
 from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
+
+from jupylet.audio.device import get_oscilloscope_as_image
+from jupylet.audio.sample import Sample
+from jupylet.audio.sound import note
+from jupylet.audio.synth import tb303
+from jupylet.audio import use, play, sleep
 
 
 app = App(width=512, height=420)#, log_level=logging.INFO)
@@ -65,8 +69,6 @@ label0 = Label('amp: %.1f' % state.amp, x=10, y=194)
 label1 = Label('span: %.1f ms' % state.ms, x=10, y=174)
 label2 = Label('use ← → ↑ ↓ to modify', anchor_x='right', x=app.width - 10, y=174)
 
-
-tb303 = TB303()
 
 keys = app.window.keys
 

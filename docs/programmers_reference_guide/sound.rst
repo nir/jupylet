@@ -19,7 +19,8 @@ Power up *Jupylet's* audio with the following import statement:
 
 .. code-block:: python
 
-    from jupylet.sound import tb303, note
+    from jupylet.audio.synth import tb303
+    from jupylet.audio.sound import note
 
 And let's start by playing a simple note:
 

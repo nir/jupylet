@@ -1,5 +1,5 @@
 """
-    jupylet/midi.py
+    jupylet/audio/midi.py
     
     Copyright (c) 2020, Nir Aides - nir@winpdb.org
 
@@ -32,8 +32,8 @@ import logging
 try:
     import rtmidi
     import mido
-except:
 
+except:
     rtmidi = None
     mido = None
 
