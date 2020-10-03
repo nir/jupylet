@@ -34,6 +34,30 @@ from ..utils import callerframe
 FPS = 44100
 
 
+def t2frames(t):
+    """Convert time in seconds to frames at 44100 frames per second.
+    
+    Args:
+        t (float): The time duration in seconds.
+
+    Returns:
+        int: The number of frames.
+    """
+    return int(FPS * t)
+
+
+def frames2t(frames):
+    """Convert frames at 44100 frames per second to time in seconds.
+    
+    Args:
+        frames (int): The number of frames.
+
+    Returns:
+        float: The time duration in seconds.
+    """
+    return frames  / FPS
+    
+
 dtd = {}
 syd = {}
 

@@ -85,8 +85,6 @@ _al_seconds = 1
 _al = []
 _dt = []
 
-_effects = None
-
 
 def _stream_callback(outdata, frames, _time, status):
     """Compute and set the sound data to be played in a few milliseconds.
@@ -115,7 +113,8 @@ def _stream_callback(outdata, frames, _time, status):
         a0 = _mix_sounds(sounds, frames)
 
     if _effects is not None:
-        a0 = _effects(a0)
+        for fx in _effects:
+            a0 = fx(a0)
 
     outdata[:] = a0
 
@@ -135,6 +134,23 @@ def _stream_callback(outdata, frames, _time, status):
         _time.outputBufferDacTime,
         _time.currentTime,
     ))
+
+
+_effects = []
+
+
+def set_effects(*effects):
+
+    global _effects
+
+    if effects and effects[0] is None:
+        _effects = []
+    
+    elif effects and type(effects[0]) in (list, tuple):
+        _effects = effects[0]
+
+    else:
+        _effects = effects
 
 
 #

@@ -36,9 +36,9 @@ import numpy as np
 
 from ..resource import find_path
 from ..utils import np_is_zero
-from ..audio import FPS
+from ..audio import FPS, t2frames
 
-from .sound import Sound
+from .sound import Sound, ButterFilter
 
 
 logger = logging.getLogger(__name__)
@@ -136,4 +136,51 @@ def compute_impulse_gain(impulse):
     e1 = (scipy.fft.rfft(ir).real ** 2).sum()
     
     return (e1 / e0) ** 0.5
+
+
+class Delay(Sound):
+    
+    def __init__(
+        self,
+        dt=0.5,
+        gain=0.5,
+        freq=2048,
+        btype='highpass'
+    ):
+    
+        super(Delay, self).__init__()
+        
+        self.dt = dt
+        self.gain = gain
+        self.freq = freq
+        
+        self.filter = ButterFilter(freq, btype, db=12)
+        
+        self._buffer = None
+        
+    def forward(self, x):
+        
+        if self._buffer is None:
+            self._buffer = np.zeros((0, x.shape[-1]))
+        
+        df = t2frames(self.dt)
+        
+        if len(self._buffer) <= df - len(x):
+            self._buffer = np.concatenate((self._buffer, x))
+            return x
+                    
+        dl = self._buffer[-df:-df+len(x)]
+        
+        a0 = x.copy()
+        a0[-len(dl):] += dl * self.gain
+        
+        a1 = a0
+        
+        if self.freq and self.freq > 10:
+            self.filter.freq = self.freq
+            a1 = self.filter(a1)
+        
+        self._buffer = np.concatenate((self._buffer, a1))[-df:]
+
+        return a0
 

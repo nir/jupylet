@@ -38,7 +38,7 @@ import scipy.signal
 import numpy as np
 
 from ..utils import settable, Dict
-from ..audio import FPS
+from ..audio import FPS, t2frames, frames2t
 
 from .device import _add_sound
 
@@ -50,30 +50,6 @@ DEBUG = False
 
 EPSILON = 1e-6
 
-
-def t2frames(t):
-    """Convert time in seconds to frames at 44100 frames per second.
-    
-    Args:
-        t (float): The time duration in seconds.
-
-    Returns:
-        int: The number of frames.
-    """
-    return int(FPS * t)
-
-
-def frames2t(frames):
-    """Convert frames at 44100 frames per second to time in seconds.
-    
-    Args:
-        frames (int): The number of frames.
-
-    Returns:
-        float: The time duration in seconds.
-    """
-    return frames  / FPS
-    
 
 def _expand_channels(a0, channels):
 
@@ -1027,18 +1003,24 @@ class ButterFilter(BaseFilter):
         
         return (lc, hc)
 
-    def filter(self, x, freq, z=None):
+    def filter(self, x, freq, z=None, _retry=True):
         
-        wp = self.get_wp(freq)
+        try:
+            wp = self.get_wp(freq)
 
-        if self.output == 'ba':
-            b, a, z0 = signal_butter(wp, 3, self.db, self.btype, self.output)
-            return scipy.signal.lfilter(b, a, x, 0, z0 if z is None else z)
-            
-        else:
-            sos, z0 = signal_butter(wp, 3, self.db, self.btype, self.output)
-            return scipy.signal.sosfilt(sos, x, 0, z0 if z is None else z)
-    
+            if self.output == 'ba':
+                b, a, z0 = signal_butter(wp, 3, self.db, self.btype, self.output)
+                return scipy.signal.lfilter(b, a, x, 0, z0 if z is None else z)                
+            else:
+                sos, z0 = signal_butter(wp, 3, self.db, self.btype, self.output)
+                return scipy.signal.sosfilt(sos, x, 0, z0 if z is None else z)
+        
+        except ValueError:
+            if z is None or not _retry:
+                raise
+
+            return self.filter(x, freq, None, _retry=False)
+
 
 @functools.lru_cache(maxsize=4096)
 def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FPS):
