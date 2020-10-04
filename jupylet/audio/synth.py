@@ -27,7 +27,11 @@
 
 import logging
 
-from .sound import GatedSound, Envelope, Oscillator, Noise, ResonantFilter
+from .sound import GatedSound, Envelope, Oscillator, Noise, noise_color
+from .sound import ResonantFilter, PhaseModulator
+from .effects import Delay
+
+import numpy as np
 
 
 logger = logging.getLogger(__name__)
@@ -80,6 +84,12 @@ class Drums(GatedSound):
         return a0 * e0
 
 
+drawbars = [16, 5+1/3, 8, 4, 2+2/3, 2, 1+3/5, 1+1/3, 1]
+
+def d2f(d):
+    return 440 * 16 / (drawbars[d])
+
+    
 class Hammond(GatedSound):
     
     def __init__(self, configuration='888000000', amp=0.5, pan=0., duration=None):
@@ -91,13 +101,13 @@ class Hammond(GatedSound):
         self.revr = Delay(0.2, 0.15, 600, 'bandpass')
         self.revr.bandwidth = 800
         
-        self.leak = Noise(noise_color.white)
+        self.leak = Noise(noise_color.violet)
 
-        self.vibo = Oscillator(freq=6)
-        self.vibr = PhaseModulator(beta=6)
+        self.vibo = Oscillator('tri', freq=7)
+        self.vibr = PhaseModulator(beta=44)
 
-        self.env0 = Envelope(0.02, 0.05, 0.5, 0.02, linear=False)
-        self.prec = Envelope(0.02, 0.2, 0., 0., linear=False)
+        self.env0 = Envelope(0., 0., 1., 0.01, linear=False)
+        self.prec = Envelope(0., 0.2, 0., 0.01, linear=False)
         
         self.bass = Oscillator(freq=440)
         self.quin = Oscillator(freq=1320)
@@ -110,7 +120,6 @@ class Hammond(GatedSound):
         self.siff = Oscillator(freq=7040)
         
         self.reverb = True
-        
         self.chorus = True
         
         self.precussion = True
@@ -133,24 +142,26 @@ class Hammond(GatedSound):
         e0 = self.env0(g0)
         ep = self.prec(g0)
         
-        km = self.key - 60
+        km = self.key - 60 - 9
         
-        ll = []
         al = []
         
         for i, a in self.parse_configuration(self.configuration):
             
-            db = self.get_drawbar(i)
-            a0 = db(key_modulation=km)
-            
-            ll.append(a0)
-            al.append(a0 * a)
+            if i == self.precussion_drawbar and self.precussion:
+
+                db = self.get_drawbar(i)
+                a0 = db(key_modulation=km)
+                al.append(a0 * self.precussion_gain * ep)
+                
+            elif a > 0:
+                
+                db = self.get_drawbar(i)
+                a0 = db(key_modulation=km)
+                al.append(a0 * a)
         
         a0 = np.stack(al).sum(0)
         
-        if self.precussion:            
-            a0 += ll[self.precussion_drawbar] * ep * self.precussion_gain
-                 
         if self.chorus:
             
             vo = self.vibo()
@@ -158,15 +169,15 @@ class Hammond(GatedSound):
             
             a0 += vb
             a0 /= 2
-        
-        a1 = a0 + self.leak() * 0.015
+                    
+        a1 = a0 + self.leak() * 0.04 * ep
         a2 = a1 * e0
         
         if self.reverb:
             a2 = self.revr(a2)
                 
         return a2
-        
+               
 
 class TB303(GatedSound):
     
