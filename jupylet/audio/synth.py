@@ -80,6 +80,94 @@ class Drums(GatedSound):
         return a0 * e0
 
 
+class Hammond(GatedSound):
+    
+    def __init__(self, configuration='888000000', amp=0.5, pan=0., duration=None):
+        
+        super().__init__(amp, pan, duration)
+        
+        self.configuration = configuration
+        
+        self.revr = Delay(0.2, 0.15, 600, 'bandpass')
+        self.revr.bandwidth = 800
+        
+        self.leak = Noise(noise_color.white)
+
+        self.vibo = Oscillator(freq=6)
+        self.vibr = PhaseModulator(beta=6)
+
+        self.env0 = Envelope(0.02, 0.05, 0.5, 0.02, linear=False)
+        self.prec = Envelope(0.02, 0.2, 0., 0., linear=False)
+        
+        self.bass = Oscillator(freq=440)
+        self.quin = Oscillator(freq=1320)
+        self.neut = Oscillator(freq=880)
+        self.octa = Oscillator(freq=1760)
+        self.naza = Oscillator(freq=2640)
+        self.bloc = Oscillator(freq=3520)
+        self.tier = Oscillator(freq=4400)
+        self.lari = Oscillator(freq=5280)
+        self.siff = Oscillator(freq=7040)
+        
+        self.reverb = True
+        
+        self.chorus = True
+        
+        self.precussion = True
+        self.precussion_gain = 1.5
+        self.precussion_decay = 0.2
+        self.precussion_drawbar = 3
+        
+    def parse_configuration(self, c):
+        return [(i, float(c) / 8) for i, c in enumerate(c)]
+
+    def get_drawbar(self, i):
+        dbl = ['bass', 'quin', 'neut', 'octa', 'naza', 'bloc', 'tier', 'lari', 'siff']
+        return getattr(self, dbl[i])
+    
+    def forward(self):
+        
+        self.prec.decay = self.precussion_decay
+        
+        g0 = self.gate()        
+        e0 = self.env0(g0)
+        ep = self.prec(g0)
+        
+        km = self.key - 60
+        
+        ll = []
+        al = []
+        
+        for i, a in self.parse_configuration(self.configuration):
+            
+            db = self.get_drawbar(i)
+            a0 = db(key_modulation=km)
+            
+            ll.append(a0)
+            al.append(a0 * a)
+        
+        a0 = np.stack(al).sum(0)
+        
+        if self.precussion:            
+            a0 += ll[self.precussion_drawbar] * ep * self.precussion_gain
+                 
+        if self.chorus:
+            
+            vo = self.vibo()
+            vb = self.vibr(a0, vo)
+            
+            a0 += vb
+            a0 /= 2
+        
+        a1 = a0 + self.leak() * 0.015
+        a2 = a1 * e0
+        
+        if self.reverb:
+            a2 = self.revr(a2)
+                
+        return a2
+        
+
 class TB303(GatedSound):
     
     def __init__(self, resonance=1., amp=1., pan=0., duration=None):

@@ -115,6 +115,9 @@ def load_impulse_response(path, compress=True, fidelity=256):
     
     ir, fs = sf.read(path)
 
+    if len(ir.shape) == 1:
+        ir = ir[:,None]
+
     if compress:
         ir = ir * np.linspace(1, 0, len(ir))[:,None]
 
