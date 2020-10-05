@@ -124,6 +124,8 @@ class Hammond(GatedSound):
         self.chorus = True
         self.chorus_depth = 0.1
 
+        self.leak_gain = 0.06
+
         self.precussion = True
         self.precussion_gain = 1.5
         self.precussion_decay = 0.2
@@ -170,7 +172,7 @@ class Hammond(GatedSound):
             vb = self.vibr(a0, vo)            
             a0 = a0 * (1 - self.chorus_depth) + vb * self.chorus_depth
                     
-        a1 = a0 + self.leak() * 0.04 * ep
+        a1 = a0 + self.leak() * self.leak_gain * ep
         a2 = a1 * e0
         
         if self.reverb:
