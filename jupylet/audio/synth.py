@@ -89,7 +89,7 @@ drawbars = [16, 5+1/3, 8, 4, 2+2/3, 2, 1+3/5, 1+1/3, 1]
 def d2f(d):
     return 440 * 16 / (drawbars[d])
 
-    
+
 class Hammond(GatedSound):
     
     def __init__(self, configuration='888000000', amp=0.5, pan=0., duration=None):
@@ -103,7 +103,7 @@ class Hammond(GatedSound):
         
         self.leak = Noise(noise_color.violet)
 
-        self.vibo = Oscillator('tri', freq=7)
+        self.vibo = Oscillator('tri', freq=5)
         self.vibr = PhaseModulator(beta=44)
 
         self.env0 = Envelope(0., 0., 1., 0.01, linear=False)
@@ -120,8 +120,10 @@ class Hammond(GatedSound):
         self.siff = Oscillator(freq=7040)
         
         self.reverb = True
-        self.chorus = True
         
+        self.chorus = True
+        self.chorus_depth = 0.1
+
         self.precussion = True
         self.precussion_gain = 1.5
         self.precussion_decay = 0.2
@@ -142,7 +144,7 @@ class Hammond(GatedSound):
         e0 = self.env0(g0)
         ep = self.prec(g0)
         
-        km = self.key - 60 - 9
+        km = self.key - 69
         
         al = []
         
@@ -165,10 +167,8 @@ class Hammond(GatedSound):
         if self.chorus:
             
             vo = self.vibo()
-            vb = self.vibr(a0, vo)
-            
-            a0 += vb
-            a0 /= 2
+            vb = self.vibr(a0, vo)            
+            a0 = a0 * (1 - self.chorus_depth) + vb * self.chorus_depth
                     
         a1 = a0 + self.leak() * 0.04 * ep
         a2 = a1 * e0

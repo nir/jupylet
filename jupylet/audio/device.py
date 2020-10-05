@@ -49,6 +49,23 @@ from ..audio import FPS
 logger = logging.getLogger(__name__)
     
 
+def disable_audio():
+    global sd
+    sd = None
+
+    
+_schedule = None
+
+
+def set_schedule(t):
+    global _schedule
+    _schedule = t
+
+
+def get_schedule():
+    return _schedule
+
+
 _worker_tid = None
 
 
@@ -56,7 +73,8 @@ def _init_worker_thread():
     logger.info('Enter _init_worker_thread().')
 
     global _worker_tid
-    if not _worker_tid:
+    
+    if not _worker_tid and sd is not None:
         _worker_tid = _thread.start_new_thread(_start_sound_stream, ())
         
 #
@@ -96,7 +114,10 @@ def _stream_callback(outdata, frames, _time, status):
         _time (struct): A bunch of clocks.
     """
     t0 = time.time()
+    dt = _time.outputBufferDacTime - _time.currentTime
 
+    set_schedule(t0 + dt)
+    
     if status:
         logger.warning('Stream callback called with status: %r.', status)
     

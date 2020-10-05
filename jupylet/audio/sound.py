@@ -40,7 +40,7 @@ import numpy as np
 from ..utils import settable, Dict
 from ..audio import FPS, t2frames, frames2t
 
-from .device import _add_sound
+from .device import _add_sound, get_schedule
 
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,12 @@ logger = logging.getLogger(__name__)
 DEBUG = False
 
 EPSILON = 1e-6
+
+LATENCY = 100
+
+
+def get_time():
+    return time.time()
 
 
 def _expand_channels(a0, channels):
@@ -209,12 +215,6 @@ class Sound(object):
                 getattr(s, name)(*args, **kwargs)
                 
     def play_release(self, release=None):
-        """
-        if release is not None:
-            self.release = release
-            
-        self.duration = frames2t(self.index)
-        """
         pass
         
     def play_new(self, note=None, **kwargs):
@@ -350,20 +350,35 @@ class Gate(Sound):
         super(Gate, self).__init__()
         
         self.states = []
-        
+        self.opened = False
+
     def reset(self):
         
         super(Gate, self).reset()
         
         self.states = []
-        
+        self.opened = False
+
     def forward(self):
         
         states = []
         end = self.index + self.frames
         
-        while self.states and self.states[0][0] < end:
-            states.append(self.states.pop(0))
+        while self.states:
+            
+            t, event = self.states[0]
+            
+            dt = max(0, t + LATENCY / 1000 - get_schedule())
+            index = self.index + t2frames(dt)
+
+            if index >= end:
+                break
+
+            if event == 'open':
+                self.opened = True
+
+            self.states.pop(0)
+            states.append((index, event))
         
         return states
         
@@ -376,20 +391,20 @@ class Gate(Sound):
     def schedule(self, event, t=None, dt=None):
         
         if not self.states:
-            last_index = self.index
+            last_t = get_time()
         else:
-            last_index = self.states[-1][0]
+            last_t = self.states[-1][0]
 
         if dt is not None:
-            index = t2frames(dt) + last_index
+            t = dt + last_t
         else:
-            index = t2frames(t)
+            t = t or get_time()
 
         # Discard events scheduled to run after this new event.
-        while self.states and self.states[-1][0] > index:
+        while self.states and self.states[-1][0] > t:
             self.states.pop(-1)
 
-        self.states.append((index, event))
+        self.states.append((t, event))
 
 
 class GatedSound(Sound):
@@ -401,6 +416,10 @@ class GatedSound(Sound):
 
         self.duration = duration
         
+    @property
+    def done(self):
+        return Sound.done.fget(self) if self.gate.opened else False
+
     def play(self, note=None, **kwargs):
 
         t = kwargs.pop('t', None)
@@ -502,6 +521,7 @@ class Envelope(Sound):
         
         end = self.index + self.frames
         index = self.index
+        
         states = states + [(end, 'continue')]
         curves = []
         
