@@ -81,23 +81,56 @@ def _init_worker_thread():
 # This queue is only used to keep the sound stream running.
 #
 _workerq = queue.Queue()
+_sp = {}
 
 
 def _start_sound_stream():
     """Start the sound device output stream handler."""
     logger.info('Enter _start_sound_stream().')
     
-    if platform.system() == 'Windows':
-        latency = 'low'
-    else:
-        latency = None
+    #if platform.system() == 'Windows':
+    #    _sp['latency'] = 'low'
+    #else:
+    #    _sp['latency'] = None
 
-    with sd.OutputStream(channels=2, callback=_stream_callback, latency=latency):
-        _workerq.get()
+    while True:
+        with sd.OutputStream(samplerate=FPS, channels=2, callback=_stream_callback, **_sp):
+            _workerq.get()
         
     global _worker_tid
     _worker_tid = None
     
+
+LOWEST_LATENCY = 0.050
+
+
+def set_device_latency(latency='high'):
+
+    assert latency in ['high', 'low', 'lowest']
+
+    if latency == 'lowest':
+        _set_stream_params(latency=LOWEST_LATENCY, blocksize=1024)
+        return
+
+    _set_stream_params(latency=latency, blocksize=None)
+
+
+def get_device_latency_ms(latency='high'):
+
+    assert latency in ['high', 'low', 'lowest']
+
+    if latency == 'lowest':
+        return LOWEST_LATENCY
+
+    dd = sd.query_devices(sd.default.device[-1])
+
+    return dd['default_%s_output_latency' % latency]
+
+
+def _set_stream_params(**kwargs):
+    _sp.update(kwargs)
+    _workerq.put(1)
+
 
 _al_seconds = 1
 _al = []
@@ -180,7 +213,7 @@ def set_effects(*effects):
 _sounds = set()
 
 
-def _add_sound(sound):
+def add_sound(sound):
     """Add sound to the set of currently playing sound objects."""
 
     if sd is None:

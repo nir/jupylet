@@ -40,7 +40,8 @@ import numpy as np
 from ..utils import settable, Dict
 from ..audio import FPS, t2frames, frames2t
 
-from .device import _add_sound, get_schedule
+from .device import add_sound, get_schedule
+from .device import set_device_latency, get_device_latency_ms
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,18 @@ DEBUG = False
 
 EPSILON = 1e-6
 
-LATENCY = 100
+
+_latency = get_device_latency_ms()
+
+
+def set_latency(latency='high'):
+
+    assert latency in ['high', 'low', 'lowest']
+
+    global _latency
+
+    set_device_latency(latency)
+    _latency = get_device_latency_ms(latency)
 
 
 def get_time():
@@ -240,7 +252,7 @@ class Sound(object):
 
         self.set(**kwargs)
               
-        _add_sound(self)
+        add_sound(self)
 
     def set(self, **kwargs):
 
@@ -368,7 +380,7 @@ class Gate(Sound):
             
             t, event = self.states[0]
             
-            dt = max(0, t + LATENCY / 1000 - get_schedule())
+            dt = max(0, t + _latency - get_schedule())
             index = self.index + t2frames(dt)
 
             if index >= end:
