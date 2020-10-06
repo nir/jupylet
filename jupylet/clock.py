@@ -153,16 +153,19 @@ class ClockLeg(object):
         self.scheduler = Scheduler(timer)
         self.schedules = {}
         
-    def sonic_live_loop(self, times=0, *args, **kwargs):
-        return self.schedule_once(0, times, *args, **kwargs)
+    def sonic_live_loop2(self, times=0, sync=True, *args, **kwargs):
+        return self.schedule_once(0, times, sync, *args, **kwargs)
+    
+    def sonic_live_loop(self, times=0, sync=False, *args, **kwargs):
+        return self.schedule_once(0, times, sync, *args, **kwargs)
     
     def run_me(self, delay=0, *args, **kwargs):
-        return self.schedule_once(delay, 1, *args, **kwargs)
+        return self.schedule_once(delay, 1, False, *args, **kwargs)
     
     def run_me_every(self, interval, *args, **kwargs):
         return self.schedule_interval(interval, *args, **kwargs)
     
-    def schedule_once(self, delay=0, times=1, *args, **kwargs):
+    def schedule_once(self, delay=0, times=1, sync=False, *args, **kwargs):
         """Schedule decorated function to be called once after ``delay`` seconds.
         
         This function uses the default clock. ``delay`` can be a float. The
@@ -174,24 +177,29 @@ class ClockLeg(object):
                 The number of seconds to wait before the timer lapses.
         """
         def schedule0(foo):
-
-            self.unschedule(foo)
             
-            spec = inspect.getfullargspec(foo)
+            async def fuu(ct, dt):
 
-            async def fuu(ct, dt, *args, **kwargs):
+                sc = self.schedules[foo.__name__]
 
                 try:
-                    args = (ct, dt) + args
-                    args = args[:len(spec.args)]
-                    
-                    n = times
                     while True:
-
-                        await foo(*args, **kwargs)
                         
-                        n -= 1
-                        if n == 0:
+                        spec = sc['spec']
+                        kwargs = sc['kwargs']
+                        args = sc['args']
+                        f00 = sc['foo']
+
+                        args0 = (ct, dt) + args
+                        args0 = args0[:len(spec.args)]
+
+                        await f00(*args0, **kwargs)
+                        
+                        dt = time.time() - ct
+                        ct = ct + dt
+
+                        sc['times'] -= 1
+                        if sc['times'] == 0:
                             break
 
                 except asyncio.exceptions.CancelledError:
@@ -202,12 +210,14 @@ class ClockLeg(object):
             @functools.wraps(foo)
             def bar(ct, dt, *args, **kwargs):
                 
+                sc = self.schedules[foo.__name__]
+
                 if inspect.isgeneratorfunction(foo):
                     
-                    goo = self.schedules[foo.__name__].get('gen')
+                    goo = sc.get('gen')
                     if goo is None:
                         goo = foo(ct, dt, *args, **kwargs)
-                        self.schedules[foo.__name__]['gen'] = goo
+                        sc['gen'] = goo
                         delay = next(goo)
 
                     else:
@@ -218,12 +228,31 @@ class ClockLeg(object):
                         
                 elif inspect.iscoroutinefunction(foo):
 
-                    task = asyncio.create_task(fuu(ct, dt, *args, **kwargs))
-                    self.schedules[foo.__name__]['task'] = task
+                    sc['spec'] = inspect.getfullargspec(foo)
+                    sc['times'] = times
+                    sc['kwargs'] = kwargs
+                    sc['args'] = args
+                    sc['foo'] = foo
+
+                    task = asyncio.create_task(fuu(ct, dt))
+                    sc['task'] = task
                     
                 else:
                     foo(ct, dt, *args, **kwargs)
                 
+            if sync and inspect.iscoroutinefunction(foo):
+                sc = self.schedules.get(foo.__name__, {}) 
+                if 'task' in sc:
+
+                    sc['spec'] = inspect.getfullargspec(foo)
+                    sc['times'] = times                    
+                    sc['kwargs'] = kwargs
+                    sc['args'] = args
+                    sc['foo'] = foo
+
+                    return foo
+
+            self.unschedule(foo)
             self.schedules.setdefault(foo.__name__, {})['func'] = bar
             self.scheduler.schedule_once(bar, delay, *args, **kwargs)
 

@@ -98,15 +98,15 @@ class Hammond(GatedSound):
         
         self.configuration = configuration
         
-        self.revr = Delay(0.2, 0.15, 600, 'bandpass')
-        self.revr.bandwidth = 800
+        self.revr = Delay(0.2, 0.2, 600, 'bandpass')
+        self.revr.filter.bandwidth = 1000
         
         self.leak = Noise(noise_color.violet)
 
-        self.vibo = Oscillator('tri', freq=5)
-        self.vibr = PhaseModulator(beta=44)
+        self.vibo = Oscillator('tri', freq=7)
+        self.vibr = PhaseModulator(beta=22)
 
-        self.env0 = Envelope(0., 0., 1., 0.01, linear=False)
+        self.env0 = Envelope(0.005, 0., 1., 0.01, linear=False)
         self.prec = Envelope(0., 0.2, 0., 0.01, linear=False)
         
         self.bass = Oscillator(freq=440)
@@ -121,8 +121,8 @@ class Hammond(GatedSound):
         
         self.reverb = True
         
-        self.chorus = True
-        self.chorus_depth = 0.1
+        self.chorus = False
+        self.chorus_depth = 0.5
 
         self.leak_gain = 0.06
 
