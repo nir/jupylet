@@ -43,6 +43,7 @@ import multiprocessing as mp
 import numpy as np
 
 from .utils import trimmed_traceback
+from .audio.device import disable_audio
 
 try:
     from multiprocessing import shared_memory
@@ -116,6 +117,8 @@ class ModuleProcess(object):
         self.stop()
         
     def _worker0(self, c0):
+        
+        disable_audio()
         
         self.c0 = c0
         self.c1 = c0

@@ -52,7 +52,7 @@ DEBUG = False
 EPSILON = 1e-6
 
 
-_latency = get_device_latency_ms()
+_latency = get_device_latency_ms() / 1000
 
 
 def set_latency(latency='high'):
@@ -62,9 +62,13 @@ def set_latency(latency='high'):
     global _latency
 
     set_device_latency(latency)
-    _latency = get_device_latency_ms(latency)
+    _latency = get_device_latency_ms(latency) / 1000
 
 
+def get_latency_ms():
+    return _latency * 1000
+
+    
 def get_time():
     return time.time()
 

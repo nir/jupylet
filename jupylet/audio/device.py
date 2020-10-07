@@ -120,11 +120,14 @@ def get_device_latency_ms(latency='high'):
     assert latency in ['high', 'low', 'lowest']
 
     if latency == 'lowest':
-        return LOWEST_LATENCY
+        return LOWEST_LATENCY * 1000
+
+    if sd is None:
+        return 100
 
     dd = sd.query_devices(sd.default.device[-1])
 
-    return dd['default_%s_output_latency' % latency]
+    return dd['default_%s_output_latency' % latency] * 1000
 
 
 def _set_stream_params(**kwargs):
