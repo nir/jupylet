@@ -55,6 +55,15 @@ logger = logging.getLogger(__name__)
 #
 
 _events = []
+_ed = {}
+
+
+def _stripped_event(e):
+    e = dict(e)
+    e.pop('timeStamp')
+    e.pop('repeat')
+    return e
+
 
 class JupyterWindow(Window):
     
@@ -246,7 +255,17 @@ class JupyterWindow(Window):
             return foo(*args, **kwargs)
 
     def _on_dom_event(self, event):
-                
+        #logger.info('Enter JupyterWindow._on_dom_event(event=%r).', event)
+
+        #
+        # Fix repeat bug in jupyter dom handler.
+        #
+        if event['event'][:3] == 'key':
+            if event['event'] == 'keydown' and event['repeat'] == False and event['code'] in _ed:
+                if _stripped_event(event) == _stripped_event(_ed[event['code']]):
+                    event['repeat'] = True
+            _ed[event['code']] = event
+
         kd = {
             'event': 'event',
             'timeStamp': 't',
