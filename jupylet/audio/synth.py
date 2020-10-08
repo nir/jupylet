@@ -27,9 +27,9 @@
 
 import logging
 
-from .sound import GatedSound, Envelope, Oscillator, Noise, noise_color
-from .sound import ResonantFilter, PhaseModulator
-from .effects import Delay
+from .sound import GatedSound, Envelope, Oscillator, Noise, noise_color, PhaseModulator
+from .filters import ResonantFilter
+from .effects import SchroederReverb
 
 import numpy as np
 
@@ -98,13 +98,11 @@ class Hammond(GatedSound):
         
         self.configuration = configuration
         
-        self.revr = Delay(0.2, 0.2, 600, 'bandpass')
-        self.revr.filter.bandwidth = 1000
-        
+        self.revr = SchroederReverb(mix=0.25, rt=0.750)        
         self.leak = Noise(noise_color.violet)
 
         self.vibo = Oscillator('tri', freq=7)
-        self.vibr = PhaseModulator(beta=22)
+        self.vibr = PhaseModulator()
 
         self.env0 = Envelope(0.005, 0., 1., 0.01, linear=False)
         self.prec = Envelope(0., 0.2, 0., 0.01, linear=False)
@@ -121,8 +119,8 @@ class Hammond(GatedSound):
         
         self.reverb = True
         
-        self.chorus = False
-        self.chorus_depth = 0.5
+        self.chorus_mix = 0.
+        self.chorus_depth = 1.
 
         self.leak_gain = 0.06
 
@@ -131,6 +129,30 @@ class Hammond(GatedSound):
         self.precussion_decay = 0.2
         self.precussion_drawbar = 3
         
+    @property
+    def vibrato_and_chorus(self):
+        
+        mode = max(0, min(2, round(self.chorus_mix * 2)))
+        if mode == 0:
+            return None
+        
+        mode = 'c' if mode == 1 else 'v'
+        valu = max(1, min(3, round(self.chorus_depth * 3)))
+
+        return mode + str(int(valu))
+
+    @vibrato_and_chorus.setter
+    def vibrato_and_chorus(self, v):
+
+        assert v in ['c1', 'c2', 'c3', 'v1', 'v2', 'v3', None]
+
+        if v is None:
+            self.chorus_mix = 0
+            return
+
+        self.chorus_mix = 0.5 if v[0] == 'c' else 1.
+        self.chorus_depth = float(v[1]) / 3
+
     def parse_configuration(self, c):
         return [(i, float(c) / 8) for i, c in enumerate(c)]
 
@@ -166,11 +188,14 @@ class Hammond(GatedSound):
         
         a0 = np.stack(al).sum(0)
         
-        if self.chorus:
+        if self.chorus_mix > 0:
             
+            self.vibr.beta = 44 * 0.85 * self.chorus_depth
+
             vo = self.vibo()
-            vb = self.vibr(a0, vo)            
-            a0 = a0 * (1 - self.chorus_depth) + vb * self.chorus_depth
+            vb = self.vibr(a0, vo)     
+
+            a0 = a0 * (1 - self.chorus_mix) + vb * self.chorus_mix
                     
         a1 = a0 + self.leak() * self.leak_gain * ep
         a2 = a1 * e0

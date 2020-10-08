@@ -39,7 +39,7 @@ from ..utils import auto
 
 from ..audio import FPS
 
-from .sound import GatedSound, Envelope, Oscillator, Noise, ResonantFilter
+from .sound import GatedSound, Envelope, Oscillator, Noise
 from .sound import key2freq
 
 

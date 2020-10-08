@@ -27,6 +27,7 @@
 
 import functools
 import logging
+import math
 
 import scipy.signal
 import scipy.fft
@@ -38,11 +39,14 @@ from ..resource import find_path
 from ..utils import np_is_zero
 from ..audio import FPS, t2frames
 
-from .sound import Sound, ButterFilter
+from .filters import ButterFilter
+from .sound import Sound
 
 
 logger = logging.getLogger(__name__)
     
+
+# TODO: fix buffering
 
 class ConvolutionReverb(Sound):
     
@@ -141,49 +145,172 @@ def compute_impulse_gain(impulse):
     return (e1 / e0) ** 0.5
 
 
-class Delay(Sound):
+class CombFilter(Sound):
     
     def __init__(
         self,
-        dt=0.5,
+        delay=0.040,
         gain=0.5,
-        freq=2048,
-        btype='highpass'
+        rt=None
     ):
     
-        super(Delay, self).__init__()
+        super(CombFilter, self).__init__()
         
-        self.dt = dt
+        self.delay = delay
         self.gain = gain
-        self.freq = freq
         
-        self.filter = ButterFilter(freq, btype, db=12)
+        if rt is not None:
+            self.rt = rt
         
         self._buffer = None
         
     def forward(self, x):
         
+        mm = t2frames(self.delay)
+        gg = self.gain
+        
+        lx = len(x)
+        
+        if lx > mm:
+            al = [self.forward(x[i:i+mm]) for i in range(0, lx, mm)]
+            return np.concatenate(al)
+
         if self._buffer is None:
-            self._buffer = np.zeros((0, x.shape[-1]))
+            self._buffer = np.zeros((mm, x.shape[-1]))
         
-        df = t2frames(self.dt)
-        
-        if len(self._buffer) <= df - len(x):
-            self._buffer = np.concatenate((self._buffer, x))
-            return x
-                    
-        dl = self._buffer[-df:-df+len(x)]
-        
-        a0 = x.copy()
-        a0[-len(dl):] += dl * self.gain
-        
-        a1 = a0
-        
-        if self.freq and self.freq > 10:
-            self.filter.freq = self.freq
-            a1 = self.filter(a1)
-        
-        self._buffer = np.concatenate((self._buffer, a1))[-df:]
+        d0 = self._buffer[:lx]
+        a0 = x + d0 * gg
+            
+        self._buffer = np.concatenate((self._buffer, a0))[-mm:]
 
         return a0
+    
+    @property
+    def rt(self):
+        return 3 * self.delay / -math.log(abs(self.gain))
+    
+    @rt.setter
+    def rt(self, t):
+        self.gain = math.exp(-3 * self.delay / abs(t)) * np.sign(t)
+
+
+class AllpassFilter(Sound):
+    
+    def __init__(
+        self,
+        delay=0.040,
+        gain=0.5,
+    ):
+    
+        super(AllpassFilter, self).__init__()
+        
+        self.delay = delay
+        self.gain = gain
+        
+        self._buffer = None
+        
+    def forward(self, x):
+        
+        mm = t2frames(self.delay)
+        gg = self.gain
+        
+        lx = len(x)
+        
+        if lx > mm:
+            al = [self.forward(x[i:i+mm]) for i in range(0, lx, mm)]
+            return np.concatenate(al)
+
+        if self._buffer is None:
+            self._buffer = np.zeros((mm, x.shape[-1]))
+        
+        d0 = self._buffer[:lx]
+        d1 = self.nested(d0)
+        
+        a0 = x + d1 * gg
+            
+        self._buffer = np.concatenate((self._buffer, a0))[-mm:]
+
+        return x * -gg + d1 * (1 - gg**2)
+    
+    def nested(self, x):
+        return x
+
+
+class SchroederReverb(Sound):
+    """A Schroeder reverb.
+
+    Implemented according to Natural Sounding Artificial Reverberation (1962)
+    http://www2.ece.rochester.edu/~zduan/teaching/ece472/reading/Schroeder_1962.pdf
+    """
+    def __init__(self, mix=0.25, rt=0.750):
+    
+        super(SchroederReverb, self).__init__()
+        
+        self.comb0 = CombFilter(0.030)
+        self.comb1 = CombFilter(0.033)
+        self.comb2 = CombFilter(0.041)
+        self.comb3 = CombFilter(0.045)
+
+        self.allp0 = AllpassFilter(0.0050, 0.7)
+        self.allp1 = AllpassFilter(0.0017, 0.7)
+        
+        self.mix = mix
+        self.rt = rt
+        
+    @property
+    def rt(self):
+        return self.comb0.rt
+    
+    @rt.setter
+    def rt(self, t):
+        
+        self.comb0.rt = t
+        self.comb1.rt = t
+        self.comb2.rt = t
+        self.comb3.rt = t
+        
+    def forward(self, x):
+        
+        c0 = self.comb0(x)
+        c1 = self.comb1(x)
+        c2 = self.comb2(x)
+        c3 = self.comb3(x)
+
+        cs = np.stack((c0, c1, c2, c3)).sum(0)
+        
+        a0 = self.allp0(cs)
+        a1 = self.allp1(a0)
+        
+        return x * (1 - self.mix) + a1 * self.mix
+
+
+class SchroederReverb2(AllpassFilter):
+    """A Schroeder reverb.
+
+    Implemented according to Natural Sounding Artificial Reverberation (1962)
+    http://www2.ece.rochester.edu/~zduan/teaching/ece472/reading/Schroeder_1962.pdf
+    """    
+    def __init__(
+        self,
+        delay=0.030,
+        gain=0.5,
+    ):
+    
+        super(SchroederReverb2, self).__init__(delay, gain)
+
+        self.allp0 = AllpassFilter(0.1 / 1.0, gain=0.7)
+        self.allp1 = AllpassFilter(0.1 / 3.1, gain=0.7)
+        self.allp2 = AllpassFilter(0.1 / 8.9, gain=0.7)
+        self.allp3 = AllpassFilter(0.1 / 28., gain=0.7)
+        self.allp4 = AllpassFilter(0.1 / 79., gain=0.7)
+        
+    def nested(self, x):
+        
+        x = self.allp0(x)
+        x = self.allp1(x)
+        x = self.allp2(x)
+        x = self.allp3(x)
+        x = self.allp4(x)
+        
+        return x
 

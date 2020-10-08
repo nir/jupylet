@@ -24,6 +24,11 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+#
+# python-rtmidi requires the following command on ubuntu:
+# sudo apt-get install libasound2-dev libjack-dev build-essentials
+# And extend setup.py with extras for midi to avoid setup crash on ubuntu.
+#
 
 import functools
 import _thread
