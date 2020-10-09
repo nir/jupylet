@@ -33,13 +33,11 @@ setuptools.setup(
         'RL',
     ],
     install_requires=[
-        'mido',
         'wget',
         'numpy', 
         'PyGLM',
         'scipy', 
         'pillow', 
-        'psutil', 
         'gltflib',
         'jupyter',
         'moderngl',
@@ -51,9 +49,11 @@ setuptools.setup(
         'sounddevice', 
         'xvfbwrapper',
         'scikit-image',
-        'python-rtmidi',
         'moderngl-window',
     ],
+    extras_require = {
+        'midi': ['mido', 'python-rtmidi']
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Education',
