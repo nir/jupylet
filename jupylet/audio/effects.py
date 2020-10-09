@@ -314,3 +314,30 @@ class SchroederReverb2(AllpassFilter):
         
         return x
 
+
+class Overdrive(Sound):
+     
+    def __init__(self, gain=1., amp=0.5):
+    
+        super(Overdrive, self).__init__(amp)
+        
+        self.gain = gain
+
+    def forward(self, x):
+        
+        return np.tanh(x * self.gain) * self.amp
+
+
+class Overdrive2(Sound):
+     
+    def __init__(self, gain=1., amp=0.5):
+    
+        super(Overdrive2, self).__init__(amp)
+        
+        self.gain = gain
+
+    def forward(self, x):
+        
+        a = 0.45 * self.gain * x
+        return a * (1 + np.abs(a)) * self.amp
+        
