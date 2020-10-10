@@ -169,9 +169,7 @@ def _stream_callback(outdata, frames, _time, status):
     else: 
         a0 = _mix_sounds(sounds, frames)
 
-    if _effects is not None:
-        for fx in _effects:
-            a0 = fx(a0)
+    a0 = _apply_effects(_effects, a0)
 
     outdata[:] = a0
 
@@ -211,9 +209,10 @@ def set_effects(*effects):
 
 
 #
-# A set of all currently playing sound objects.
+# A list of all currently playing sound objects.
 #
-_sounds = set()
+_sounds0 = []
+_sounds1 = []
 
 
 def add_sound(sound):
@@ -225,17 +224,27 @@ def add_sound(sound):
     if _worker_tid is None:
         _init_worker_thread()
 
-    _sounds.add(sound)
+    _sounds0.append(sound)
 
          
 def _get_sounds():
     """Get currently playing sound objects."""
 
-    for s in list(_sounds):
-        if s.done:
-            _sounds.discard(s)
+    sl = []
 
-    return list(_sounds)
+    while _sounds0:
+        s = _sounds0.pop(0)
+        if not s.done:
+            sl.append(s)
+
+    while _sounds1:
+        s = _sounds1.pop(0)
+        if not s.done:
+            sl.append(s)
+
+    _sounds1[:] = sl
+
+    return sl
       
 
 def _mix_sounds(sounds, frames):
@@ -248,8 +257,33 @@ def _mix_sounds(sounds, frames):
     Returns:
         ndarray
     """
-    d = np.stack([s._consume(frames) for s in sounds])
-    return np.sum(d, 0).clip(-1, 1)
+    es = {}
+
+    for s0 in sounds:
+        el = s0.get_effects()
+        es.setdefault(el, []).append(s0)
+
+    al = []
+
+    for el, sl in es.items():
+        a0 = _mix_sounds0(sl, frames)
+        a0 = _apply_effects(el, a0)
+        al.append(a0)
+        
+    return np.stack(al).sum(0).clip(-1, 1)
+
+
+def _mix_sounds0(sounds, frames):
+
+    al = [s._consume(frames) for s in sounds]
+    return np.stack(al).sum(0)
+
+
+def _apply_effects(effects, a):
+
+    for e in effects or []:
+        a = e(a)
+    return a
 
 
 def get_oscilloscope_as_image(

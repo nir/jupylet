@@ -27,9 +27,9 @@
 
 import logging
 
-from .sound import GatedSound, Envelope, Oscillator, Noise, noise_color, PhaseModulator
+from .sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color, PhaseModulator
+from .effects import SchroederReverb, Overdrive
 from .filters import ResonantFilter
-from .effects import SchroederReverb
 
 import numpy as np
 
@@ -90,20 +90,68 @@ def d2f(d):
     return 440 * 16 / (drawbars[d])
 
 
+class Chorus(Sound):
+
+    def __init__(self, mix=0.5, depth=1/3, shared=False):
+
+        super().__init__(shared=shared)
+
+        self.mix = mix
+        self.depth = depth
+
+        self.osc = Oscillator('tri', freq=7)
+        self.phm = PhaseModulator(shared=shared)
+
+    def forward(self, x):
+
+        if self.mix <= 0:
+            return x
+
+        self.phm.beta = 44 * 0.85 * self.depth
+
+        vo = self.osc()
+        vb = self.phm(x, vo)     
+
+        return x * (1 - self.mix) + vb * self.mix
+
+    @property
+    def vibrato_and_chorus(self):
+        
+        mode = max(0, min(2, round(self.mix * 2)))
+        if mode == 0:
+            return None
+        
+        mode = 'c' if mode == 1 else 'v'
+        valu = max(1, min(3, round(self.depth * 3)))
+
+        return mode + str(int(valu))
+
+    @vibrato_and_chorus.setter
+    def vibrato_and_chorus(self, v):
+
+        assert v in ['c1', 'c2', 'c3', 'v1', 'v2', 'v3', None]
+
+        if v is None:
+            self.mix = 0
+            return
+
+        self.mix = 0.5 if v[0] == 'c' else 1.
+        self.depth = float(v[1]) / 3
+
+
 class Hammond(GatedSound):
     
-    def __init__(self, configuration='888000000', amp=0.5, pan=0., duration=None):
+    def __init__(self, configuration='888000000', amp=0.25, pan=0., duration=None):
         
         super().__init__(amp, pan, duration)
         
         self.configuration = configuration
         
-        self.revr = SchroederReverb(mix=0.25, rt=0.750)        
+        self.reve = SchroederReverb(mix=0.25, rt=0.750, shared=True) 
+        self.over = Overdrive(gain=2., shared=True)
+        self.chor = Chorus(shared=True)
+
         self.leak = Noise(noise_color.violet)
-
-        self.vibo = Oscillator('tri', freq=7)
-        self.vibr = PhaseModulator()
-
         self.env0 = Envelope(0.005, 0., 1., 0.01, linear=False)
         self.prec = Envelope(0., 0.2, 0., 0.01, linear=False)
         
@@ -117,10 +165,9 @@ class Hammond(GatedSound):
         self.lari = Oscillator(freq=5280)
         self.siff = Oscillator(freq=7040)
         
+        self.chorus = True
         self.reverb = True
-        
-        self.chorus_mix = 0.
-        self.chorus_depth = 1.
+        self.overdrive = True
 
         self.leak_gain = 0.06
 
@@ -129,29 +176,28 @@ class Hammond(GatedSound):
         self.precussion_decay = 0.2
         self.precussion_drawbar = 3
         
+    def get_effects(self):
+
+        el = []
+
+        if self.chorus:
+            el.append(self.chor)
+
+        if self.reverb:
+            el.append(self.reve)
+
+        if self.overdrive:
+            el.append(self.over)
+
+        return tuple(el)
+
     @property
     def vibrato_and_chorus(self):
-        
-        mode = max(0, min(2, round(self.chorus_mix * 2)))
-        if mode == 0:
-            return None
-        
-        mode = 'c' if mode == 1 else 'v'
-        valu = max(1, min(3, round(self.chorus_depth * 3)))
-
-        return mode + str(int(valu))
+        return self.chor.vibrato_and_chorus
 
     @vibrato_and_chorus.setter
     def vibrato_and_chorus(self, v):
-
-        assert v in ['c1', 'c2', 'c3', 'v1', 'v2', 'v3', None]
-
-        if v is None:
-            self.chorus_mix = 0
-            return
-
-        self.chorus_mix = 0.5 if v[0] == 'c' else 1.
-        self.chorus_depth = float(v[1]) / 3
+        self.chor.vibrato_and_chorus = v
 
     def parse_configuration(self, c):
         return [(i, float(c) / 8) for i, c in enumerate(c)]
@@ -187,22 +233,9 @@ class Hammond(GatedSound):
                 al.append(a0 * a)
         
         a0 = np.stack(al).sum(0)
-        
-        if self.chorus_mix > 0:
-            
-            self.vibr.beta = 44 * 0.85 * self.chorus_depth
-
-            vo = self.vibo()
-            vb = self.vibr(a0, vo)     
-
-            a0 = a0 * (1 - self.chorus_mix) + vb * self.chorus_mix
-                    
         a1 = a0 + self.leak() * self.leak_gain * ep
         a2 = a1 * e0
         
-        if self.reverb:
-            a2 = self.revr(a2)
-                
         return a2
                
 

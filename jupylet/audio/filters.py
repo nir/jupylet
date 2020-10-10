@@ -44,10 +44,8 @@ class BaseFilter(Sound):
     
     def __init__(self, freq=8192):
         
-        super(BaseFilter, self).__init__()
+        super(BaseFilter, self).__init__(freq=freq)
         
-        self.freq = freq
-
         self._f = None
         self._x = None
         self._z = None

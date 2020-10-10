@@ -55,10 +55,11 @@ class ConvolutionReverb(Sound):
         path,
         compress=True,
         fidelity=256,
-        buffer_size=1024,
+        buffer_size=1024, 
+        shared=False,
     ):
         
-        super(ConvolutionReverb, self).__init__()
+        super(ConvolutionReverb, self).__init__(shared=shared)
         
         self.path = str(find_path(path))
 
@@ -151,10 +152,11 @@ class CombFilter(Sound):
         self,
         delay=0.040,
         gain=0.5,
-        rt=None
+        rt=None, 
+        shared=False,
     ):
     
-        super(CombFilter, self).__init__()
+        super(CombFilter, self).__init__(shared=shared)
         
         self.delay = delay
         self.gain = gain
@@ -164,6 +166,13 @@ class CombFilter(Sound):
         
         self._buffer = None
         
+    def reset(self):
+        
+        super().reset()
+        
+        if not self.shared:
+            self._buffer = None
+ 
     def forward(self, x):
         
         mm = t2frames(self.delay)
@@ -199,16 +208,24 @@ class AllpassFilter(Sound):
     def __init__(
         self,
         delay=0.040,
-        gain=0.5,
+        gain=0.5, 
+        shared=False,
     ):
     
-        super(AllpassFilter, self).__init__()
+        super(AllpassFilter, self).__init__(shared=shared)
         
         self.delay = delay
         self.gain = gain
         
         self._buffer = None
         
+    def reset(self):
+        
+        super().reset()
+        
+        if not self.shared:
+            self._buffer = None
+ 
     def forward(self, x):
         
         mm = t2frames(self.delay)
@@ -242,17 +259,17 @@ class SchroederReverb(Sound):
     Implemented according to Natural Sounding Artificial Reverberation (1962)
     http://www2.ece.rochester.edu/~zduan/teaching/ece472/reading/Schroeder_1962.pdf
     """
-    def __init__(self, mix=0.25, rt=0.750):
+    def __init__(self, mix=0.25, rt=0.750, shared=False):
     
-        super(SchroederReverb, self).__init__()
+        super(SchroederReverb, self).__init__(shared=shared)
         
-        self.comb0 = CombFilter(0.030)
-        self.comb1 = CombFilter(0.033)
-        self.comb2 = CombFilter(0.041)
-        self.comb3 = CombFilter(0.045)
+        self.comb0 = CombFilter(0.030, shared=shared)
+        self.comb1 = CombFilter(0.033, shared=shared)
+        self.comb2 = CombFilter(0.041, shared=shared)
+        self.comb3 = CombFilter(0.045, shared=shared)
 
-        self.allp0 = AllpassFilter(0.0050, 0.7)
-        self.allp1 = AllpassFilter(0.0017, 0.7)
+        self.allp0 = AllpassFilter(0.0050, 0.7, shared=shared)
+        self.allp1 = AllpassFilter(0.0017, 0.7, shared=shared)
         
         self.mix = mix
         self.rt = rt
@@ -293,16 +310,17 @@ class SchroederReverb2(AllpassFilter):
     def __init__(
         self,
         delay=0.030,
-        gain=0.5,
+        gain=0.5, 
+        shared=False,
     ):
     
-        super(SchroederReverb2, self).__init__(delay, gain)
+        super(SchroederReverb2, self).__init__(delay, gain, shared=shared)
 
-        self.allp0 = AllpassFilter(0.1 / 1.0, gain=0.7)
-        self.allp1 = AllpassFilter(0.1 / 3.1, gain=0.7)
-        self.allp2 = AllpassFilter(0.1 / 8.9, gain=0.7)
-        self.allp3 = AllpassFilter(0.1 / 28., gain=0.7)
-        self.allp4 = AllpassFilter(0.1 / 79., gain=0.7)
+        self.allp0 = AllpassFilter(0.1 / 1.0, gain=0.7, shared=shared)
+        self.allp1 = AllpassFilter(0.1 / 3.1, gain=0.7, shared=shared)
+        self.allp2 = AllpassFilter(0.1 / 8.9, gain=0.7, shared=shared)
+        self.allp3 = AllpassFilter(0.1 / 28., gain=0.7, shared=shared)
+        self.allp4 = AllpassFilter(0.1 / 79., gain=0.7, shared=shared)
         
     def nested(self, x):
         
@@ -317,9 +335,9 @@ class SchroederReverb2(AllpassFilter):
 
 class Overdrive(Sound):
      
-    def __init__(self, gain=1., amp=0.5):
+    def __init__(self, gain=1., amp=0.5, shared=False):
     
-        super(Overdrive, self).__init__(amp)
+        super(Overdrive, self).__init__(amp=amp, shared=shared)
         
         self.gain = gain
 
@@ -330,9 +348,9 @@ class Overdrive(Sound):
 
 class Overdrive2(Sound):
      
-    def __init__(self, gain=1., amp=0.5):
+    def __init__(self, gain=1., amp=0.5, shared=False):
     
-        super(Overdrive2, self).__init__(amp)
+        super(Overdrive2, self).__init__(amp=amp, shared=shared)
         
         self.gain = gain
 

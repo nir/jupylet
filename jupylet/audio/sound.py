@@ -185,9 +185,11 @@ class Sound(object):
     oscillators and effects.
     """
 
-    def __init__(self, amp=1., pan=0.):
+    def __init__(self, freq=262, amp=0.33, pan=0., shared=False):
         
-        self.freq = 262.
+        self.shared = shared
+        
+        self.freq = freq
         
         # MIDI attribute corresponding to velocity of pressed key,
         # between 0 and 128.
@@ -205,8 +207,12 @@ class Sound(object):
         # The frame counter.
         self.index = 0
         
+        self._done = 0
+        self._done_decay = 3 * FPS
+
         # The lastest output arrays of the forward() function.
         self._a0 = None
+        self._ac = None
         self._al = []
                 
     def _rset(self, key, value, force=False):
@@ -280,7 +286,7 @@ class Sound(object):
         o = copy.copy(self)
         
         for k, v in o.__dict__.items():
-            if isinstance(v, Sound):
+            if isinstance(v, Sound) and not v.shared:
                 setattr(o, k, v.copy())
                 
         return o
@@ -288,39 +294,64 @@ class Sound(object):
     def reset(self):
         
         self.index = 0
+
+        self._done = 0
         self._a0 = None
+        self._ac = None
+        self._al = []
         
         self._ccall('reset')
         
-    def _consume(self, frames, channels=2, *args, **kwargs):
-        
-        self._rset('frames', frames)
-        
-        a0 = self(*args, **kwargs)
-        a0 = _expand_channels(a0, channels)
-        
-        if channels == 2:
-            return a0 * _ampan(self.velocity / 128 * self.amp, self.pan)
-        
-        return self.velocity / 128 * self.amp * a0
-
     @property
     def done(self):
         
         if self.index < FPS / 8:
             return False
         
-        if self._a0 is None:
+        if self._a0 is None or self._ac is None:
             return False
         
-        return np.abs(self._a0).max() < 1e-4
+        if not self._done:
+            if np.abs(self._a0).max() < 1e-4:
+                self._done = self.index or 1
+                self._a0 = self._a0 * 0
+                self._ac = self._ac * 0
+
+            return False
+
+        if not self.get_effects():
+            return True
+            
+        if self.index - self._done < self._done_decay:
+            return False
+
+        return True
         
+    def _consume(self, frames, channels=2, *args, **kwargs):
+        
+        self._rset('frames', frames)
+        
+        a0 = self(*args, **kwargs)
+
+        if not self._done or self._ac is None:
+
+            a0 = _expand_channels(a0, channels)
+            
+            if channels == 2:
+                self._ac = a0 * _ampan(self.velocity / 128 * self.amp, self.pan)
+            else:
+                self._ac = self.velocity / 128 * self.amp * a0
+
+        return self._ac
+
     def __call__(self, *args, **kwargs):
         
         assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
         
-        self._a0 = self.forward(*args, **kwargs)
-        self.index += self.frames
+        if not self._done or self._a0 is None:
+            self._a0 = self.forward(*args, **kwargs)
+
+        self.index += len(self._a0)
         
         if DEBUG:
             self._al = self._al[-255:] + [self._a0]
@@ -349,6 +380,9 @@ class Sound(object):
     @note.setter
     def note(self, value):
         self.key = note2key(value) if type(value) is str else value
+
+    def get_effects(self):
+        pass
 
 
 class Gate(Sound):
@@ -427,7 +461,8 @@ class GatedSound(Sound):
     
     def __init__(self, amp=1., pan=0., duration=None):
         
-        super(GatedSound, self).__init__(amp, pan)
+        super(GatedSound, self).__init__(amp=amp, pan=pan)
+
         self.gate = Gate()
 
         self.duration = duration
@@ -761,11 +796,10 @@ class Oscillator(Sound):
     
     def __init__(self, shape='sine', freq=262., key=None, phase=0., sign=1, duty=0.5, **kwargs):
         
-        super(Oscillator, self).__init__()
+        super(Oscillator, self).__init__(freq=freq)
         
         self.shape = shape
         self.phase = phase
-        self.freq = freq
         
         if key is not None:
             self.key = key
@@ -935,7 +969,7 @@ def fftnoise(freqs):
 
 class PhaseModulator(Sound):
     
-    def __init__(self, beta=1.):
+    def __init__(self, beta=1., shared=False):
         """A sort of phase modulator.
         
         It can be used for aproximate frequency modulation by using the 
@@ -943,7 +977,7 @@ class PhaseModulator(Sound):
         balanced so its cumsum does not drift.
         """
         
-        super(PhaseModulator, self).__init__()
+        super().__init__(shared=shared)
         
         self.beta = beta
         
@@ -951,9 +985,10 @@ class PhaseModulator(Sound):
         
     def reset(self):
         
-        super(PhaseModulator, self).reset()
+        super().reset()
         
-        self._buffer = None
+        if not self.shared:
+            self._buffer = None
         
     def forward(self, carrier, signal):
         
