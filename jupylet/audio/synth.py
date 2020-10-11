@@ -41,7 +41,7 @@ class Synth(GatedSound):
     
     def __init__(self, amp=1., pan=0., duration=None):
         
-        super(Synth, self).__init__(amp, pan, duration)
+        super().__init__(amp, pan, duration)
 
         self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
         self.osc0 = Oscillator('sine', 4)
@@ -60,7 +60,7 @@ class Synth(GatedSound):
     def play(self, note=None, **kwargs):
         #logger.info('Enter Synth.play(note=%r, **kwargs=%r).', note, kwargs)
 
-        super(Synth, self).play(note, **kwargs)        
+        super().play(note, **kwargs)        
         self.osc1.freq = self.freq      
         
 
@@ -68,7 +68,7 @@ class Drums(GatedSound):
     
     def __init__(self, amp=2., pan=0., duration=0.02):
         
-        super(Drums, self).__init__(amp, pan, duration)
+        super().__init__(amp, pan, duration)
 
         self.env0 = Envelope(0.01, 0., 1., 0.3, linear=False)
         self.noise = Noise()
@@ -100,7 +100,7 @@ class Chorus(Sound):
         self.depth = depth
 
         self.osc = Oscillator('tri', freq=7)
-        self.phm = PhaseModulator(shared=shared)
+        self.phm = PhaseModulator()
 
     def forward(self, x):
 
@@ -148,7 +148,7 @@ class Hammond(GatedSound):
         self.configuration = configuration
         
         self.reve = SchroederReverb(mix=0.25, rt=0.750, shared=True) 
-        self.over = Overdrive(gain=2., shared=True)
+        self.over = Overdrive(gain=4., shared=True)
         self.chor = Chorus(shared=True)
 
         self.leak = Noise(noise_color.violet)
@@ -169,7 +169,7 @@ class Hammond(GatedSound):
         self.reverb = True
         self.overdrive = True
 
-        self.leak_gain = 0.06
+        self.leak_gain = 0.05
 
         self.precussion = True
         self.precussion_gain = 1.5
@@ -243,7 +243,7 @@ class TB303(GatedSound):
     
     def __init__(self, resonance=1., amp=1., pan=0., duration=None):
         
-        super(TB303, self).__init__(amp, pan, duration)
+        super().__init__(amp, pan, duration)
                 
         self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
         self.env1 = Envelope(0., 2., 0., 2., linear=False)

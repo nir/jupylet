@@ -44,15 +44,15 @@ class BaseFilter(Sound):
     
     def __init__(self, freq=8192):
         
-        super(BaseFilter, self).__init__(freq=freq)
+        super().__init__(freq=freq)
         
         self._f = None
         self._x = None
         self._z = None
 
-    def reset(self):
+    def reset(self, shared=False):
         
-        super(BaseFilter, self).reset()
+        super().reset(shared)
 
         self._f = None
         self._x = None
@@ -115,7 +115,7 @@ class ButterFilter(BaseFilter):
     
     def __init__(self, freq=8192, btype='lowpass', db=24, bandwidth=500, output='ba'):
         
-        super(ButterFilter, self).__init__(freq)
+        super().__init__(freq)
         
         self.bandwidth = bandwidth
         self.output = output
@@ -195,7 +195,7 @@ class PeakFilter(BaseFilter):
     
     def __init__(self, freq=8192, q=10.):
         
-        super(PeakFilter, self).__init__(freq)
+        super().__init__(freq)
         
         self.q = q
 

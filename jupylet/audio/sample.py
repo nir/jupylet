@@ -159,7 +159,7 @@ class Sample(GatedSound):
         duration=None,
     ):
         
-        super(Sample, self).__init__(amp, pan, duration)
+        super().__init__(amp, pan, duration)
         
         self.env0 = Envelope(0., 0., 1., 1., linear=False)
 
@@ -181,9 +181,9 @@ class Sample(GatedSound):
             pitch_keycenter = None,
         )
         
-    def reset(self):
+    def reset(self, shared=False):
         
-        super(Sample, self).reset()
+        super().reset(shared)
         
         self.phase = 0
         

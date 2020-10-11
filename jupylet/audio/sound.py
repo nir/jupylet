@@ -187,8 +187,6 @@ class Sound(object):
 
     def __init__(self, freq=262, amp=0.33, pan=0., shared=False):
         
-        self.shared = shared
-        
         self.freq = freq
         
         # MIDI attribute corresponding to velocity of pressed key,
@@ -206,6 +204,10 @@ class Sound(object):
 
         # The frame counter.
         self.index = 0
+        
+        self._buffer = None
+
+        self._shared = shared
         
         self._done = 0
         self._done_decay = 3 * FPS
@@ -255,7 +257,7 @@ class Sound(object):
     def play(self, note=None, **kwargs):
         #logger.info('Enter Sample.play(note=%r, **kwargs=%r).', note, kwargs)
         
-        self.reset()
+        self.reset(self._shared)
         
         if note is not None:
             self.note = note
@@ -286,21 +288,24 @@ class Sound(object):
         o = copy.copy(self)
         
         for k, v in o.__dict__.items():
-            if isinstance(v, Sound) and not v.shared:
+            if isinstance(v, Sound) and not v._shared:
                 setattr(o, k, v.copy())
                 
         return o
        
-    def reset(self):
+    def reset(self, shared=False):
         
         self.index = 0
+
+        if not shared:
+            self._buffer = None 
 
         self._done = 0
         self._a0 = None
         self._ac = None
         self._al = []
         
-        self._ccall('reset')
+        self._ccall('reset', shared=shared or self._shared)
         
     @property
     def done(self):
@@ -327,7 +332,7 @@ class Sound(object):
 
         return True
         
-    def _consume(self, frames, channels=2, *args, **kwargs):
+    def consume(self, frames, channels=2, *args, **kwargs):
         
         self._rset('frames', frames)
         
@@ -397,14 +402,14 @@ class Gate(Sound):
     """
     def __init__(self):
         
-        super(Gate, self).__init__()
+        super().__init__()
         
         self.states = []
         self.opened = False
 
-    def reset(self):
+    def reset(self, shared=False):
         
-        super(Gate, self).reset()
+        super().reset(shared)
         
         self.states = []
         self.opened = False
@@ -461,7 +466,7 @@ class GatedSound(Sound):
     
     def __init__(self, amp=1., pan=0., duration=None):
         
-        super(GatedSound, self).__init__(amp=amp, pan=pan)
+        super().__init__(amp=amp, pan=pan)
 
         self.gate = Gate()
 
@@ -546,7 +551,7 @@ class Envelope(Sound):
         linear=True,
     ):
         
-        super(Envelope, self).__init__()
+        super().__init__()
         
         self.attack = attack
         self.decay = decay
@@ -559,9 +564,9 @@ class Envelope(Sound):
         self._valu0 = 0
         self._valu1 = 0
         
-    def reset(self):
+    def reset(self, shared=False):
         
-        super(Envelope, self).reset()
+        super().reset(shared)
         
         self._state = None
         self._start = 0
@@ -796,7 +801,7 @@ class Oscillator(Sound):
     
     def __init__(self, shape='sine', freq=262., key=None, phase=0., sign=1, duty=0.5, **kwargs):
         
-        super(Oscillator, self).__init__(freq=freq)
+        super().__init__(freq=freq)
         
         self.shape = shape
         self.phase = phase
@@ -859,7 +864,7 @@ class Noise(Sound):
     
     def __init__(self, color=noise_color.white):
         
-        super(Noise, self).__init__()
+        super().__init__()
         
         self.color = color
         self.state = None
@@ -980,16 +985,7 @@ class PhaseModulator(Sound):
         super().__init__(shared=shared)
         
         self.beta = beta
-        
-        self._buffer = None
-        
-    def reset(self):
-        
-        super().reset()
-        
-        if not self.shared:
-            self._buffer = None
-        
+                
     def forward(self, carrier, signal):
         
         signal = signal.mean(-1).clip(-1, 1)

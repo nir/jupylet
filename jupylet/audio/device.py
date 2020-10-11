@@ -275,7 +275,7 @@ def _mix_sounds(sounds, frames):
 
 def _mix_sounds0(sounds, frames):
 
-    al = [s._consume(frames) for s in sounds]
+    al = [s.consume(frames) for s in sounds]
     return np.stack(al).sum(0)
 
 
