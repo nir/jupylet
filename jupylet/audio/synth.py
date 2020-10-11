@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class Synth(GatedSound):
     
-    def __init__(self, amp=1., pan=0., duration=None):
+    def __init__(self, amp=0.33, pan=0., duration=None):
         
         super().__init__(amp, pan, duration)
 
@@ -63,11 +63,11 @@ class Synth(GatedSound):
 
 class Drums(GatedSound):
     
-    def __init__(self, amp=2., pan=0., duration=0.02):
+    def __init__(self, amp=0.33, pan=0.):
         
-        super().__init__(amp, pan, duration)
+        super().__init__(amp, pan)
 
-        self.env0 = Envelope(0.01, 0., 1., 0.3, linear=False)
+        self.env0 = Envelope(0.002, 0.15, 0., 0., linear=False)
         self.noise = Noise()
                 
     def forward(self):
@@ -238,7 +238,7 @@ class Hammond(GatedSound):
 
 class TB303(GatedSound):
     
-    def __init__(self, resonance=1., amp=1., pan=0., duration=None):
+    def __init__(self, resonance=1., amp=0.33, pan=0., duration=None):
         
         super().__init__(amp, pan, duration)
                 
