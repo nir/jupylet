@@ -462,6 +462,18 @@ class Gate(Sound):
         self.states.append((t, event))
 
 
+_note_length = 1.
+
+
+def set_note_length(t=1):
+    global _note_length
+    _note_length = t
+
+
+def get_note_length():
+    return _note_length
+
+
 class GatedSound(Sound):
     
     def __init__(self, amp=1., pan=0., duration=None):
@@ -471,22 +483,41 @@ class GatedSound(Sound):
         self.gate = Gate()
 
         self.duration = duration
+        self.note_length = None
         
     @property
     def done(self):
         return Sound.done.fget(self) if self.gate.opened else False
 
-    def play(self, note=None, **kwargs):
+    def get_note_length(self):
+        return self.note_length or get_note_length()
+
+    def play_new(self, note=None, duration=None, **kwargs):
+        """Play new copy of sound.
+
+        If sound is already playing it will play the new copy in parallel. 
+        
+        Returns:
+            Sound object: The newly copied and playing sound object.
+        """
+        o = self.copy()
+        o.play(note, duration, **kwargs)
+
+        return o
+
+    def play(self, note=None, duration=None, **kwargs):
+
+        if duration is None:
+            duration = self.duration
 
         t = kwargs.pop('t', None)
         dt = kwargs.pop('dt', 0)
-        dur = kwargs.pop('duration', self.duration)
 
         super().play(note, **kwargs)
         self.gate.open(t, dt)
 
-        if dur is not None:
-            self.gate.close(dt=dur)
+        if duration is not None:
+            self.gate.close(dt=duration * self.get_note_length())
         
     def play_release(self, **kwargs):
 

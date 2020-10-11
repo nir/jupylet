@@ -74,7 +74,7 @@ def use(synth, **kwargs):
     syd[hh] = synth
 
 
-def play(note, **kwargs):
+def play(note, *args, **kwargs):
 
     cf = callerframe()
     cn = cf.f_code.co_name
@@ -82,7 +82,7 @@ def play(note, **kwargs):
 
     sy = syd[hh]
 
-    return sy.play_new(note, **kwargs)
+    return sy.play_new(note, *args, **kwargs)
 
 
 def sleep(dt=0):
@@ -92,6 +92,10 @@ def sleep(dt=0):
     cf = callerframe()
     cn = cf.f_code.co_name
     hh = cn if cn == '<module>' else hash(cf) 
+
+    sy = syd.get(hh)
+    if sy is not None:
+        dt = dt * sy.get_note_length()
 
     t0 = dtd.get(hh) or tt
     t1 = dtd[hh] = max(t0 + dt, tt)

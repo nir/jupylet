@@ -48,7 +48,9 @@ class Synth(GatedSound):
         self.osc1 = Oscillator('tri')
                 
     def forward(self):
-        
+
+        self.osc1.freq = self.freq
+
         g0 = self.gate()        
         e0 = self.env0(g0)
                 
@@ -57,12 +59,6 @@ class Synth(GatedSound):
         
         return o1 * e0
 
-    def play(self, note=None, **kwargs):
-        #logger.info('Enter Synth.play(note=%r, **kwargs=%r).', note, kwargs)
-
-        super().play(note, **kwargs)        
-        self.osc1.freq = self.freq      
-        
 
 class Drums(GatedSound):
     
