@@ -38,7 +38,7 @@ import scipy.signal
 import numpy as np
 
 from ..utils import settable, Dict
-from ..audio import FPS, t2frames, frames2t
+from ..audio import FPS, t2frames, frames2t, get_time
 
 from .device import add_sound, get_schedule
 from .device import set_device_latency, get_device_latency_ms
@@ -69,10 +69,6 @@ def get_latency_ms():
     return _latency * 1000
 
     
-def get_time():
-    return time.time()
-
-
 def _expand_channels(a0, channels):
 
     if len(a0.shape) == 1:
@@ -444,7 +440,8 @@ class Gate(Sound):
         self.schedule('close', t, dt)
         
     def schedule(self, event, t=None, dt=None):
-        
+        logger.debug('Enter Gate.schedule(event=%r, t=%r, dt=%r).', event, t, dt)
+
         if not self.states:
             last_t = get_time()
         else:
@@ -511,7 +508,7 @@ class GatedSound(Sound):
             duration = self.duration
 
         t = kwargs.pop('t', None)
-        dt = kwargs.pop('dt', 0)
+        dt = kwargs.pop('dt', None)
 
         super().play(note, **kwargs)
         self.gate.open(t, dt)
@@ -522,7 +519,7 @@ class GatedSound(Sound):
     def play_release(self, **kwargs):
 
         t = kwargs.pop('t', None)
-        dt = kwargs.pop('dt', 0)
+        dt = kwargs.pop('dt', None)
 
         self.set(**kwargs)
         self.gate.close(t, dt)

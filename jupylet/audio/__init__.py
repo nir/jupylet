@@ -56,7 +56,11 @@ def frames2t(frames):
         float: The time duration in seconds.
     """
     return frames  / FPS
-    
+
+
+def get_time():
+    return time.time()
+  
 
 dtd = {}
 syd = {}
@@ -74,6 +78,9 @@ def use(synth, **kwargs):
     syd[hh] = synth
 
 
+PLAY_EXTRA_LATENCY = 0.150
+
+
 def play(note, *args, **kwargs):
 
     cf = callerframe()
@@ -81,13 +88,16 @@ def play(note, *args, **kwargs):
     hh = cn if cn == '<module>' else hash(cf) 
 
     sy = syd[hh]
+    
+    tt = dtd.get(hh) or get_time()
+    tt += PLAY_EXTRA_LATENCY
 
-    return sy.play_new(note, *args, **kwargs)
+    return sy.play_new(note, t=tt, *args, **kwargs)
 
 
 def sleep(dt=0):
     
-    tt = time.time()
+    tt = get_time()
 
     cf = callerframe()
     cn = cf.f_code.co_name

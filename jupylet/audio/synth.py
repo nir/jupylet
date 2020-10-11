@@ -27,7 +27,8 @@
 
 import logging
 
-from .sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color, PhaseModulator
+from .sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color
+from .sound import PhaseModulator, note
 from .effects import SchroederReverb, Overdrive
 from .filters import ResonantFilter
 
