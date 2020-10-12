@@ -62,6 +62,30 @@ def get_time():
     return time.time()
   
 
+_note_value = 4
+
+
+def set_note_value(v=4):
+    global _note_value
+    _note_value = v
+
+
+def get_note_value():
+    return _note_value
+
+
+_bpm = 240
+
+
+def set_bpm(bpm=4):
+    global _bpm
+    _bpm = bpm
+
+
+def get_bpm():
+    return _bpm
+
+
 dtd = {}
 syd = {}
 
@@ -105,7 +129,7 @@ def sleep(dt=0):
 
     sy = syd.get(hh)
     if sy is not None:
-        dt = dt * sy.get_note_length()
+        dt = dt * get_note_value() * 60 / get_bpm()
 
     t0 = dtd.get(hh) or tt
     t1 = dtd[hh] = max(t0 + dt, tt)

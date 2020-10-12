@@ -38,8 +38,9 @@ import scipy.signal
 import numpy as np
 
 from ..utils import settable, Dict
-from ..audio import FPS, t2frames, frames2t, get_time
+from ..audio import FPS, t2frames, frames2t, get_time, get_bpm, get_note_value
 
+from .note import note2key, key2note
 from .device import add_sound, get_schedule
 from .device import set_device_latency, get_device_latency_ms
 
@@ -52,6 +53,11 @@ DEBUG = False
 EPSILON = 1e-6
 
 
+#
+# Played sounds are schedulled a little into the future so as to start at a 
+# particular planned moment in time rather than at the arbitrary time of the 
+# start of the next sound buffer.
+#
 _latency = get_device_latency_ms() / 1000
 
 
@@ -83,6 +89,11 @@ def _expand_channels(a0, channels):
     return a0
 
 
+#
+# A helper function to amplify and pan (balance) audio between the left and
+# right channels.
+#
+
 #@functools.lru_cache(maxsize=1024)
 def _ampan(amp, pan):
     return np.array([1 - pan, 1 + pan]) * (amp / 2)
@@ -108,73 +119,6 @@ def freq2key(freq):
     else:
         return (math.log(freq) - _LOG_CX) / _LOG_CC
         
-
-_notes = dict(
-    C = 1,
-    Cs = 2, Db = 2,
-    D = 3,
-    Ds = 4, Eb = 4,
-    E = 5,
-    F = 6,
-    Fs = 7, Gb = 7,
-    G = 8, 
-    Gs = 9, Ab = 9,
-    A = 10,
-    As = 11, Bb = 11,
-    B = 12,
-)
-
-
-class note(object):
-    pass
-
-
-for o in range(8):
-    for n, k in _notes.items():
-        no = (n + str(o)).rstrip('0')
-        setattr(note, no, k + 11 + 12 * (o if o else 4))
-
-
-def note2key(note):
-    
-    if note[-1].isdigit():
-        octave = int(note[-1])
-        note = note[:-1]
-    else:
-        octave = 4
-        
-    note = note.replace('#', 's')
-    return _notes[note] + octave * 12 + 11
-
-
-def key2note(key):
-    """Convert keyboard key to note. e.g. 60 to 'C4'.
-
-    Args:
-        key (float): keyboard key to convert.
-
-    Returns:
-        str: A string representing the note. In the conversion process
-            the floating point key will be rounded in a special way that 
-            preserves the nearest note to the key. e.g. 60.9 and 61.1 
-            will converted to Cs4, Db4 respectively.
-    """ 
-    i = (key - 11) % 12 
-
-    octave = (round(key) - 12) // 12
-
-    n0, i0 = 'B', 0
-
-    for n1, i1 in _notes.items():
-        if i <= i1:
-            break
-
-        n0, i0 = n1, i1
-    
-    note = n0 if i1 - i > 0.5 else n1
-    
-    return note + str(int(octave))
-
 
 class Sound(object):
     """The base class for all other sound classes, including audio samples, 
@@ -203,10 +147,16 @@ class Sound(object):
         
         self._buffer = None
 
+        # Indicate if sound is shared by multiple sounds. For example
+        # an effect may be shared by multiple sounds. This affects how it 
+        # should react to reset() calls.
         self._shared = shared
         
+        # A somewhat brittle mechanism to force a note to keep "playing"
+        # for a few seconds after it's done, so a shared effect may still
+        # be applied to it (for example in the case of a long reverb).
         self._done = 0
-        self._done_decay = 3 * FPS
+        self._done_decay = 5 * FPS
 
         # The lastest output arrays of the forward() function.
         self._a0 = None
@@ -234,6 +184,7 @@ class Sound(object):
             if isinstance(s, Sound):
                 getattr(s, name)(*args, **kwargs)
                 
+    # Switch sound envelope to release phase.
     def play_release(self, release=None):
         pass
         
@@ -258,8 +209,11 @@ class Sound(object):
         if note is not None:
             self.note = note
 
+        # This mechanism allows the play() function to modify any of the 
+        # sound properties before playing.
         self.set(**kwargs)
-              
+
+        # Send sound to audio device for playing. 
         add_sound(self)
 
     def set(self, **kwargs):
@@ -270,6 +224,8 @@ class Sound(object):
     
         return self
 
+    # TODO: This mechanism is probably wrong since it shallow copies
+    # all kind of buffers and this is asking for trouble. fix it.
     def copy(self):
         """Create a copy of sound object.
 
@@ -293,6 +249,10 @@ class Sound(object):
         
         self.index = 0
 
+        # When a sound (effect) is shared by multiple other sounds, its state
+        # should not be reset in the usual way. However this is probably not 
+        # correctly implemented. For example, the self.index should probably 
+        # not reset either - need to think about this more.
         if not shared:
             self._buffer = None 
 
@@ -306,6 +266,19 @@ class Sound(object):
     @property
     def done(self):
         
+        # The done() function is used by the sound device to determine when
+        # a playing sound may be considered done and discarded.
+        # There are various criteria and the logic is probably brittle and 
+        # needs to be considered again and simplified.
+        #
+        # The general idea is to consider a sound done if after it has played
+        # for a while, it becomes nearly zero for an entire output buffer
+        # length. 
+        #
+        # However, in the case effects are applied to the sound, it may be
+        # needed around for a while longer even if its output has become 
+        # zero. For example in the case of a reverb effect.
+
         if self.index < FPS / 8:
             return False
         
@@ -328,11 +301,20 @@ class Sound(object):
 
         return True
         
+    #
+    # This is the function called by the sound device to compute the next
+    # *frames* to be sent to the sound device for playing.
+    #
+
     def consume(self, frames, channels=2, *args, **kwargs):
         
         self._rset('frames', frames)
         
         a0 = self(*args, **kwargs)
+
+        # The following mechanism is a brittle way to minimize the
+        # computation time in case the sound is done but is kept around for 
+        # an effect applied to it.
 
         if not self._done or self._ac is None:
 
@@ -359,10 +341,14 @@ class Sound(object):
 
         return self._a0
 
+    # This is for debugging.
     @property
     def _a1(self):
         return np.concatenate(self._al)
 
+    #
+    # The pytorch style forward function to compute the next sound buffer.
+    #
     def forward(self, *args, **kwargs):
         return np.zeros((self.frames,))
     
@@ -412,6 +398,11 @@ class Gate(Sound):
 
     def forward(self):
         
+        #
+        # open/close events are scheduled in terms of absolute time. Here these 
+        # timestamps are converted into a frame index.
+        #
+
         states = []
         end = self.index + self.frames
         
@@ -459,35 +450,19 @@ class Gate(Sound):
         self.states.append((t, event))
 
 
-_note_length = 1.
-
-
-def set_note_length(t=1):
-    global _note_length
-    _note_length = t
-
-
-def get_note_length():
-    return _note_length
-
-
 class GatedSound(Sound):
     
-    def __init__(self, amp=1., pan=0., duration=None):
+    def __init__(self, amp=0.33, pan=0., duration=None):
         
         super().__init__(amp=amp, pan=pan)
 
         self.gate = Gate()
 
         self.duration = duration
-        self.note_length = None
         
     @property
     def done(self):
         return Sound.done.fget(self) if self.gate.opened else False
-
-    def get_note_length(self):
-        return self.note_length or get_note_length()
 
     def play_new(self, note=None, duration=None, **kwargs):
         """Play new copy of sound.
@@ -514,7 +489,7 @@ class GatedSound(Sound):
         self.gate.open(t, dt)
 
         if duration is not None:
-            self.gate.close(dt=duration * self.get_note_length())
+            self.gate.close(dt=duration * get_note_value() * 60 / get_bpm())
         
     def play_release(self, **kwargs):
 
@@ -524,6 +499,13 @@ class GatedSound(Sound):
         self.set(**kwargs)
         self.gate.close(t, dt)
 
+
+#
+# An envelope curve may span multiple buffers and it is therefore generated
+# piece by piece. The code to do that is very delicate. Be extra careful to 
+# modify it. Computations appeared to require float64 precision (!) since in 
+# float32 they occasionally emit buffers of the wrong length.
+#
 
 def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01):
     """Compute a section of an exponential envelope curve.
@@ -568,6 +550,10 @@ def get_linear_adsr_curve(dt, start=0, end=None):
     return a0
 
 
+#
+# Envelopes are currently the only consumers of gate open/close signals.
+#
+
 class Envelope(Sound):
     
     def __init__(
@@ -585,10 +571,22 @@ class Envelope(Sound):
         self.decay = decay
         self.sustain = sustain
         self.release = release
+
+        # Linear or exponential envelope curve.
         self.linear = linear
         
+        # The current state of the envelope, one of attack, decay, ...
         self._state = None
+
+        # The first frame index of the current envelope state.
         self._start = 0
+
+        #
+        # Pure envelope curves go from 0 to 1, but in practice a curve may go
+        # from arbitrary level A to level B. e.g. release may start at sustain
+        # level and go down to 0. The following two properties are use to 
+        # implement this.
+        #
         self._valu0 = 0
         self._valu1 = 0
         
@@ -606,6 +604,12 @@ class Envelope(Sound):
         end = self.index + self.frames
         index = self.index
         
+        # TODO: This code assumes the envelope frame index and the gate frame
+        # index are synchronized (the same). In practice this is correct, but
+        # it should not be assumed. Instead the gate itself should include 
+        # its buffer start and end index. also, in this way there will be no 
+        # need to add the end (continue) index artificially here.
+
         states = states + [(end, 'continue')]
         curves = []
         

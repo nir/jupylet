@@ -28,9 +28,11 @@
 import logging
 
 from .sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color
-from .sound import PhaseModulator, note
+from .sound import PhaseModulator
 from .effects import SchroederReverb, Overdrive
 from .filters import ResonantFilter
+
+from ..audio import note
 
 import numpy as np
 

@@ -41,9 +41,10 @@ from jupylet.sprite import Sprite
 
 from jupylet.audio.device import get_oscilloscope_as_image
 from jupylet.audio.sample import Sample
-from jupylet.audio.sound import note
 from jupylet.audio.synth import tb303
 from jupylet.audio import use, play, sleep
+
+from jupylet.audio import note
 
 
 app = App(width=512, height=420)#, log_level=logging.INFO)
@@ -192,31 +193,31 @@ xylo.amp = 8
 @app.sonic_live_loop
 async def loop0():
             
-    use(tb303, duration=1.7, amp=0.4)
+    use(tb303, duration=2, amp=0.33)
 
-    play('C2')
-    await sleep(3.)
+    play(note.C4)
+    await sleep(3)
 
-    play('E2')
-    await sleep(3.)
+    play(note.E4)
+    await sleep(3)
 
-    play('C2')
-    await sleep(6.)
+    play(note.C4)
+    await sleep(6)
 
 
 @app.sonic_live_loop
 async def loop1():
     
-    use(xylo, duration=1., amp=8)
+    use(xylo, amp=8)
         
     play(note.C5)
-    await sleep(1.)
+    await sleep(1)
 
     play(note.E5)
-    await sleep(1.)
+    await sleep(1)
 
     play(note.G5)
-    await sleep(1.)
+    await sleep(1)
 
 
 if __name__ == '__main__':

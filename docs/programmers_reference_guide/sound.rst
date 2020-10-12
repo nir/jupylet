@@ -20,13 +20,13 @@ Power up *Jupylet's* audio with the following import statement:
 .. code-block:: python
 
     from jupylet.audio.synth import tb303
-    from jupylet.audio.sound import note
+    from jupylet.audio.note import *
 
 And let's start by playing a simple note:
 
 .. code-block:: python
 
-    tb303.play(note.C4, duration=1)
+    tb303.play(C4)
 
 
 
