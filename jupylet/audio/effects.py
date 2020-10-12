@@ -55,7 +55,7 @@ class ConvolutionReverb(Sound):
         path,
         compress=True,
         fidelity=256,
-        buffer_size=1024, 
+        buffer_size=0, 
         shared=False,
     ):
         

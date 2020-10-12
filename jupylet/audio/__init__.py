@@ -131,7 +131,10 @@ def sleep(dt=0):
     if sy is not None:
         dt = dt * get_note_value() * 60 / get_bpm()
 
-    t0 = dtd.get(hh) or tt
+    t0 = dtd.get(hh)
+    if not t0 or t0 + 1 < tt:
+        t0 = tt
+
     t1 = dtd[hh] = max(t0 + dt, tt)
 
     return asyncio.sleep(t1 - tt)

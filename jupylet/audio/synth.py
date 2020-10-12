@@ -147,7 +147,7 @@ class Hammond(GatedSound):
         self.configuration = configuration
         
         self.reve = SchroederReverb(mix=0.25, rt=0.750, shared=True) 
-        self.over = Overdrive(gain=4., shared=True)
+        self.over = Overdrive(gain=4., amp=0.25, shared=True)
         self.chor = Chorus(shared=True)
 
         self.leak = Noise(noise_color.violet)
@@ -190,12 +190,10 @@ class Hammond(GatedSound):
 
         return tuple(el)
 
-    @property
-    def vibrato_and_chorus(self):
+    def get_vibrato_and_chorus(self):
         return self.chor.vibrato_and_chorus
 
-    @vibrato_and_chorus.setter
-    def vibrato_and_chorus(self, v):
+    def set_vibrato_and_chorus(self, v):
         self.chor.vibrato_and_chorus = v
 
     def parse_configuration(self, c):
@@ -237,6 +235,9 @@ class Hammond(GatedSound):
         
         return a2
                
+
+hammond = Hammond()
+
 
 class TB303(GatedSound):
     
