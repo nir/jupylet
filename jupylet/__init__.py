@@ -32,7 +32,7 @@ import os
 from .env import is_remote, start_xvfb, has_display
 
 
-VERSION = '0.9.0.dev'
+VERSION = '0.8.0.dev'
 
 
 if platform.system() == 'Linux' and not has_display():
