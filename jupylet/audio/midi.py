@@ -111,7 +111,7 @@ def simple_midi_callback(msg):
 
         if msg.velocity != 0 and _sound is not None:
             _keyd[msg.note] = _sound.play_new(key=msg.note, velocity=msg.velocity)
-            
-        elif msg.note in _keyd:
-            _keyd[msg.note].play_release()
+
+    elif msg.note in _keyd:
+        _keyd[msg.note].play_release()
 
