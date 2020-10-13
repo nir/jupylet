@@ -216,6 +216,7 @@ _sounds1 = []
 
 
 def stop_sound():
+    _sounds0.clear()
     _sounds1.clear()
 
 
