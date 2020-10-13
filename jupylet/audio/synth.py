@@ -99,17 +99,15 @@ class Chorus(Sound):
         self.depth = depth
 
         self.osc = Oscillator('tri', freq=7)
-        self.phm = PhaseModulator()
+        self.phm = PhaseModulator(beta=0.85*44.1)
 
     def forward(self, x):
 
         if self.mix <= 0:
             return x
 
-        self.phm.beta = 44 * 0.85 * self.depth
-
         vo = self.osc()
-        vb = self.phm(x, vo)     
+        vb = self.phm(x, vo * self.depth)     
 
         return x * (1 - self.mix) + vb * self.mix
 

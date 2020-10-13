@@ -26,9 +26,24 @@
 
 
 import asyncio
+import pathlib
 import time
+import os
 
-from ..utils import callerframe
+from ..utils import callerframe, callerpath
+
+
+def sonic_py(resource_dir='.'):
+
+    from ..app import App
+
+    red = os.path.join(callerpath(), resource_dir)
+    red = pathlib.Path(red).absolute()
+
+    app = App(32, 32, resource_dir=str(red))
+    app.run(0)
+    
+    return app
 
 
 FPS = 44100
@@ -138,4 +153,10 @@ def sleep(dt=0):
     t1 = dtd[hh] = max(t0 + dt, tt)
 
     return asyncio.sleep(t1 - tt)
+
+
+def stop():
+    
+    from .device import stop_sound
+    stop_sound()
 

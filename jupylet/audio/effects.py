@@ -46,8 +46,6 @@ from .sound import Sound
 logger = logging.getLogger(__name__)
     
 
-# TODO: fix buffering
-
 class ConvolutionReverb(Sound):
     
     def __init__(
@@ -74,7 +72,6 @@ class ConvolutionReverb(Sound):
         self._buffi = None
         self._state = None
         self._buffo = None
-        self._zeros = 0
         
     def forward(self, x):
         
@@ -87,27 +84,29 @@ class ConvolutionReverb(Sound):
             self._buffo = np.zeros((self.buffer_size, nchannels))
             
         self._buffi = np.concatenate((self._buffi, x))
-        
-        bsize = self.buffer_size if self.buffer_size else len(x)
+        bsize = max(self.buffer_size, len(x))
 
         if len(self._buffi) >= bsize:
             
-            a0, self._buffi = self._buffi[:bsize], self._buffi[bsize:]
+            a0, self._buffi = self._buffi, self._buffi[:0]
             
             if np_is_zero(a0):
-                self._zeros += len(a0)
+                a1 = a0
+
             else:
-                self._zeros = 0
-                
-            if self._zeros < len(self._ir) + bsize:
-                a0 = scipy.signal.fftconvolve(
+                a1 = scipy.signal.fftconvolve(
                     a0.astype('float32'), 
                     self._ir, 
                     axes=0
                 ).astype('float64')
-                a0[:len(self._state)] += self._state
-            
-            a1, self._state = a0[:bsize], a0[bsize:]
+
+            if len(a1) >= len(self._state):
+                a1[:len(self._state)] += self._state
+            else:
+                self._state[:len(a1)] += a1
+                a1 = self._state
+
+            a1, self._state = a1[:len(a0)], a1[len(a0):]
             self._buffo = np.concatenate((self._buffo, a1))
         
         a2, self._buffo = self._buffo[:len(x)], self._buffo[len(x):]
@@ -175,6 +174,7 @@ class CombFilter(Sound):
             al = [self.forward(x[i:i+mm]) for i in range(0, lx, mm)]
             return np.concatenate(al)
 
+        # note buffer expects constant input number of channels.
         if self._buffer is None:
             self._buffer = np.zeros((mm, x.shape[-1]))
         
@@ -219,6 +219,7 @@ class AllpassFilter(Sound):
             al = [self.forward(x[i:i+mm]) for i in range(0, lx, mm)]
             return np.concatenate(al)
 
+        # note buffer expects constant input number of channels.
         if self._buffer is None:
             self._buffer = np.zeros((mm, x.shape[-1]))
         

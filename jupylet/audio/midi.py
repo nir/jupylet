@@ -50,6 +50,7 @@ _port = None
 
 
 def midi_port_handler(*args):
+    logger.debug('Enter midi_port_handler(*args=%r).', args)
     
     global _port
     
@@ -79,6 +80,7 @@ _callback = None
 
 
 def set_midi_callback(callback):
+    logger.info('Enter set_midi_callback(callback=%r).', callback)
 
     global _callback
     global _port
@@ -93,6 +95,7 @@ _sound = None
 
 
 def set_midi_sound(s):
+    logger.info('Enter set_midi_sound(s=%r).', s)
 
     global _sound
     _sound = s
@@ -102,6 +105,7 @@ _keyd = {}
 
 
 def simple_midi_callback(msg):
+    #logger.debug('Enter simple_midi_callback(msg=%r).', msg)
 
     if msg.type == 'note_on':
 

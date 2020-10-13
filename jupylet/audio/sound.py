@@ -224,8 +224,6 @@ class Sound(object):
     
         return self
 
-    # TODO: This mechanism is probably wrong since it shallow copies
-    # all kind of buffers and this is asking for trouble. fix it.
     def copy(self):
         """Create a copy of sound object.
 
@@ -233,6 +231,9 @@ class Sound(object):
         the entire tree of child sound objects, but shallow-copies the other
         properties of each sound object in the tree. The motivation is to 
         avoid creating unnecessary copies of numpy buffers.
+
+        However, this means it should be followed by a reset() call on 
+        the newly copied sound to prevent unintentionally sharing buffers.
 
         Returns:
             Sound object: new copy of sound object. 
@@ -247,6 +248,7 @@ class Sound(object):
        
     def reset(self, shared=False):
         
+        # TODO: think how to handle reset of shared index.
         self.index = 0
 
         # When a sound (effect) is shared by multiple other sounds, its state
@@ -316,7 +318,7 @@ class Sound(object):
         # computation time in case the sound is done but is kept around for 
         # an effect applied to it.
 
-        if not self._done or self._ac is None:
+        if not self._done or self._ac is None or len(self._ac) != self.frames:
 
             a0 = _expand_channels(a0, channels)
             
@@ -331,7 +333,7 @@ class Sound(object):
         
         assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
         
-        if not self._done or self._a0 is None:
+        if not self._done or self._a0 is None or len(self._a0) != self.frames:
             self._a0 = self.forward(*args, **kwargs)
 
         self.index += len(self._a0)
@@ -433,15 +435,19 @@ class Gate(Sound):
     def schedule(self, event, t=None, dt=None):
         logger.debug('Enter Gate.schedule(event=%r, t=%r, dt=%r).', event, t, dt)
 
+        tt = get_time()
+
         if not self.states:
-            last_t = get_time()
+            last_t = tt
         else:
             last_t = self.states[-1][0]
 
         if dt is not None:
             t = dt + last_t
         else:
-            t = t or get_time()
+            t = t or tt
+
+        t = max(t, tt)
 
         # Discard events scheduled to run after this new event.
         while self.states and self.states[-1][0] > t:

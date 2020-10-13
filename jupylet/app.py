@@ -131,6 +131,8 @@ class App(EventLeg, ClockLeg):
             self.__dict__[k] = v
 
         setup_basic_logging(conf.log_level)
+        
+        #logger.warning('Create app object with width %r, height %r, and the following configuration: %r', width, height, conf)
 
         if mode in ['jupyter', 'hidden']:
             window_cls = JupyterWindow
@@ -323,7 +325,9 @@ class App(EventLeg, ClockLeg):
 
         self.interval = interval
         self.scheduler.unschedule(self._redraw_windows)
-        self.scheduler.schedule_interval(self._redraw_windows, interval)
+
+        if interval > 0:
+            self.scheduler.schedule_interval(self._redraw_windows, interval)
 
     def _redraw_windows(self, ct, dt):
         

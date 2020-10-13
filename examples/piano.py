@@ -41,7 +41,7 @@ from jupylet.sprite import Sprite
 
 from jupylet.audio.device import get_oscilloscope_as_image
 from jupylet.audio.sample import Sample
-from jupylet.audio.synth import tb303
+from jupylet.audio.synth import tb303, hammond
 from jupylet.audio import use, play, sleep
 
 from jupylet.audio import note
@@ -183,7 +183,7 @@ def render(ct, dt):
     label2.draw()
 
 
-app.set_midi_sound(tb303)
+app.set_midi_sound(hammond)
 
 
 xylo = Sample('sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz')
@@ -195,13 +195,13 @@ async def loop0():
             
     use(tb303, duration=2, amp=0.33)
 
-    play(note.C4)
+    play(note.C2)
     await sleep(3)
 
-    play(note.E4)
+    play(note.E2)
     await sleep(3)
 
-    play(note.C4)
+    play(note.C2)
     await sleep(6)
 
 

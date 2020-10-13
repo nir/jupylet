@@ -215,6 +215,10 @@ _sounds0 = []
 _sounds1 = []
 
 
+def stop_sound():
+    _sounds1.clear()
+
+
 def add_sound(sound):
     """Add sound to the set of currently playing sound objects."""
 
