@@ -40,7 +40,7 @@ from jupylet.app import App
 logger = logging.getLogger()
 
 
-app = App(log_level=logging.INFO)
+app = App()
 
 
 stars = Sprite('images/stars.png', scale=2.5)

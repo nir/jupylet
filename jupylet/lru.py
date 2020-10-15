@@ -30,6 +30,9 @@ SKYBOX_TEXTURE_UNIT = 1
 SHADOW_TEXTURE_UNIT = 2
 
 
+# TODO: an lru is actually not an ideal policy for allocating texture units.
+# fix it.
+
 class LRU(object):
     """Mechanism to allocate least recently used slot in array."""
 

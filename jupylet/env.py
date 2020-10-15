@@ -26,12 +26,36 @@
 
 
 import functools
+import argparse
 import platform
 import inspect
-import os
 import sys
+import os
 
 import multiprocessing as mp
+
+
+def parse_args():
+    return create_parser().parse_args(sys.argv[1:])
+
+
+def create_parser():
+
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument(
+        "--window",
+        choices=['pyglet', 'glfw'],
+        help="Windowing library to use.",
+    )
+
+    parser.add_argument(
+        "--log_level",
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+        help="logging level.",
+    )
+
+    return parser
 
 
 _mode = None

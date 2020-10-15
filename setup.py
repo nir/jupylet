@@ -33,6 +33,7 @@ setuptools.setup(
         'RL',
     ],
     install_requires=[
+        'glfw',
         'wget',
         'numpy', 
         'PyGLM',

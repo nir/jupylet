@@ -103,7 +103,7 @@ def get_logging_level():
     return _logging_level
 
     
-def setup_basic_logging(level: int):
+def setup_basic_logging(level):
     """Set up basic logging
 
     Args:
@@ -112,6 +112,9 @@ def setup_basic_logging(level: int):
     
     global _logging_level
 
+    if type(level) is str:
+        level = logging._nameToLevel.get(level, None)
+        
     if level is None:
         return
 

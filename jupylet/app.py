@@ -49,7 +49,7 @@ except:
     shared_memory = None
 
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
-from .env import is_remote, set_app_mode, in_python_script
+from .env import is_remote, set_app_mode, in_python_script, parse_args
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
@@ -127,6 +127,11 @@ class App(EventLeg, ClockLeg):
         
         conf = Dict(get_config_dict(self))
         conf.update(kwargs)
+
+        for k, v in vars(parse_args()).items():
+            if v is not None:
+                conf[k] = v
+
         for k, v in conf.items():
             self.__dict__[k] = v
 
@@ -139,6 +144,11 @@ class App(EventLeg, ClockLeg):
 
         elif mode == 'window':
             window_cls = mglw.get_local_window_cls(conf.window)
+
+        if conf.window == 'glfw':
+            import glfw
+            glfw.init()
+            glfw.window_hint(0x0002200C, True)
 
         self.window = window_cls(size=(width, height), **conf)
         self.window.print_context_info()
