@@ -128,9 +128,10 @@ class App(EventLeg, ClockLeg):
         conf = Dict(get_config_dict(self))
         conf.update(kwargs)
 
-        for k, v in vars(parse_args()).items():
-            if v is not None:
-                conf[k] = v
+        if mode == 'window':
+            for k, v in vars(parse_args()).items():
+                if v is not None:
+                    conf[k] = v
 
         for k, v in conf.items():
             self.__dict__[k] = v
