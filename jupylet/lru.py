@@ -25,6 +25,12 @@
 """
 
 
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
 SPRITE_TEXTURE_UNIT = 0
 SKYBOX_TEXTURE_UNIT = 1
 SHADOW_TEXTURE_UNIT = 2
@@ -76,6 +82,8 @@ class LRU(object):
             self.items.pop(lid0)
             self.items[lid] = [self.step, lid, slot, 0]
             
+            logger.debug('Allocated a new LRU slot with step=%r, lid=%r, slot=%r, 1.', self.step, lid, slot)
+
             return self.step, lid, slot, 1
             
         r[0] = self.step

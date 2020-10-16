@@ -362,6 +362,8 @@ class Material(Object):
         return True
 
     def allocate_texture(self, t, lid=None):
+        logger.debug('Enter Material.allocate_texture(t=%r, lid=%r) [name=%r].', t, lid, self.name)
+
         if isinstance(t, moderngl.texture_array.TextureArray):
             return _lru_textures.allocate(lid)
         return None, None, None, None
@@ -384,6 +386,8 @@ class Material(Object):
         if self._dirty:
             self.load_texture_array()
 
+        logger.debug('Allocate material mlid=%r, name=%r.', self._mlid, self.name)
+
         _, self._mlid, self._mslot, mnew = _lru_materials.allocate(self._mlid)
         _, self._tlid, self._tslot, tnew = self.allocate_texture(self._tarr, self._tlid)
 
@@ -392,6 +396,8 @@ class Material(Object):
         dirty = self._dirty or mnew or tnew
 
         if dirty:
+
+            logger.debug('Call _dirty.clear().')
             self._dirty.clear()
 
             if self._tarr is not None:
