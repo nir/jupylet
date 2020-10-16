@@ -39,8 +39,8 @@ import PIL.Image
 import moderngl_window.geometry as geometry
 import numpy as np
 
-from .lru import _lru_textures, _lru_materials, _MIN_TEXTURES
-from .lru import SKYBOX_TEXTURE_UNIT, SHADOW_TEXTURE_UNIT
+from .lru import _lru_materials
+from .lru import SKYBOX_TEXTURE_UNIT, SHADOW_TEXTURE_UNIT, TARRAY_TEXTURE_UNIT
 from .node import Object, Node
 from .resource import get_shader_3d, pil_from_texture, get_context
 from .resource import find_glob_path, unresolve_path, load_texture_cube
@@ -330,7 +330,6 @@ class Material(Object):
         self.load_texture_array()
 
         self._mlid, self._mslot = None, None
-        self._tlid, self._tslot = None, None
 
     def load_texture_array(self):
 
@@ -361,13 +360,6 @@ class Material(Object):
 
         return True
 
-    def allocate_texture(self, t, lid=None):
-        logger.debug('Enter Material.allocate_texture(t=%r, lid=%r) [name=%r].', t, lid, self.name)
-
-        if isinstance(t, moderngl.texture_array.TextureArray):
-            return _lru_textures.allocate(lid)
-        return None, None, None, None
-
     def compute_normals_gamma(self, normals):
 
         if isinstance(normals, PIL.Image.Image):
@@ -386,32 +378,26 @@ class Material(Object):
         if self._dirty:
             self.load_texture_array()
 
+        if self._tarr is not None:
+            self._tarr.use(location=TARRAY_TEXTURE_UNIT)
+
         logger.debug('Allocate material mlid=%r, name=%r.', self._mlid, self.name)
 
         _, self._mlid, self._mslot, mnew = _lru_materials.allocate(self._mlid)
-        _, self._tlid, self._tslot, tnew = self.allocate_texture(self._tarr, self._tlid)
 
         shader._members['material'].value = self._mslot
 
-        dirty = self._dirty or mnew or tnew
+        dirty = self._dirty or mnew
 
         if dirty:
 
             logger.debug('Call _dirty.clear().')
             self._dirty.clear()
 
-            if self._tarr is not None:
-                shader._members['textures[%s].t' % (self._tslot - _MIN_TEXTURES)].value = self._tslot
-
-                get_context().clear_samplers(self._tslot, self._tslot+1)
-                self._tarr.use(location=self._tslot)
+            # This only needs to be called once.
+            shader._members['tarr'].value = TARRAY_TEXTURE_UNIT
 
             material = 'materials[%s].' % self._mslot
-
-            if self._tslot is not None:
-                shader._members[material + 'tarr'].value = self._tslot - _MIN_TEXTURES
-            else:
-                shader._members[material + 'tarr'].value = -1
 
             shader._members[material + 'color_texture'].value = self._color
             if self._color < 0:

@@ -23,18 +23,10 @@ struct Skybox {
 uniform Skybox skybox;
 
 
-struct Texture {
-    sampler2DArray t;
-};
-
-#define MAX_TEXTURES 16
-
-uniform Texture textures[MAX_TEXTURES];
+uniform sampler2DArray tarr;
 
 
 struct Material { 
-
-    int tarr;
 
     vec4 color; // Expected as linear - physical.
     int color_texture;
@@ -251,7 +243,7 @@ void compute_light0() {
         mat3 TBN = cotangent_frame(l0.normal, -l0.view_direction, frag_uv); 
         int layer = materials[mi].normals_texture;
 
-        l0.normal = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer)).rgb;
+        l0.normal = texture(tarr, vec3(frag_uv, layer)).rgb;
         l0.normal = pow(l0.normal, vec3(materials[mi].normals_gamma)) * 2 - 1;
         l0.normal.xy *= materials[mi].normals_scale;
         l0.normal = normalize(TBN * normalize(l0.normal)); 
@@ -261,7 +253,7 @@ void compute_light0() {
 
     if (materials[mi].color_texture >= 0) {
         int layer = materials[mi].color_texture;
-        l0.color = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer)).xyz;
+        l0.color = texture(tarr, vec3(frag_uv, layer)).xyz;
         l0.color = pow(l0.color, vec3(2.2));
     }
 
@@ -270,7 +262,7 @@ void compute_light0() {
 
     if (materials[mi].roughness_texture >= 0) {
         int layer = materials[mi].roughness_texture;
-        vec4 r4 = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer));
+        vec4 r4 = texture(tarr, vec3(frag_uv, layer));
         l0.roughness = r4.y;
         l0.metallic = 1.0 - r4.w;
     }
@@ -361,7 +353,7 @@ void main() {
 
     if (materials[mi].emissive_texture >= 0) {
         int layer = materials[mi].emissive_texture;
-        color = texture(textures[materials[mi].tarr].t, vec3(frag_uv, layer)).xyz;
+        color = texture(tarr, vec3(frag_uv, layer)).xyz;
         color = pow(color, vec3(2.2));
     }
 

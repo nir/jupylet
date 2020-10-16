@@ -55,7 +55,6 @@ from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
 from .utils import Dict, o2h, abspath, callerpath, patch_method
 from .utils import get_logging_widget, setup_basic_logging
-from .lru import _lru_textures, _MIN_TEXTURES
 
 from .audio import midi
 
@@ -199,16 +198,11 @@ class App(EventLeg, ClockLeg):
         set_context(self.ctx)
         self.ctx.enable_only(moderngl.BLEND)
 
-        max_textures = self.ctx.info['GL_MAX_TEXTURE_IMAGE_UNITS']
-
-        _lru_textures.reset(_MIN_TEXTURES, max_textures)
+        #max_textures = self.ctx.info['GL_MAX_TEXTURE_IMAGE_UNITS']
 
         set_shader_3d(self.load_program(
             vertex_shader='shaders/default-vertex-shader.glsl',
             fragment_shader='shaders/default-fragment-shader.glsl',
-            defines=dict(
-                MAX_TEXTURES=max_textures-_MIN_TEXTURES,
-            ),
         ))
 
         shader = set_shader_2d(self.load_program('shaders/sprite.glsl'))

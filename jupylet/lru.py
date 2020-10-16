@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 SPRITE_TEXTURE_UNIT = 0
 SKYBOX_TEXTURE_UNIT = 1
 SHADOW_TEXTURE_UNIT = 2
+TARRAY_TEXTURE_UNIT = 3
 
 
 # TODO: an lru is actually not an ideal policy for allocating texture units.
@@ -90,10 +91,6 @@ class LRU(object):
 
         return r
 
-
-_MIN_TEXTURES = 3
-_MAX_TEXTURES = 16
-_lru_textures = LRU(_MIN_TEXTURES, _MAX_TEXTURES)
 
 _MAX_MATERIALS = 12
 _lru_materials = LRU(0, _MAX_MATERIALS)
