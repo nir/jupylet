@@ -96,6 +96,8 @@ def _clear(
 
 class App(EventLeg, ClockLeg):
     
+    """A Jupylet game object."""
+
     def __init__(
         self, 
         width=512, 
@@ -105,7 +107,19 @@ class App(EventLeg, ClockLeg):
         quality=None,
         **kwargs
     ):
-        
+        """
+        Args:
+            width (int): The width of the game canvas in pixels.
+            height (int): The height of the game canvas in pixels.
+            mode (str): Game mode can be 'jupyter' for running the game in a 
+                Jupyter notebook, 'window' for running the game in a Python 
+                script, 'hidden' for machine learning, or 'auto' for let
+                Jupylet choose the appropriate mode automatically.
+            resource_dir (path): A path to the directory of the game assets.
+            quality (int): Quality of game video compression specified as an
+                integer between 10 and 100 for when the Jupyter notebook is 
+                run on a remote server.
+        """
         if mode == 'auto':
             mode = 'window' if in_python_script() else 'jupyter'
 

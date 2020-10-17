@@ -50,6 +50,8 @@ _empty_array = np.array([])
 
 class Sprite(Node):
     
+    """A 2D game sprite."""
+
     def __init__(
         self,
         img, 
@@ -69,8 +71,25 @@ class Sprite(Node):
         name=None,
         collisions=True,
     ):
-
-        super(Sprite, self).__init__(
+        """
+        Args:
+            img: either a path to a sprite image, a PIL Image object, or a 
+                numpy array with image pixel data.
+            x (float): The x position for the sprite.
+            y (float): The y position for the sprite.
+            scale (float): value by which to scale the sprite up or down.
+            angle (float): clockwise rotation of the sprite in degrees.
+            anchor_x (float or str): either 'left', 'center' or 'right' or a 
+                value between 0.0 (for left) and 1.0 (for right) indicating
+                the anchor point inside the sprite along its x axis.
+            anchor_y (float or str): either 'bottom', 'center' or 'top' or a 
+                value between 0.0 (for bottom) and 1.0 (for top) indicating
+                the anchor point inside the sprite along its y axis.
+            color (str or 3-tuple): color by which to tint sprite image.
+                Could be a color name, color hex notation, or a 3-tuple.
+            flip (bool): flip the sprite upside down or not.
+        """
+        super().__init__(
             name,
             rotation=aa2q(glm.radians(angle)),
             scale=None,

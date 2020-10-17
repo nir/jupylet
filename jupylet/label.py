@@ -71,74 +71,108 @@ def draw_chr(c, path, size):
     return np.array(im)
 
 
-def draw_str(s, path, size, line_height=1.2):
+def draw_str(s, path, size, line_height=1.2, align='left'):
     
     al = []
+    ll = []
 
+    # Compute line height and baseline height.
     lh = math.ceil(size * line_height)
     bl = draw_chr('a', path, size).shape[0]
 
+    # Coordinates for top-left position for each char.
     hh = 0
     ww = 0
     
+    # Maximum accumulated width and height for label. 
     mh = 0
     mw = 0
     
     for c in s.rstrip():
         if c == '\n':
+            ll.append(ww)
             hh += lh
             mw = max(mw, ww)
             ww = 0
             mh = 0
             continue
             
-        a = draw_chr(c, path, size)
-        al.append((a, (hh, ww)))
+        ca = draw_chr(c, path, size)
+        al.append((ca, (hh, ww), len(ll)))
         
-        h, w = a.shape
+        h, w = ca.shape
         
         mh = max(mh, h)
         ww += w
 
+    ll.append(ww)
+
+    # Compute final baseline, maximum width and height for label.
     bl = mh - bl  
     mh = hh + mh
     mw = max(mw, ww)
+
     a0 = np.zeros((mh, mw), dtype='uint8')
 
-    for a, (hh, ww) in al:
+    aw = {'left': 0, 'center': 0.5, 'right': 1}[align]
+
+    for ca, (hh, ww), li in al:
         
-        h, w = a.shape
-        a0[hh:hh+h, ww:ww+w] = a
+        a = int((mw - ll[li]) * aw)
+        h, w = ca.shape
+        a0[hh:hh+h, ww+a:ww+a+w] = ca
         
     return a0, bl
 
 
 class Label(Sprite):
-    
+
+    """A text label."""
+
     def __init__(
         self, 
         text='',
         font_path='fonts/SourceSerifPro-Bold.otf', 
         font_size=16,
         line_height=1.2,
+        align='left',
         bold=False, 
         italic=False,
         color='white',
         x=0, 
         y=0, 
+        angle=0.0,
         width=None, 
         height=None,
         anchor_x='left', 
         anchor_y='baseline',
-        align='left'
     ):
-                
-        image, baseline = draw_str(text, font_path, font_size, line_height)
+        """
+        Args:
+            text (str): text to display in label.
+            font (path): path to a true type or open type font.
+            font_size (float): font size to use. 
+            align (str): the desired alignment for the text label. May be one
+                of 'left', 'center', and 'right'.
+            color (str or 3-tuple): a color name, color hex notation, or a 
+                3-tuple. specifying the color for the text label.
+            x (float): the x position for the label.
+            y (float): the y position for the label.
+            angle (float): clockwise rotation of the label in degrees.
+            anchor_x (float or str): either 'left', 'center' or 'right' or a 
+                value between 0.0 (for left) and 1.0 (for right) indicating
+                the anchor point inside the label along its x axis.
+            anchor_y (float or str): either 'bottom', 'baseline', 'center' or 
+                'top' or a value between 0.0 (for bottom) and 1.0 (for top) 
+                indicating the anchor point inside the label along its y axis.
+        """                
+        image, baseline = draw_str(text, font_path, font_size, line_height, align)
 
         super(Label, self).__init__(
             image,
             x, 
             y, 
+            angle=angle,
             anchor_x=anchor_x,
             anchor_y=anchor_y,
             height=height,
@@ -151,6 +185,7 @@ class Label(Sprite):
             font_path = font_path,
             font_size = font_size,
             line_height = line_height,
+            align = align,
         )
 
         self.baseline = baseline / self.texture.height
@@ -166,7 +201,8 @@ class Label(Sprite):
                 self.text, 
                 self.font_path, 
                 self.font_size, 
-                self.line_height
+                self.line_height,
+                self.align,
             )
 
             self.baseline = baseline / self.texture.height
@@ -181,6 +217,7 @@ class Label(Sprite):
             font_path = self.font_path,
             font_size = self.font_size,
             line_height = self.line_height,
+            align = align,
         )
 
     def set_state(self, s):

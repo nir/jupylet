@@ -96,11 +96,13 @@ get started:
 
 - `Microsoft's introduction to Python <https://docs.microsoft.com/en-us/learn/modules/intro-to-python/1-introduction>`_
   \- Microsoft has a long tradition of publishing good guides to programming
-  languages and this tutorial appears to be in line with this tradition.
+  languages and this tutorial appears to be in line with this tradition. 
+  However, their Azure Cloud Shell is unfortunately a distraction. You would 
+  be better off trying out their exercises in Python's own `online shell <https://www.python.org/shell/>`_.
 
 - `Python's own tutorial <https://docs.python.org/3/tutorial/index.html>`_
   \- Perhaps not as didactic as Microsoft's guide, but it is a good idea to
-  get familiar with Python's documentation.
+  get familiar with Python's official documentation.
 
 These guides will instruct you how to start a python interpreter where you
 can type and run Python code. You may do that, but once you gain a little bit
@@ -122,8 +124,8 @@ Jupyter Notebooks
 Jupyter notebooks are awesome but they can be a little confusing at
 first. Here are a few resources that explain how to use them:
 
-- *jupylet/examples/01-hello-world.ipynb* notebook contains some instructions on
-  how to use Jupyter notebooks. Check it out.
+- `examples/01-hello-world.ipynb <https://github.com/nir/jupylet/blob/master/examples/01-hello-world.ipynb>`_ 
+  notebook contains a basic introduction to Jupyter notebooks. Check it out.
 
 - `Running Code <https://mybinder.org/v2/gh/jupyter/notebook/master?filepath=docs%2Fsource%2Fexamples%2FNotebook%2FRunning%20Code.ipynb>`_
   \- This is a Jupyter notebook explaining how to use Jupyter notebooks 🙂.
