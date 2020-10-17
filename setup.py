@@ -48,7 +48,6 @@ setuptools.setup(
         'ipywidgets', 
         'matplotlib', 
         'sounddevice', 
-        'xvfbwrapper',
         'scikit-image',
         'moderngl-window',
     ],

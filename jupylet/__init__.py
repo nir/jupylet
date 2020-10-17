@@ -29,7 +29,7 @@ import platform
 import sys
 import os
 
-from .env import is_remote, start_xvfb, has_display
+from .env import is_remote, has_display
 
 
 VERSION = '0.8.0.dev'
