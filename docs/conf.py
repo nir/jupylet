@@ -33,6 +33,7 @@ release = 'v0.6.2'
 # ones.
 extensions = [
     'sphinx_rtd_theme',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
 ]
 

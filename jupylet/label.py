@@ -127,7 +127,29 @@ def draw_str(s, path, size, line_height=1.2, align='left'):
 
 class Label(Sprite):
 
-    """A text label."""
+    """A text label.
+
+    Since a text label is actually implemented as a 2D sprite, it has all the
+    functionality and methods of a sprite.
+
+    Args:
+        text (str): text to display in label.
+        font (path): path to a true type or open type font.
+        font_size (float): font size to use. 
+        align (str): the desired alignment for the text label. May be one
+            of 'left', 'center', and 'right'.
+        color (str or 3-tuple): a color name, color hex notation, or a 
+            3-tuple. specifying the color for the text label.
+        x (float): the x position for the label.
+        y (float): the y position for the label.
+        angle (float): clockwise rotation of the label in degrees.
+        anchor_x (float or str): either 'left', 'center' or 'right' or a 
+            value between 0.0 (for left) and 1.0 (for right) indicating
+            the anchor point inside the label along its x axis.
+        anchor_y (float or str): either 'bottom', 'baseline', 'center' or 
+            'top' or a value between 0.0 (for bottom) and 1.0 (for top) 
+            indicating the anchor point inside the label along its y axis.
+    """                
 
     def __init__(
         self, 
@@ -147,25 +169,8 @@ class Label(Sprite):
         anchor_x='left', 
         anchor_y='baseline',
     ):
-        """
-        Args:
-            text (str): text to display in label.
-            font (path): path to a true type or open type font.
-            font_size (float): font size to use. 
-            align (str): the desired alignment for the text label. May be one
-                of 'left', 'center', and 'right'.
-            color (str or 3-tuple): a color name, color hex notation, or a 
-                3-tuple. specifying the color for the text label.
-            x (float): the x position for the label.
-            y (float): the y position for the label.
-            angle (float): clockwise rotation of the label in degrees.
-            anchor_x (float or str): either 'left', 'center' or 'right' or a 
-                value between 0.0 (for left) and 1.0 (for right) indicating
-                the anchor point inside the label along its x axis.
-            anchor_y (float or str): either 'bottom', 'baseline', 'center' or 
-                'top' or a value between 0.0 (for bottom) and 1.0 (for top) 
-                indicating the anchor point inside the label along its y axis.
-        """                
+        """"""
+
         image, baseline = draw_str(text, font_path, font_size, line_height, align)
 
         super(Label, self).__init__(

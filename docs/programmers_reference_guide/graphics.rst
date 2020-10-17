@@ -12,9 +12,9 @@ the text *"hello, world"*. You can find the notebook at
     To understand this code you need to know about Python imports, functions, 
     and classes.
 
-The code begins with two import statements that import the `App` class which
-represents a game and the `Label` class which will be used to display the 
-text:
+The code begins with two import statements that import the :class:`~jupylet.app.App` 
+class which represents a game and the :class:`~jupylet.label.Label` class which 
+will be used to display the text:
 
 .. code-block:: python
 
@@ -88,8 +88,8 @@ Catch a Spaceship
 Let's take a look into a simple 2D game called *Spaceship*. You can 
 find the notebook at `examples/11-spaceship.ipynb <https://github.com/nir/jupylet/blob/master/examples/11-spaceship.ipynb>`_.
 
-The code in the spaceship notebook makes simple use of 2D sprites. Sprites are
-bitmap images that can be drawn on the game canvas and can be manipulated
+The code in the spaceship notebook makes simple use of 2D sprites. A :class:`~jupylet.sprite.Sprite` 
+is a bitmap image that can be drawn on the game canvas and can be manipulated
 and animated. Let's create one:
 
 .. code-block:: python
