@@ -61,3 +61,16 @@ html_static_path = ['_static']
 
 master_doc = 'index'
 
+
+autodoc_mock_imports = [
+    'xvfbwrapper',
+    'scikit-image',
+    'sounddevice',
+    'matplotlib',
+    'soundfile',
+    'webcolors',
+    'gltflib',
+    'PyGLM',
+    'mido',
+]
+
