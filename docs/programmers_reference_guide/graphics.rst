@@ -12,9 +12,9 @@ the text *"hello, world"*. You can find the notebook at
     To understand this code you need to know about Python imports, functions, 
     and classes.
 
-The code begins with two import statements that import the `App` class which
-represents a game and the `Label` class which will be used to display the 
-text:
+The code begins with two import statements that import the :class:`~jupylet.app.App` 
+class which represents a game and the :class:`~jupylet.label.Label` class which 
+will be used to display the text:
 
 .. code-block:: python
 
@@ -39,9 +39,9 @@ or it can be any RGB color of the form :code:`'#abcdef'` - see here `<https://ww
 
 Next, we define a function to scroll the label from right to left. The 
 line :code:`@app.run_me_every(1/30)` above the function definition is called a 
-decorator. Python decorators are kind of magical, and this particular one
-makes sure the function will be called every 1/30 of a second, or 30 times
-per second, once the game is run:
+decorator. Python decorators are kind of magical, and this one will make 
+*Jupylet* automatically call the *scroll* function once every 1/30 of a 
+second, or 30 times per second, once the game is run:
 
 .. code-block:: python
 
@@ -79,4 +79,41 @@ animation:
 
 .. image:: ../images/hello-world.gif
 
+Now that we've got "hello, world" under our belt we may proceed to more elaborate
+stuff.
+
+Catch a Spaceship
+-----------------
+
+Let's take a look into a simple 2D game called *Spaceship*. You can 
+find the notebook at `examples/11-spaceship.ipynb <https://github.com/nir/jupylet/blob/master/examples/11-spaceship.ipynb>`_.
+
+The code in the spaceship notebook makes simple use of 2D sprites. A :class:`~jupylet.sprite.Sprite` 
+is a bitmap image that can be drawn on the game canvas and can be manipulated
+and animated. Let's create one:
+
+.. code-block:: python
+
+    from jupylet.sprite import Sprite
+
+    ship = Sprite('images/ship1.png', x=app.width/2, y=app.height/2, scale=0.5)
+
+We create a sprite by specifying the path to an image of a spaceship on disk:
+
+.. image:: ../images/ship1.png
+   :scale: 50 %
+
+We also specify the sprite's x and y coordinates. By setting them to half the
+game canvas width and height, we effectively position the sprite in the 
+middle of the game canvas.
+
+Sprites have many more properties that can be set when it is constructed and 
+later modified.
+
+.. note::
+    Jupyter can conveniently show you the list of arguments accepted by a 
+    function or by a class constructor, their default values and other 
+    documentation. In the spaceship notebook, position your cursor anywhere
+    inside the parentheses of a *Sprite()* constructor, then hold down the 
+    :guilabel:`Shift` key and press the :guilabel:`Tab` key once or more.
 

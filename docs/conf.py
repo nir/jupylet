@@ -12,6 +12,7 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('..'))
 
 
@@ -22,7 +23,7 @@ copyright = '2020, Nir Aides'
 author = 'Nir Aides'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.6.2'
+release = 'v0.8.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -32,6 +33,7 @@ release = 'v0.6.2'
 # ones.
 extensions = [
     'sphinx_rtd_theme',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
 ]
 
@@ -58,4 +60,15 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ['_static']
 
 master_doc = 'index'
+
+autodoc_mock_imports = [
+    'scikit-image',
+    'sounddevice',
+    'matplotlib',
+    'soundfile',
+    'webcolors',
+    'gltflib',
+    'PyGLM',
+    'mido',
+]
 

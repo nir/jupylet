@@ -39,8 +39,10 @@ from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
 
-from jupylet.audio.device import get_oscilloscope_as_image
+from jupylet.audio.effects import ConvolutionReverb
+from jupylet.audio.device import get_oscilloscope_as_image, set_effects
 from jupylet.audio.sample import Sample
+from jupylet.audio.sound import set_latency
 from jupylet.audio.synth import tb303, hammond
 from jupylet.audio import use, play, sleep
 
@@ -183,8 +185,10 @@ def render(ct, dt):
     label2.draw()
 
 
-app.set_midi_sound(hammond)
+app.set_midi_sound(tb303)
 
+#set_latency('lowest')
+set_effects(ConvolutionReverb('./sounds/impulses/MaesHowe.flac'))
 
 xylo = Sample('sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz')
 xylo.amp = 8
@@ -193,7 +197,7 @@ xylo.amp = 8
 @app.sonic_live_loop
 async def loop0():
             
-    use(tb303, duration=2, amp=0.33)
+    use(tb303, duration=2, amp=0.15)
 
     play(note.C2)
     await sleep(3)

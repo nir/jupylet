@@ -50,6 +50,26 @@ _empty_array = np.array([])
 
 class Sprite(Node):
     
+    """A 2D game sprite.
+    
+    Args:
+        img: either a path to a sprite image, a PIL Image object, or a 
+            numpy array with image pixel data.
+        x (float): The x position for the sprite.
+        y (float): The y position for the sprite.
+        scale (float): value by which to scale the sprite up or down.
+        angle (float): clockwise rotation of the sprite in degrees.
+        anchor_x (float or str): either 'left', 'center' or 'right' or a 
+            value between 0.0 (for left) and 1.0 (for right) indicating
+            the anchor point inside the sprite along its x axis.
+        anchor_y (float or str): either 'bottom', 'center' or 'top' or a 
+            value between 0.0 (for bottom) and 1.0 (for top) indicating
+            the anchor point inside the sprite along its y axis.
+        color (str or 3-tuple): color by which to tint sprite image.
+            Could be a color name, color hex notation, or a 3-tuple.
+        flip (bool): flip the sprite upside down or not.
+    """
+
     def __init__(
         self,
         img, 
@@ -69,8 +89,9 @@ class Sprite(Node):
         name=None,
         collisions=True,
     ):
+        """"""
 
-        super(Sprite, self).__init__(
+        super().__init__(
             name,
             rotation=aa2q(glm.radians(angle)),
             scale=None,
@@ -121,10 +142,12 @@ class Sprite(Node):
         pass
 
     def draw(self, shader=None):
+        """Draw sprite on canvas (this is just an alias to Sprite.render)."""
         return self.render(shader)
         
     def render(self, shader=None):
-        
+        """Draw sprite on canvas."""
+
         shader = shader or get_shader_2d()
         
         if self._dirty:
@@ -142,6 +165,7 @@ class Sprite(Node):
 
     @property
     def scale(self):
+        """Scale of sprite."""
         return self.scale0.x / self.texture.width
 
     @scale.setter
@@ -150,6 +174,7 @@ class Sprite(Node):
 
     @property
     def x(self):
+        """x coordinate of anchor's position."""
         return self.position.x
         
     @x.setter
@@ -158,6 +183,7 @@ class Sprite(Node):
         
     @property
     def y(self):
+        """x coordinate of anchor's position."""
         return self.position.y
         
     @y.setter
@@ -166,6 +192,7 @@ class Sprite(Node):
         
     @property
     def angle(self):
+        """Angle in degrees rotated around anchor."""
         angle, axis = q2aa(self.rotation)
         return round(glm.degrees(angle * glm.sign(axis.z)), 4)
 
@@ -174,7 +201,22 @@ class Sprite(Node):
         self.rotation = aa2q(glm.radians(angle))
 
     def set_anchor(self, ax=None, ay=None):
+        """Set anchor point of sprite.
 
+        The anchor is a point in the sprite that is used for rotation and 
+        positioning. Imagine a pin going through the sprite and that you use
+        this pin to position the sprite on the canvas and to rotate it. The
+        point at which the pin goes through the canvas is the anchor point.
+
+        The anchor point is set separately for the x axis, and for the y axis.
+
+        Args:
+            ax (str or float): the x anchor can be one of 'left', 'center', 
+                'right', or a float value between 0.0 (left) and 1.0 (right).
+
+            ay (str or float): the y anchor can be one of 'bottom', 'center', 
+                'top', or a float value between 0.0 (bottom) and 1.0 (top).
+        """
         self._ax = ax
         self._ay = ay
 
@@ -200,6 +242,7 @@ class Sprite(Node):
 
     @property
     def width(self):
+        """Width in pixels after scaling."""
         return self.scale0.x
 
     @width.setter
@@ -208,6 +251,7 @@ class Sprite(Node):
 
     @property
     def height(self):
+        """Height in pixels after scaling."""
         return self.scale0.y
 
     @height.setter
@@ -216,6 +260,11 @@ class Sprite(Node):
 
     @property
     def image(self):
+        """Bitmap image of sprite.
+        
+        You can set this property with a new image or with a path to an image 
+        on disk to change the current sprite image.
+        """
         return pil_from_texture(self.texture)
     
     @image.setter
@@ -240,7 +289,8 @@ class Sprite(Node):
             self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
 
     def collisions_with(self, o, debug=False):
-        
+        """Check if sprite collides with given other sprite."""
+
         #if self.distance_to(o) > self.radius + o.radius:
         #    return
 
@@ -259,6 +309,7 @@ class Sprite(Node):
         return compute_collisions(o, self, debug=debug)
 
     def distance_to(self, o=None, pos=None):
+        """Compute the distance to another sprite."""
 
         x, y = pos or (o.position.x, o.position.y)
         
@@ -268,7 +319,8 @@ class Sprite(Node):
         return (dx ** 2 + dy ** 2) ** 0.5
     
     def angle_to(self, o=None, pos=None):
-        
+        """Compute clockwise angle in degrees to another sprite."""
+
         qd = {
             (True, True): 0,
             (True, False): 180,

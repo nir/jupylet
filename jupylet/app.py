@@ -95,6 +95,21 @@ def _clear(
 
 class App(EventLeg, ClockLeg):
     
+    """A Jupylet game object.
+
+    Args:
+        width (int): The width of the game canvas in pixels.
+        height (int): The height of the game canvas in pixels.
+        mode (str): Game mode can be 'jupyter' for running the game in a 
+            Jupyter notebook, 'window' for running the game in a Python 
+            script, 'hidden' for machine learning, or 'auto' for let
+            Jupylet choose the appropriate mode automatically.
+        resource_dir (path): A path to the directory of the game assets.
+        quality (int): Quality of game video compression specified as an
+            integer between 10 and 100 for when the Jupyter notebook is 
+            run on a remote server.
+    """
+
     def __init__(
         self, 
         width=512, 
@@ -104,7 +119,8 @@ class App(EventLeg, ClockLeg):
         quality=None,
         **kwargs
     ):
-        
+        """"""
+
         if mode == 'auto':
             mode = 'window' if in_python_script() else 'jupyter'
 
@@ -230,7 +246,8 @@ class App(EventLeg, ClockLeg):
         EventLeg.set_event_handler(self, name, func)
 
     def set_midi_sound(self, s):
-        
+        """Start a MIDI handler with given sound object as its intrument."""
+
         midi.set_midi_sound(s)
         midi.set_midi_callback(midi.simple_midi_callback)
         
@@ -239,14 +256,17 @@ class App(EventLeg, ClockLeg):
 
     @property
     def width(self):
+        """Width of game canvas."""
         return self._width
 
     @property
     def height(self):
+        """Height of game canvas."""
         return self._height
     
-    def run(self, interval=1/48):
-        
+    def run(self, interval=1/30):
+        """"""
+
         #assert self.window._context, 'Window has closed. Create a new app object to run.'
 
         hasattr(self, '_show_remote_warning') and sys.stderr.write(REMOTE_WARNING + '\n')
@@ -281,7 +301,7 @@ class App(EventLeg, ClockLeg):
         self.is_running = False
         self.timer.pause()
 
-    def start(self, interval=1/24):
+    def start(self, interval=1/20):
         
         assert self.mode == 'hidden', 'start() is only possible in "hidden" reinforcement learning mode. Use run() instead.'
         
@@ -314,6 +334,7 @@ class App(EventLeg, ClockLeg):
             self.is_running = False
 
     def stop(self, foo=None):
+        """Stop given handler from running. If not handler is given stop game."""
 
         if foo is not None:
             return self.unschedule(foo, levels_up=2)
@@ -360,7 +381,7 @@ class App(EventLeg, ClockLeg):
         self.ndraws += 1
 
     def observe(self):
-        """Return buffer as upside-down-flipped numpy array."""
+        """Return canvas content as upside-down-flipped numpy array."""
 
         w, h = self.window.fbo.size
         b = self.get_buffer() 
@@ -407,7 +428,6 @@ class App(EventLeg, ClockLeg):
 
         This is useful for RL applications since smaller windows render faster.
         """
-
         #assert self.mode == 'hidden', 'Can only scale hidden window.'
         assert self.is_running, 'Window can only be scaled once app has been started.'
 
