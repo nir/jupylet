@@ -81,7 +81,7 @@ def key_event(key, action, modifiers):
     
     keys = app.window.keys
 
-    value = action == keys.ACTION_PRESS
+    value = action != keys.ACTION_RELEASE
     
     if key == keys.CAPS_LOCK and value:
         state.capslock = not state.capslock

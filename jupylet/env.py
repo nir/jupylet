@@ -91,6 +91,10 @@ def is_binder_env():
     return 'BINDER_REQUEST' in os.environ
 
 
+def is_osx():
+    return platform.system().lower() == 'darwin'
+
+    
 _has_display = None
 
 

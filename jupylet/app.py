@@ -49,7 +49,7 @@ except:
     shared_memory = None
 
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
-from .env import is_remote, set_app_mode, in_python_script, parse_args
+from .env import is_remote, is_osx, set_app_mode, in_python_script, parse_args
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
@@ -141,6 +141,11 @@ class App(EventLeg, ClockLeg):
         self.window_size = (width, height)
         
         conf = Dict(get_config_dict(self))
+
+        # pyglet may crash on osx.
+        if conf.window == 'pyglet' and is_osx():
+            conf.window = 'glfw'
+
         conf.update(kwargs)
 
         if mode == 'window':
@@ -161,6 +166,7 @@ class App(EventLeg, ClockLeg):
         elif mode == 'window':
             window_cls = mglw.get_local_window_cls(conf.window)
 
+        # Hack to scale glfw window to monitor DPI.
         if conf.window == 'glfw':
             import glfw
             glfw.init()
@@ -294,10 +300,10 @@ class App(EventLeg, ClockLeg):
         
     async def _run(self):
         
-        while not self._exit:            
+        while not self._exit and not self.window.is_closing:            
             dt = self.scheduler.call()
             await asyncio.sleep(max(0, dt - 0.0005))
-
+        
         self.is_running = False
         self.timer.pause()
 

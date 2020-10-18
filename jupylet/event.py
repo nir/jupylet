@@ -157,6 +157,10 @@ class JupyterWindow(Window):
         """Destroy the context"""
         self.ctx.release()
 
+    @property
+    def is_closing(self) -> bool:
+        pass
+    
     def close(self) -> None:
         """Signal for the window to close"""
         self._close = True
