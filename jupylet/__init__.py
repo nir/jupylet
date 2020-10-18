@@ -32,7 +32,7 @@ import os
 from .env import is_remote, has_display
 
 
-VERSION = '0.8.0.dev'
+VERSION = '0.8.0'
 
 
 if platform.system() == 'Linux' and not has_display():
