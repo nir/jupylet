@@ -95,8 +95,8 @@ command:
 
     git clone https://github.com/nir/jupylet.git
 
-Alternatively, you can download and unzip the *jupylet* code base by copying
-and pasting the following commands into the console:
+Alternatively, you can download and unzip the *jupylet* code base by 
+copying-pasting the following commands into the console:
 
     python -m wget https://github.com/nir/jupylet/archive/master.zip
     python -m zipfile -e jupylet-master.zip .
@@ -108,7 +108,7 @@ and pasting the following commands into the console:
 Next, enter the *jupylet/examples/* directory with the change directory
 command:
 
-    cd ./jupylet/examples/
+    cd jupylet/examples/
 
 And start a jupyter notebook with:
 

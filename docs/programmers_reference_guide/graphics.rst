@@ -5,16 +5,24 @@ Hello, Jupylet!
 ---------------
 
 We begin with the simplest *Jupylet* app. It displays a scolling banner with 
-the text *"hello, world"*. You can find the notebook at
+the string *"hello, world"*. You can find the notebook at
 `examples/02-hello-jupylet.ipynb <https://github.com/nir/jupylet/blob/master/examples/02-hello-jupylet.ipynb>`_.
 
 .. note::
-    To understand this code you need to know about Python imports, functions, 
-    and classes.
+    If you click the link above it will take you to a copy of the notebook at
+    github.com. That copy is static - you can read it but you can't run it. If
+    you would like to run the notebook and experiment with it, open a command 
+    console as explained in :any:`Let's get started!<getting_started>` enter
+    the *jupylet/examples/* directory and type:  
+    ``jupyter notebook 02-hello-jupylet.ipynb``
+
+.. note::
+    To understand the code in this chapter you need to know about Python 
+    imports, functions, and classes.
 
 The code begins with two import statements that import the :class:`~jupylet.app.App` 
 class which represents a game and the :class:`~jupylet.label.Label` class which 
-will be used to display the text:
+we will use to display the text:
 
 .. code-block:: python
 
@@ -22,44 +30,51 @@ will be used to display the text:
     from jupylet.label import Label
 
 Next, we create the game object and specify the width and height of the
-game canvas, and then we create the label:
+game canvas:
 
 .. code-block:: python
 
     app = App(width=320, height=64)
+
+And then we create a label:
+
+.. code-block:: python
+
     hello = Label('hello, world', color='cyan', font_size=32, x=app.width, y=16)
 
-The *x* and *y* coordinates of a label correspond to its lower
+The *x* and *y* coordinates of a label correspond approximately to its lower
 left corner. By setting the initial *x* position to *app.width* we
-effectively position the label just outside the right hand side of the
-game canvas.
+effectively position the label just outside the right hand side of the game 
+canvas in `pixels <https://en.wikipedia.org/wiki/Pixel>`_.
 
 The label color can be any name defined by the `W3C SVG standard <https://www.w3.org/TR/SVG11/types.html#ColorKeywords>`_
-or it can be any RGB color of the form :code:`'#abcdef'` - see here `<https://www.color-hex.com/>`_.
+or it can be any RGB color of the form :code:`"#abcdef"` as explained here 
+`<https://www.color-hex.com/>`_.
 
 Next, we define a function to scroll the label from right to left. The 
-line :code:`@app.run_me_every(1/30)` above the function definition is called a 
-decorator. Python decorators are kind of magical, and this one will make 
-*Jupylet* automatically call the *scroll* function once every 1/30 of a 
+code :code:`@app.run_me_every(1/30)` above the function definition is called a 
+decorator. Python decorators are kind of "magical", and this one will make 
+*Jupylet* automatically call the ``scroll()`` function once every 1/30 of a 
 second, or 30 times per second, once the game is run:
 
 .. code-block:: python
 
     @app.run_me_every(1/30)
     def scroll(ct, dt):
-        hello.x -= 1
+        hello.x = hello.x - 1
         if hello.right < 0:
             hello.x = app.width
 
 The two function arguments *ct* and *dt* will contain the current game time
 and the time since the function was last called (delta time). We can use 
-these arguments to do interesting things, but you can ignore them for now.
+these arguments to do interesting stuff, but you can ignore them for now.
 
-Note that the function above does not actually draw the label in its new
-position. For that we need the *render()* function. The *render()* function is a 
-special function responsible for drawing each frame. In this particular case 
-it will clear the game canvas (paint it black) and draw the label in 
-its new position:
+The function above does not actually draw the label in its new position, 
+rather it only updates the *x* property of the label. To draw the label in its 
+new position we need the ``render()`` function. The ``render()`` function is a 
+special function responsible for drawing each new frame of the game video 
+while it is running. In this particular case it will clear the game canvas 
+(paint it black) and draw the label in its new position:
 
 .. code-block:: python
 
@@ -107,13 +122,113 @@ We also specify the sprite's x and y coordinates. By setting them to half the
 game canvas width and height, we effectively position the sprite in the 
 middle of the game canvas.
 
-Sprites have many more properties that can be set when it is constructed and 
-later modified.
+Sprites have many more properties that we can set when we create it and later
+if we wish to modify them.
 
 .. note::
     Jupyter can conveniently show you the list of arguments accepted by a 
     function or by a class constructor, their default values and other 
     documentation. In the spaceship notebook, position your cursor anywhere
-    inside the parentheses of a *Sprite()* constructor, then hold down the 
-    :guilabel:`Shift` key and press the :guilabel:`Tab` key once or more.
+    between the opening and closing parentheses of the ``Sprite()`` 
+    constructor, then hold down the :guilabel:`Shift` key and press the 
+    :guilabel:`Tab` key once or more.
 
+For example, we can make the ship sprite half transparent with the following 
+code:
+
+.. code-block:: python
+
+    ship.opacity = 0.5
+
+Next up is a more complex function to control the ship's movement. Let's see 
+it and then unpack it line by line:
+
+.. code-block:: python
+
+    @app.run_me_every(1/60)
+    def update_ship(ct, dt):
+        
+        global vx, vy
+
+        if left:
+            ship.angle += 192 * dt
+            
+        if right:
+            ship.angle -= 192 * dt
+            
+        if up:
+            vx += 3 * math.cos(math.radians(90 + ship.angle))
+            vy += 3 * math.sin(math.radians(90 - ship.angle))
+
+        #
+        # Update ship position according to its velocity.
+        #
+        
+        ship.x += vx * dt
+        ship.y += vy * dt
+        
+        ship.wrap_position(app.width, app.height)
+        
+        #
+        # If ship touches alien, make the yellow alien circle visible.
+        #
+        
+        if len(ship.collisions_with(alien)) > 0:
+            circle.opacity = 0.5
+        else:
+            circle.opacity = 0.0
+
+Let's unpack it. 
+
+Our ship can turn left or right. We can make it turn left by incrementing its 
+angle property and right by decrementing its angle property:
+
+.. code-block:: python
+
+    if left:
+        ship.angle += 192 * dt
+        
+    if right:
+        ship.angle -= 192 * dt
+
+The Python ``+=`` operator increments the operand by the given amount 
+``192 * dt``. The variable ``dt`` (delta time) is a parameter of the 
+``update_ship()`` function. It contains the time (in seconds) that elapsed 
+since the function was last called. By multiplying it with 192 we 
+effectively increment the ship's angle by 192 degrees per second regardless 
+of how often the function is called (think about it).
+
+The next bit of code is just as interesting:
+
+.. code-block:: python
+
+    if up:
+        vx += 3 * math.cos(math.radians(90 + ship.angle))
+        vy += 3 * math.sin(math.radians(90 + ship.angle))
+
+We would like our spaceship to have a velocity and we would like to be able 
+to accelerate the ship's speed.
+
+In our everyday language velocity and speed are synonyms but in physics they
+correspond to different concepts. Roughly speaking, in physics `velocity <https://en.wikipedia.org/wiki/Velocity>`_ 
+is speed in a particular direction. We represent velocity in 2D space by
+keeping track of the ship's horizontal velocity (`vx`) and its vertical 
+velopcity (`vy`) separately and we call `vx` and `vy` the components of the 
+velocity.
+
+When we engage the ship's rocket engine we would like it to accelerate in 
+the direction it is pointing. To compute that direction we read the 
+angle of the ship's sprite ``ship.angle`` and add 90 degrees, because when 
+the sprite angle is 0 the ship actually points up. 
+
+If you would like to understand more about the components of velocity and what 
+cosine snd sine have to do with it, the Khan Academy has 
+`a nice post about it <https://www.khanacademy.org/science/physics/two-dimensional-motion/two-dimensional-projectile-mot/a/what-are-velocity-components>`_.
+
+Once we have updated the velocity components we use them to update the ship's 
+`x` and `y` coordinates:
+
+.. code-block:: python
+
+    ship.x += vx * dt
+    ship.y += vy * dt

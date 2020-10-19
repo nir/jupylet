@@ -44,8 +44,8 @@ command:
 
     git clone https://github.com/nir/jupylet.git
 
-Alternatively, you can download and unzip the *jupylet* code base by copying
-and pasting the following commands into the console:
+Alternatively, you can download and unzip the *jupylet* code base by 
+copy-pasting the following commands into the console:
 
 .. code-block:: bash
 
@@ -61,7 +61,7 @@ command:
 
 .. code-block:: bash
 
-    cd ./jupylet/examples/
+    cd jupylet/examples/
 
 And start a jupyter notebook with:
 
@@ -81,8 +81,8 @@ with:
 
     python spaceship.py
 
-Python Programming Language
----------------------------
+The Python Programming Language
+-------------------------------
 
 Python is an awesome programming language. It is both simple for kids to
 learn and powerful enough to be `one of the most popular programming languages

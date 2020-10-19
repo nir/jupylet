@@ -85,8 +85,8 @@ def update_ship(ct, dt):
         ship.angle -= 128 * dt
         
     if up:
-        vx += 3 * math.cos((90 + ship.angle) / 180 * math.pi)
-        vy += 3 * math.sin((90 - ship.angle) / 180 * math.pi)
+        vx += 3 * math.cos(math.radians(90 + ship.angle))
+        vy += 3 * math.sin(math.radians(90 + ship.angle))
 
     ship.x += vx * dt
     ship.y += vy * dt
