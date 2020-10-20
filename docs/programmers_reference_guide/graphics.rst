@@ -111,19 +111,22 @@ and animated. Let's create one:
 
     from jupylet.sprite import Sprite
 
+    circle = Sprite('images/yellow-circle.png', width=184)
+    alien = Sprite('images/alien.png', scale=0.5)
     ship = Sprite('images/ship1.png', x=app.width/2, y=app.height/2, scale=0.5)
 
-We create a sprite by specifying the path to an image of a spaceship on disk:
+We create a sprite by specifying the path to an image on disk. For example 
+here is the image that we use for our little spaceship:
 
 .. image:: ../images/ship1.png
    :scale: 50 %
 
-We also specify the sprite's x and y coordinates. By setting them to half the
-game canvas width and height, we effectively position the sprite in the 
+We can also specify the sprite's x and y coordinates. By setting them to half 
+the game canvas width and height, we effectively position the sprite in the 
 middle of the game canvas.
 
-Sprites have many more properties that we can set when we create it and later
-if we wish to modify them.
+Sprites have many more properties that we can set when we create them and 
+later if we wish to modify them.
 
 .. note::
     Jupyter can conveniently show you the list of arguments accepted by a 
@@ -133,12 +136,12 @@ if we wish to modify them.
     constructor, then hold down the :guilabel:`Shift` key and press the 
     :guilabel:`Tab` key once or more.
 
-For example, we can make the ship sprite half transparent with the following 
-code:
+For example, we can make the yellow circle sprite half transparent with the 
+following code:
 
 .. code-block:: python
 
-    ship.opacity = 0.5
+    circle.opacity = 0.5
 
 Next up is a more complex function to control the ship's movement. Let's see 
 it and then unpack it line by line:
@@ -232,3 +235,99 @@ Once we have updated the velocity components we use them to update the ship's
 
     ship.x += vx * dt
     ship.y += vy * dt
+
+The problem with incrementing and decrementing the `x` and `y` coordinates 
+like that is that very quickly the ship will disappear from view. That's what 
+the ``ship.wrap_position()`` function is for. It will modify the ship's 
+position such that if it goes out of the canvas from one side it will show up 
+again at the opposite side:
+
+.. code-block:: python
+
+    ship.wrap_position(app.width, app.height)
+
+The function ends with a bit of code that checks if our little spaceship 
+collides with the alien sprite and if it does it shows a half transparent 
+yellow circle sprite:
+
+.. code-block:: python
+
+    if len(ship.collisions_with(alien)) > 0:
+        circle.opacity = 0.5
+    else:
+        circle.opacity = 0.0
+
+The ``ship.collisions_with(alien)`` function call checks if the ship sprite
+collides with the alien sprite and returns a list with contact points. If all 
+we care about is whether they collide or not we can simply test if the length
+of the returned list is greater than 0 (think about it).
+
+If the spaceship and the alien do not collide, we hide the yellow circle by 
+setting its opacity to 0.0 making it fully transparent.
+
+Handling Keyboard and Mouse Events
+----------------------------------
+
+In programming and in particular in game programming, pressing keys on the 
+keyboard or clicking the mouse and moving it around the screen is often 
+represented as a stream or sequence of `events <https://en.wikipedia.org/wiki/Event_(computing)>`_.
+
+For example, as the mouse is moved around the game canvas a sequence of 
+events with updated mouse positions is continuously generated. 
+
+To handle this stream of events you create an `event handler <https://en.wikipedia.org/wiki/Event_(computing)#Event_handler>`_.
+The spaceship game includes a function to handle mouse position events. Here 
+it is:
+
+.. code-block:: python
+
+    @app.event
+    def mouse_position_event(x, y, dx, dy):
+        
+        alien.x = x
+        alien.y = y
+        
+        circle.x = x
+        circle.y = y    
+
+The function begins with the special decorator ``@app.event``. This decorator
+makes sure our function is recorgnized as the handler for the 
+`mouse_position_event`. The function itself is pretty simple. It just sets the
+position of the alien and the yellow circle behind it to that of the mouse
+cursor.
+
+Here is a more complicated hander. The spaceship keyboard handler:
+
+.. code-block:: python
+
+    @app.event
+    def key_event(key, action, modifiers):
+        
+        global up, left, right
+        
+        keys = app.window.keys
+        
+        if action == keys.ACTION_PRESS:
+
+            if key == keys.UP:
+                ship.image = 'images/ship2.png'
+                up = True
+
+            if key == keys.LEFT:
+                left = True
+
+            if key == keys.RIGHT:
+                right = True
+
+        if action == keys.ACTION_RELEASE:
+        
+            if key == keys.UP:
+                ship.image = 'images/ship1.png'
+                up = False
+
+            if key == keys.LEFT:
+                left = False
+
+            if key == keys.RIGHT:
+                right = False
+

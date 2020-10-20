@@ -73,7 +73,7 @@ left = 0
 right = 0
 
 
-@app.run_me_every(1/120)
+@app.run_me_every(1/60)
 def update_ship(ct, dt):
     
     global vx, vy
@@ -99,7 +99,7 @@ def update_ship(ct, dt):
         circle.opacity = 0.0
 
 
-@app.run_me_every(1/48)
+@app.run_me_every(1/60)
 def rotate(ct, dt):
     
     alien.angle += 64 * dt
