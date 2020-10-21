@@ -18,7 +18,7 @@ the string *"hello, world"*. You can find the notebook at
 
 .. note::
     To understand the code in this chapter you need to know about Python 
-    imports, functions, and classes.
+    imports, functions, classes, and globals.
 
 The code begins with two import statements that import the :class:`~jupylet.app.App` 
 class which represents a game and the :class:`~jupylet.label.Label` class which 
@@ -273,11 +273,11 @@ keyboard or clicking the mouse and moving it around the screen is often
 represented as a stream or sequence of `events <https://en.wikipedia.org/wiki/Event_(computing)>`_.
 
 For example, as the mouse is moved around the game canvas a sequence of 
-events with updated mouse positions is continuously generated. 
+events with updated mouse positions is continuously generated and processed. 
 
-To handle this stream of events you create an `event handler <https://en.wikipedia.org/wiki/Event_(computing)#Event_handler>`_.
-The spaceship game includes a function to handle mouse position events. Here 
-it is:
+To handle this stream of events we create an `event handler <https://en.wikipedia.org/wiki/Event_(computing)#Event_handler>`_.
+The spaceship game includes such a function to handle mouse position events. 
+Here it is:
 
 .. code-block:: python
 
@@ -293,8 +293,8 @@ it is:
 The function begins with the special decorator ``@app.event``. This decorator
 makes sure our function is recorgnized as the handler for the 
 `mouse_position_event`. The function itself is pretty simple. It just sets the
-position of the alien and the yellow circle behind it to that of the mouse
-cursor.
+position of the alien sprite and the yellow circle sprite behind it to that of 
+the mouse cursor.
 
 Here is a more complicated hander. The spaceship keyboard handler:
 
@@ -330,4 +330,25 @@ Here is a more complicated hander. The spaceship keyboard handler:
 
             if key == keys.RIGHT:
                 right = False
+
+Let's go over the parameters of the ``key_event()`` function. 
+The `key` parameter tells us which keyboard key this event is all about; 
+the `action` parameter tells us whether it was pressed or released; and 
+the `modifiers` parameter tells us wheter any of the ``SHIFT``, ``ALT``, 
+or ``CTRL`` keys were held down during the event.
+
+Note that you should not directly compare the `key` argument to letters and 
+symbols, rather you should compare it to special predefined constants - in 
+this case ``keys.LEFT``, ``keys.UP``, and ``keys.RIGHT``.
+
+We use the handler to keep track of which arrow keys are being held down. 
+We accomplish that with global variables that hold the current state of keys.
+When a key is pressed we set the corresponding global variable to True,
+and when it is released we set the corresponding global variable to False.
+
+When we press the up arrow we engage the spaceship engines, a yellow 
+propulsion jet appears at the end of the rocket engine nozzle, and the ship
+accelerates. We achieve the visual effect with the statement 
+``ship.image = 'images/ship2.png'`` which changes the sprite's bitmap image
+to that of a spaceship with a visible propulsion jet.
 

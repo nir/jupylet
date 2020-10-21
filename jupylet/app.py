@@ -340,7 +340,7 @@ class App(EventLeg, ClockLeg):
             self.is_running = False
 
     def stop(self, foo=None):
-        """Stop given handler from running. If not handler is given stop game."""
+        """Stop given handler from running. If no handler is given stop game."""
 
         if foo is not None:
             return self.unschedule(foo, levels_up=2)

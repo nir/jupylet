@@ -139,7 +139,7 @@ def key_event(key, action, modifiers):
         _keyd.pop(key).play_release()
 
 
-@app.run_me_every(1/24)
+@app.run_me_every(1/10)
 def modify_oscilloscope(ct, dt):
     
     s = 2 ** dt

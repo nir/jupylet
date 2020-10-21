@@ -154,11 +154,11 @@ class ClockLeg(object):
         self.schedules = {}
         
     # TODO: handle errors so application does not exit on user errors.
-    def sonic_live_loop2(self, times=0, sync=True, *args, **kwargs):
-        return self.schedule_once(0, times, sync, *args, **kwargs)
+    def sonic_live_loop2(self, times=0, *args, **kwargs):
+        return self.schedule_once(0, times, sync=True, *args, **kwargs)
     
-    def sonic_live_loop(self, times=0, sync=False, *args, **kwargs):
-        return self.schedule_once(0, times, sync, *args, **kwargs)
+    def sonic_live_loop(self, times=0, *args, **kwargs):
+        return self.schedule_once(0, times, sync=False, *args, **kwargs)
     
     def run_me(self, delay=0, *args, **kwargs):
         return self.schedule_once(delay, 1, False, *args, **kwargs)

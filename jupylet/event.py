@@ -478,16 +478,8 @@ class EventLeg(mglw.WindowConfig):
             return foo(*args, **kwargs)
 
     def event(self, *args):
-        """Function decorator for an event handler.
-        Usage::
-            @app.event
-            def on_resize(self, width, height):
-                # ...
-        or::
-            @app.event('on_resize')
-            def foo(self, width, height):
-                # ...
-        """
+        """Function decorator for an event handler."""
+        
         logger.info('Enter EventLeg.event(*args=%r).', args) 
 
         if len(args) == 0:                      # @window.event()

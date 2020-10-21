@@ -49,7 +49,7 @@ _empty_array = np.array([])
 
 
 class Sprite(Node):
-    
+
     """A 2D game sprite.
     
     Args:
