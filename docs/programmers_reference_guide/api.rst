@@ -79,10 +79,11 @@ Properties
 .. autoattribute:: Sprite.radius
 .. autoattribute:: Sprite.opacity
 .. autoattribute:: Sprite.color
-.. autoattribute:: Sprite.flip
-.. autoattribute:: Sprite.mipmap
-.. autoattribute:: Sprite.autocrop
-.. autoattribute:: Sprite.anisotropy
+
+.. py:attribute:: Sprite.flip
+.. py:attribute:: Sprite.mipmap
+.. py:attribute:: Sprite.autocrop
+.. py:attribute:: Sprite.anisotropy
 
 
 Class Label
@@ -95,9 +96,9 @@ Class Label
 Properties
 ~~~~~~~~~~    
 
-.. autoattribute:: Label.text
-.. autoattribute:: Label.font_size
-.. autoattribute:: Label.font_path
-.. autoattribute:: Label.line_height
-.. autoattribute:: Label.align
+.. py:attribute:: Label.text
+.. py:attribute:: Label.font_path
+.. py:attribute:: Label.font_size=16
+.. py:attribute:: Label.line_height=1.2
+.. py:attribute:: Label.align='left'
 

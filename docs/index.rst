@@ -8,7 +8,7 @@ JUPYLET PROGRAMMER'S REFERENCE GUIDE
 
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 2
     :caption: TABLE OF CONTENTS
 
     programmers_reference_guide/introduction
