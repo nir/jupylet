@@ -14,6 +14,7 @@ JUPYLET PROGRAMMER'S REFERENCE GUIDE
     programmers_reference_guide/introduction
     programmers_reference_guide/getting_started
     programmers_reference_guide/graphics
+    programmers_reference_guide/graphics-3d
     programmers_reference_guide/sound
     programmers_reference_guide/rl
     programmers_reference_guide/api
