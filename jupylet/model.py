@@ -42,6 +42,7 @@ import numpy as np
 from .lru import _lru_materials
 from .lru import SKYBOX_TEXTURE_UNIT, SHADOW_TEXTURE_UNIT, TARRAY_TEXTURE_UNIT
 from .node import Object, Node
+from .color import c2v
 from .resource import get_shader_3d, pil_from_texture, get_context
 from .resource import find_glob_path, unresolve_path, load_texture_cube
 
@@ -401,7 +402,7 @@ class Material(Object):
 
             shader._members[material + 'color_texture'].value = self._color
             if self._color < 0:
-                shader._members[material + 'color'].value = tuple(self.color) 
+                shader._members[material + 'color'].value = tuple(c2v(self.color))
                                     
             shader._members[material + 'normals_texture'].value = self._normals
             shader._members[material + 'normals_scale'].value = self.normals_scale
@@ -452,7 +453,7 @@ class Light(Node):
 
             type = type,
             
-            color = [round(c, 3) for c in color],
+            color = [round(c, 3) for c in c2v(color)],
             intensity = round(intensity, 3),
             ambient = ambient,
 
@@ -494,7 +495,7 @@ class Light(Node):
             prefix = self.get_uniform_name('')
 
             shader._members[prefix + 'type'].value = LIGHT_TYPE[self.type]
-            shader._members[prefix + 'color'].value = tuple(self.color)
+            shader._members[prefix + 'color'].value = tuple(c2v(self.color))[:3]
             shader._members[prefix + 'intensity'].value = self.intensity
             shader._members[prefix + 'ambient'].value = self.ambient
             

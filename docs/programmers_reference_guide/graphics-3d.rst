@@ -102,8 +102,8 @@ Shadows are turned off by default. You can turn them on with:
 
     scene.shadows = True
 
-If just want to draw the scene, simply call the ``scene.draw()`` 
-method inside your ``render()`` function. That's it:
+If you just want to draw the scene, simply call the ``scene.draw()`` 
+method in the ``render()`` function. That's it:
 
 .. code-block:: python
 
@@ -122,21 +122,53 @@ various objects in the scene. Let's modify the camera's `field of view`:
 
     camera.yfov = 0.4
 
-If the game was already running, you should see the camera zoom in. If you
-increase the field of view the cammera should appear to zoom out.
+If the game was already running, you should see the camera zoomed in. If you
+increase the field of view the camera would appear to zoom out.
 
 .. note::
     In Jupyter you can manipulate the properties of objects while the game is
     running and see the effect immediately and interactively.
 
+Let's turn the color of the sun into bright red:
 
-The Sky in a Box
-----------------
+.. code-block:: python
 
+    sun = scene.lights['Light.Sun']
+
+    sun.intensity = 16
+    sun.color = 'red'
+
+Let's make the moon twice as big:
+
+.. code-block:: python
+
+    moon = scene.meshes['Moon']
+
+    moon.scale *= 2
+
+Take a few minutes to play around with the objects of the scene and you will 
+soon get the idea. After all it's not rocket science.
+
+.. note::
+    In Jupyter you can find out the various method and properties of an object
+    with the auto `complete function`. e.g. type ``moon.`` (don't forget the 
+    dot) and then tap the :guilabel:`Tab` key.
 
 
 A Little Bit of Math
 --------------------
+
+To move objects around and rotate them in 3D space we need to understand 
+vectors in space. 
+
+
+
+.. image:: ../images/coordinate_systems_right_handed.png 
+
+
+
+The Sky in a Box
+----------------
 
 
 Diving into OpenGL
