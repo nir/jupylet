@@ -158,13 +158,169 @@ soon get the idea. After all it's not rocket science.
 A Little Bit of Math
 --------------------
 
-To move objects around and rotate them in 3D space we need to understand 
-vectors in space. 
+Let's move the alien one unit to the right:
 
+.. code-block:: python
 
+    alien = scene.meshes['Alien']
+
+    alien.position.x += 1
+
+You should be able to notice it moved a little to the right.
+
+.. note::
+    We are not specifying coordinates using pixels any more since we are not 
+    moving the alien on screen but in 3D space.
+
+Now let's move it one and a half units up:
+
+.. code-block:: python
+
+    alien.position.y += 1.5
+
+So far nothing surprising. Now let's try something new and move it 2 units 
+towards us:
+
+.. code-block:: python
+
+    alien.position.z += 2
+
+Coordinates in 3D space have 3 components `x`, `y`, `z`, with the `z` axis 
+pointing towards us as shown in this figure:
 
 .. image:: ../images/coordinate_systems_right_handed.png 
 
+More generally the `(x, y, z)` components combined are called a `vector <https://www.khanacademy.org/math/algebra-home/alg-vectors>`_:
+
+.. code-block:: python
+
+    In []: alien.position
+    Out[]: vec3( 1, 1.5, 2 )
+
+.. note::
+    The ``In []:`` and ``Out []:`` notation in the example above is used in
+    Jupyter notebooks to help us distinguish between what we type in and what 
+    Python prints out in response.
+
+Jupylet uses a wonderful Python module called `PyGLM <https://github.com/Zuzu-Typ/PyGLM>`_ 
+for vector math. It is super fast and very convenient. Check it out!
+
+Let's define an arbitrary displacement in space and use it to move our alien:
+
+.. code-block:: python
+
+    import glm
+
+    displacement = glm.vec3(0.2, 1, 0.33)
+    alien.position += displacement
+
+Are you ready for your first 3D animation? Type and run the following code
+in the spaceship 3D notebook while the game is running:
+
+.. code-block:: python
+
+    import asyncio
+
+    for i in range(100):
+        alien.position += displacement / 30
+        await asyncio.sleep(1/30)
+
+If you did it correctly, you should see the alien drift away in the direction 
+of the displacement we defined above. 
+
+If you know a little bit of Python you may be wondering why we have used the 
+strange looking ``await asyncio.sleep(1/30)`` instead of the standard 
+``time.sleep(1/30)``. The simplistic answer is that the `asyncio.sleep` 
+function is special in that it tells Python it can go do other stuff until the 
+sleep period is over, where other stuff includes important other stuff like 
+carrying on with all the other gazillion computations required for keeping the 
+game going.
+
+However, while the screen kept updating and the alien kept spinning as it 
+drifted away, you may have noticed that the game does not seem to respond 
+to key presses while the animation is running and that you therefore cannot 
+navigate the spaceship (with the :guilabel:`W`, :guilabel:`A`, and 
+:guilabel:`D` keys).
+
+The explanation for why this is happening is complicated and involves advanced
+Python, but the good news is that we can fix it easily. Run the following code
+in the game notebook and the alien should start drifting indefinitely and 
+this time you should be able to chase it by navigating the ship:
+
+.. code-block:: python
+
+    velocity = glm.vec3(0.2, 1, 0.33)
+
+    @app.run_me_every(1/30)
+    def drift(ct, dt):
+        alien.position += velocity * dt 
+
+Notice how we changed the vector name from `displacement` to `velocity` and now 
+we suddenly have `a proper physics equation <https://physics.info/velocity/>`_ 
+driving our little animation (ds = v * dt).
+
+Type the following to bring back the alien to its original position:
+
+.. code-block:: python
+
+    alien.position = glm.vec3(0)
+
+Or stop the alien in its tracks with:
+
+.. code-block:: python
+    
+    app.stop(drift)
+
+Our alien has two interesting vector attributes ``alien.up`` and 
+``alien.front``. The `up` vector can be visualized as a personal `+y` axis that 
+always points upward through the alien's head regardless of the alien's 
+orientation, while the `front` vector always points in the direction the alien
+is facing.
+
+By default the alien is perpetually spinning clockwise. Let's combine this 
+spinning with a small displacement in the direction of the `up` vector to make 
+the alien swim through space in circles:
+
+.. code-block:: python
+
+    @app.run_me_every(1/30)
+    def swim(ct, dt):
+        alien.position += alien.up * dt 
+
+More generally these personal `up` and `front` vectors are known as the local 
+coordinate system of the alien; i.e. a personal set of `+x`, `+y`, `+z` axes 
+that rotate along with the alien's orientation.
+
+Here is a version of the ``swim()`` function that uses the local coordinate
+system explicitly:
+
+.. code-block:: python
+
+    y_direction = glm.vec3(0, 1, 0)
+
+    @app.run_me_every(1/30)
+    def swim(ct, dt):
+        alien.move_local(y_direction * dt)
+
+Finally we arrive at the trickiest of all functions - rotation in 3D space. 
+The default ``spin()`` function actually performs a clockwise roll rotation; 
+that is, a clockwise rotation around the `front` (`+z`) axis. Let's replace 
+it with a proper ballet dancing spinning around the `up` (`+y`) axis:
+
+.. code-block:: python
+
+    import math 
+
+    @app.run_me_every(1/30)
+    def spin(ct, dt):
+        alien.rotate_local(2 * math.pi * dt, y_direction)
+
+The ``rotate_local(angle, axis)`` function expects two arguments; an angle 
+specifying how many `radians <https://www.mathopenref.com/radians.html>`_ to 
+rotate, and a vector specifying the axis around which to rotate.
+
+Since ``2 * math.pi`` is the number of radians in a full circle, the alien will
+complete one rotation per second.
 
 
 The Sky in a Box
