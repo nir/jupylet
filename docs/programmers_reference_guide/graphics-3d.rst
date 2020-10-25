@@ -122,7 +122,7 @@ various objects in the scene. Let's modify the camera's `field of view`:
 
     camera.yfov = 0.4
 
-If the game was already running, you should see the camera zoomed in. If you
+If the game is running you should see the camera zoom in. If you
 increase the field of view the camera would appear to zoom out.
 
 .. note::
@@ -277,9 +277,10 @@ always points upward through the alien's head regardless of the alien's
 orientation, while the `front` vector always points in the direction the alien
 is facing.
 
-By default the alien is perpetually spinning clockwise. Let's combine this 
-spinning with a small displacement in the direction of the `up` vector to make 
-the alien swim through space in circles:
+The spaceship notebook includes a ``spin()`` function that keeps the alien
+spinning clockwise perpetually. Let's combine this spinning with a small 
+displacement in the direction of the `up` vector to make the alien swim 
+through space in circles:
 
 .. code-block:: python
 
@@ -315,23 +316,37 @@ it with a proper ballet dancing spinning around the `up` (`+y`) axis:
     def spin(ct, dt):
         alien.rotate_local(2 * math.pi * dt, y_direction)
 
-The ``rotate_local(angle, axis)`` function expects two arguments; an angle 
-specifying how many `radians <https://www.mathopenref.com/radians.html>`_ to 
-rotate, and a vector specifying the axis around which to rotate.
+The ``alien.rotate_local(angle, axis)`` function expects two arguments; an 
+angle specifying how many `radians <https://www.mathopenref.com/radians.html>`_ 
+to rotate, and a vector specifying the axis to rotate around.
 
-Since ``2 * math.pi`` is the number of radians in a full circle, the alien will
-complete one rotation per second.
+By multiplying ``2 * math.pi``, the number of radians in a full circle, by 
+`dt`, the number of seconds since the last time the function was called, we 
+make the alien spin at the rate of one full rotation per second (think about 
+it).
 
 
 The Sky in a Box
 ----------------
 
 
+
 Diving into OpenGL
 ------------------
 
 Over the years many sophisticated algorithms have been developed to enable
-computer graphics to reproduce the visual effects of the interaction of light 
-with matter, and by default Jupylet employs some of these algorithms to 
+computer graphics to reproduce the visual effect of the interaction of light 
+and matter. By default Jupylet employs some of these algorithms to approximate
+the way Blender would render a 3D scene.
 
+However, you are not limited in any way to the default Jupylet renderer. 
+Jupylet is built on top of the wonderful `ModernGL <https://github.com/moderngl/moderngl>`_  
+library, which is an efficient wrapper around the `OpenGL API <https://en.wikipedia.org/wiki/OpenGL>`_.
+
+By using ModernGL and the OpenGL API you are free to program GPU shaders to 
+create any visual effect you want, from cartoon like shading to mesmerizing 
+music visualizations, to any effect you are imaginative enough to dream up
+and skilled enough to program.
+
+If you want to dive into OpenGL and shading check out `learnopengl.com  <https://learnopengl.com/>`_.
 
