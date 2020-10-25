@@ -243,7 +243,7 @@ navigate the spaceship (with the :guilabel:`W`, :guilabel:`A`, and
 :guilabel:`D` keys).
 
 The explanation for why this is happening is complicated and involves advanced
-Python, but the good news is that we can fix it easily. Run the following code
+Python, but the good news is that we can easily fix it. Run the following code
 in the game notebook and the alien should start drifting indefinitely and 
 this time you should be able to chase it by navigating the ship:
 
@@ -329,6 +329,31 @@ it).
 The Sky in a Box
 ----------------
 
+You may be surprised to learn that the beautiful nebula laden sky of the 
+spaceship demo is implemented as a box positioned around the game
+camera such that the camera is always at the center of the box. 
+
+Each of the six faces of the sky box (its left, front, right, back, top, and
+bottom faces) is textured with one of six carefully prepared images of the sky 
+as shown in the following illustration:
+
+.. image:: ../images/skybox-layout-small.png
+
+In the spaceship notebook, the nebula skybox is loaded with the following
+statement:
+
+.. code-block:: python
+
+    from jupylet.model import Skybox
+
+    scene.skybox = Skybox('./scenes/moon/nebula/nebula*.png', intensity=2., flip_left_right=True)
+
+The first argument to the Skybox constructor is a `glob path pattern <https://en.wikipedia.org/wiki/Glob_(programming)>`_ 
+that matches `the six skybox images <https://github.com/nir/jupylet/tree/master/examples/scenes/moon/nebula>`_. 
+The `intensity` argument adjusts the exposure of the images (we brighten them 
+a little to make the effect more pleasing). Finally, try toggling the 
+`flip_left_right` argument if your skybox appears to be badly stiched 
+initially.
 
 
 Diving into OpenGL
@@ -348,5 +373,5 @@ create any visual effect you want, from cartoon like shading to mesmerizing
 music visualizations, to any effect you are imaginative enough to dream up
 and skilled enough to program.
 
-If you want to dive into OpenGL and shading check out `learnopengl.com  <https://learnopengl.com/>`_.
+If you would like to dive into OpenGL and shading check out `learnopengl.com  <https://learnopengl.com/>`_.
 
