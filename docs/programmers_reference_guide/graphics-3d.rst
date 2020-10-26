@@ -330,17 +330,31 @@ The Sky in a Box
 ----------------
 
 You may be surprised to learn that the beautiful nebula laden sky of the 
-spaceship demo is implemented as a box positioned around the game
-camera such that the camera is always at the center of the box. 
+spaceship demo is implemented as six carefully prepared images texturing the 
+six faces of a virtual cube positioned around the game camera such that the 
+viewer is always at the center of the cube. 
 
-Each of the six faces of the sky box (its left, front, right, back, top, and
-bottom faces) is textured with one of six carefully prepared images of the sky 
-as shown in the following illustration:
+Technically it is a form of `anamorphosis <https://en.wikipedia.org/wiki/Anamorphosis>`_ 
+that requires the viewer to occupy the exact middle of the cube in order
+to enjoy the optical illusion, just as 3D street art and drawings require 
+the viewer to observe them from a particular vantage point.
+
+Here is an illustration of the nebula skybox images laid out as the unwrapped 
+faces of the skybox cube (i.e. its left, front, right, back, top, and
+bottom faces):
 
 .. image:: ../images/skybox-layout-small.png
 
-In the spaceship notebook, the nebula skybox is loaded with the following
-statement:
+In 3D gaming `skyboxes <https://en.wikipedia.org/wiki/Skybox_(video_games)>`_ 
+can be used to create a powerful atmospheric effect and to give a sense of 
+depth to an environment. 
+
+The nebula skybox used in the spaceship game was created by `Spacescape <http://alexcpeterson.com/spacescape/>`_ 
+and you can find many other skyboxes and tools and guides for creating them
+online.
+
+Back to the spaceship notebook, the nebula skybox is loaded with the 
+following statement:
 
 .. code-block:: python
 
@@ -352,8 +366,7 @@ The first argument to the Skybox constructor is a `glob path pattern <https://en
 that matches `the six skybox images <https://github.com/nir/jupylet/tree/master/examples/scenes/moon/nebula>`_. 
 The `intensity` argument adjusts the exposure of the images (we brighten them 
 a little to make the effect more pleasing). Finally, try toggling the 
-`flip_left_right` argument if your skybox appears to be badly stiched 
-initially.
+`flip_left_right` argument if your skybox appears to be badly stiched.
 
 
 Diving into OpenGL
@@ -367,11 +380,10 @@ the way Blender would render a 3D scene.
 However, you are not limited in any way to the default Jupylet renderer. 
 Jupylet is built on top of the wonderful `ModernGL <https://github.com/moderngl/moderngl>`_  
 library, which is an efficient wrapper around the `OpenGL API <https://en.wikipedia.org/wiki/OpenGL>`_.
-
-By using ModernGL and the OpenGL API you are free to program GPU shaders to 
-create any visual effect you want, from cartoon like shading to mesmerizing 
-music visualizations, to any effect you are imaginative enough to dream up
-and skilled enough to program.
+By using ModernGL and the OpenGL API you are free to program your own GPU 
+shaders to create any visual effect you want, from cartoon like shading to 
+mesmerizing music visualizations, to any effect you are imaginative enough 
+to dream up and skilled enough to program.
 
 If you would like to dive into OpenGL and shading check out `learnopengl.com  <https://learnopengl.com/>`_.
 
