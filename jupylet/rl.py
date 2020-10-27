@@ -42,6 +42,7 @@ import os
 import multiprocessing as mp
 import numpy as np
 
+from .env import set_rl_worker
 from .utils import trimmed_traceback
 from .audio.device import disable_audio
 
@@ -118,6 +119,7 @@ class ModuleProcess(object):
         
     def _worker0(self, c0):
         
+        set_rl_worker()
         disable_audio()
         
         self.c0 = c0

@@ -49,7 +49,8 @@ except:
     shared_memory = None
 
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
-from .env import is_remote, is_osx, set_app_mode, in_python_script, parse_args
+from .env import is_remote, is_osx, set_app_mode, is_python_script, is_rl_worker
+from .env import parse_args
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
 from .event import EventLeg, JupyterWindow
@@ -122,7 +123,12 @@ class App(EventLeg, ClockLeg):
         """"""
 
         if mode == 'auto':
-            mode = 'window' if in_python_script() else 'jupyter'
+            if is_rl_worker():
+                mode = 'hidden'
+            elif is_python_script():
+                mode = 'window'
+            else:
+                mode = 'jupyter'
 
         assert mode in ['window', 'jupyter', 'hidden']
         assert not (is_remote() and mode == 'window')

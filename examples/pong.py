@@ -54,12 +54,7 @@ from jupylet.audio.sample import Sample
 import moderngl_window.timers.clock as _clock
 
 
-if __name__ == '__main__':
-    mode = 'window'
-else:
-    mode = 'hidden'
-
-app = App(mode=mode)
+app = App()
 
 
 background = '#3e32a2'

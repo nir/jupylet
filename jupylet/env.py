@@ -70,6 +70,18 @@ def get_app_mode():
     return _mode
 
 
+_is_rl_worker = False
+
+
+def set_rl_worker():
+    global _is_rl_worker
+    _is_rl_worker = True
+
+
+def is_rl_worker():
+    return _is_rl_worker
+
+
 @functools.lru_cache()
 def is_remote():
 
@@ -149,7 +161,7 @@ def is_xvfb():
 
 
 @functools.lru_cache()
-def in_python_script():
+def is_python_script():
 
     f0 = inspect.currentframe()
     
