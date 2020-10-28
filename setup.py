@@ -9,7 +9,10 @@ with open('README.md', 'rb') as f:
 
 setuptools.setup(
     name = 'jupylet',
-    packages = ['jupylet'],
+    packages = ['jupylet', 'jupylet.audio'],
+    package_data={
+       'jupylet': ['assets/*', 'assets/*/*'],
+    },
     version = '0.8.1',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
