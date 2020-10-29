@@ -18,7 +18,9 @@ the string *"hello, world"*. You can find the notebook at
 
 .. note::
     To understand the code in this chapter you need to know about Python 
-    imports, functions, classes, and globals.
+    `imports <https://docs.python.org/3.8/tutorial/modules.html>`_, 
+    `functions <https://docs.python.org/3.8/tutorial/controlflow.html#defining-functions>`_, 
+    `classes <https://docs.python.org/3.8/tutorial/classes.html>`_, and globals.
 
 The code begins with two import statements that import the :class:`~jupylet.app.App` 
 class which represents a game and the :class:`~jupylet.label.Label` class which 
