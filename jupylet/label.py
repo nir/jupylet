@@ -173,7 +173,7 @@ class Label(Sprite):
 
         image, baseline = draw_str(text, font_path, font_size, line_height, align)
 
-        super(Label, self).__init__(
+        super().__init__(
             image,
             x, 
             y, 
@@ -217,19 +217,19 @@ class Label(Sprite):
 
     def get_state(self):
         return dict(
-            sprite = super(Label, self).get_state(),
+            sprite = super().get_state(),
             text = self.text,
             font_path = self.font_path,
             font_size = self.font_size,
             line_height = self.line_height,
-            align = align,
+            align = self.align,
         )
 
     def set_state(self, s):
         
+        super().set_state(s['sprite'])
+
         for k, v in s.items():
-            if k == 'sprite':
-                super(Label, self).set_state(v)
-            else:
+            if k != 'sprite':
                 setattr(self, k, v)
 

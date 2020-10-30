@@ -279,7 +279,16 @@ def highlights(ct, dt):
         if sr0 != state.sr:
             sr0 = state.sr
             scorer.color = 'white'
-                        
+
+
+def observe(reward=0):
+
+    return {
+        'screen0': app.observe(),
+        'player0': {'score': state.sl, 'reward': reward},
+        'player1': {'score': state.sr, 'reward': -reward},
+    }
+
 
 def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
     
@@ -295,22 +304,20 @@ def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
         
     reward = (state.sl - sl0) - (state.sr - sr0)
 
-    return {
-        'screen0': app.observe(),
-        'player0': {'score': state.sl, 'reward': reward},
-        'player1': {'score': state.sr, 'reward': -reward},
-    }
+    return observe(reward)
 
 
 START = 'pong-start.state'
 
 
 def reset():
-    return load(START)
+    load(START)
+    return observe()
     
     
 def load(path):
-    return app.load_state(path, state, ball, padl, padr, scorel, scorer)
+    app.load_state(path, state, ball, padl, padr, scorel, scorer)
+    return observe()
     
 
 def save(path=None):

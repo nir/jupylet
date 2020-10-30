@@ -22,7 +22,8 @@ Prepare a Game for RL
 When I program a new game in Jupylet I enjoy doing it interactively in a 
 Jupyter notebook while it is running. This is how all the Jupylet example 
 notebooks were created. However, to programmatically control a game in RL we 
-first need to convert it into a Python module.
+need it in the form of a Python module, and we need to define a ``step()``
+function and a ``reset()`` function.
 
 To convert a Jupylet game into a Python module, simply select 
 `Download as Python` from the Jupyter notebook :guilabel:`File` menu. 
@@ -68,20 +69,43 @@ This is a very `common programming pattern in Python <https://realpython.com/pyt
 The magical `__name__` variable will only equal `'__main__'` if  
 `21-pong.py` is run as a Python script (e.g. as we did above).
 
-The other thing we have to do is fix the module's filename. While you can name 
+Next we need to fix the module's filename. While you can name 
 a Python script anything you want, Python module names follow the same 
 restrictions as Python variable names and cannot contain dashes; therefore, a 
 filename like `pong.py` would be much better.
 
-But don't rename the file just yet since we have already 
-done that for you, and there are a few extra lines of code in there that we 
-need to examine. So open `examples/pong.py <https://github.com/nir/jupylet/blob/master/examples/pong.py>`_ 
-and scroll it down right to the end.
+However, don't rename the file just yet since we have already done that for 
+you, and we have also added the required definitions for ``step()`` and 
+``reset()`` in there. 
 
-To make a Jupylet game module controllable you need to provide a definition
-for 3 functions:
+You can find the final version of the `Pong` game in its module form at 
+`examples/pong.py <https://github.com/nir/jupylet/blob/master/examples/pong.py>`_.
+
+Let's look at the ``step()`` and ``reset()`` functions now. The ``step()`` 
+function is r
 
 .. code-block:: python
+
+    def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
+        
+        state.key_a, state.key_d = player0[:2]
+        
+        state.left, state.right = player1[:2]
+        
+        sl0 = state.sl
+        sr0 = state.sr
+        
+        if app.mode == 'hidden': 
+            app.step(n)
+            
+        reward = (state.sl - sl0) - (state.sr - sr0)
+
+        return {
+            'screen0': app.observe(),
+            'player0': {'score': state.sl, 'reward': reward},
+            'player1': {'score': state.sr, 'reward': -reward},
+        }
+
 
     def reset():
         return load('pong-start.state')
@@ -93,6 +117,7 @@ for 3 functions:
 
     def save(path=None):
         app.save_state('pong', path, state, ball, padl, padr, scorel, scorer)
+
 
 Reinforcement learning is often episodic. For example in `Pong` the agent 
 does not need to play indefinitely or to a particular score, but instead the 

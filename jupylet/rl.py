@@ -28,6 +28,7 @@
 import functools
 import importlib
 import itertools
+import builtins
 import datetime
 import platform
 import tempfile
@@ -131,7 +132,7 @@ class ModuleProcess(object):
             
             try:
                 if kwargs is not None:
-                    foo = rgetattr(module, name)
+                    foo = getattr(builtins, name, None) or rgetattr(module, name)
                     self._c1_send(foo(*args, **kwargs))
                     
                 elif args is not None:
@@ -198,7 +199,7 @@ class ModuleProcess(object):
             return load(v)
         
         if t == 'ee':
-            sys.stderr.write('\n'.join(v))   
+            sys.stderr.write(''.join(v))   
 
             
 class GameProcess(ModuleProcess):
@@ -213,7 +214,7 @@ class GameProcess(ModuleProcess):
         self.call('app.use_shared_memory')        
 
     def observe(self):
-        return self.call('app.observe')
+        return self.call('observe')
         
     def step(self, *args, **kwargs):
         return self.call('step', *args, **kwargs)
@@ -251,7 +252,7 @@ class Games(object):
         self.call('app.use_shared_memory')        
 
     def observe(self):
-        return self.call('app.observe') 
+        return self.call('observe') 
 
     def step(self, *args, **kwargs):
         return self.call('step', *args, **kwargs) 

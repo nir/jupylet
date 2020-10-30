@@ -400,7 +400,7 @@ class Sprite(Node):
 
     def get_state(self):
         return dict(
-            node = super(Sprite, self).get_state(),
+            node = super().get_state(),
             color4 = glm_dumps(glm.vec4(self.color4)),
             mipmap = self.mipmap,
             autocrop = self.autocrop,
@@ -414,8 +414,8 @@ class Sprite(Node):
     def set_state(self, s):
         
         for k, v in s.items():
-            if k == 'node':
-                super(Sprite, self).set_state(v)
-            else:
+            if k != 'node':
                 setattr(self, k, glm_loads(v))
+
+        super().set_state(s['node'])
 

@@ -163,10 +163,10 @@ class Scene(Object):
             shader._members['shadowmap_pass'].value = 0
 
         for light in self.lights.values():
-            light.set_state(shader, self.shadows)
+            light.prepare(shader, self.shadows)
 
         for camera in self.cameras.values():
-            camera.set_state(shader)
+            camera.prepare(shader)
 
         for mesh in self.meshes.values():
             mesh.draw(shader)
@@ -222,7 +222,7 @@ class Scene(Object):
 
                     l = self.shadowmap.next_layer()
 
-                    light.set_state_render_shadowmap(
+                    light.prepare_render_shadowmap(
                         j, l, shader, camera_position, camera_screen
                     )
 
@@ -374,7 +374,7 @@ class Material(Object):
 
         return math.log(0.5) / math.log(nm)        
 
-    def set_state(self, shader):
+    def prepare(self, shader):
             
         if self._dirty:
             self.load_texture_array()
@@ -484,7 +484,7 @@ class Light(Node):
     def get_uniform_name(self, key):
         return 'lights[%s].%s' % (self.index, key)
  
-    def set_state(self, shader, shadows):
+    def prepare(self, shader, shadows):
         
         _trigger_dirty_flat = self.matrix
 
@@ -513,7 +513,7 @@ class Light(Node):
             shader._members[prefix + 'shadowmap_bias'].value = self.bias
             shader._members[prefix + 'shadowmap_textures_count'].value = self.shadowmaps_count
                         
-    def set_state_render_shadowmap(
+    def prepare_render_shadowmap(
         self, 
         shadowmap_index, 
         shadowmap_layer, 
@@ -624,7 +624,7 @@ class Camera(Node):
 
         self._aspect = 0
 
-    def set_state(self, shader):
+    def prepare(self, shader):
 
         width, height = get_context().fbo.size
 
@@ -735,7 +735,7 @@ class Primitive(Object):
         #logger.debug('Enter Primitive.draw(shader=%r).', shader)
 
         if shader.extra.get('shadowmap_pass') != 1:
-            self.material.set_state(shader)
+            self.material.prepare(shader)
 
         vao = self.get_vao(shader)
         vao.render()

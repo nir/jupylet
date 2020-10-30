@@ -468,8 +468,6 @@ class App(EventLeg, ClockLeg):
 
         self._redraw_windows(0, 0)
 
-        return self.observe()
-
     def get_logging_widget(self, height='256px', quiet_default_logger=True):
         return get_logging_widget(height, quiet_default_logger)
        
