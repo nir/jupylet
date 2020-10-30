@@ -22,8 +22,8 @@ Prepare a Game for RL
 When I program a new game in Jupylet I enjoy doing it interactively in a 
 Jupyter notebook while it is running. This is how all the Jupylet example 
 notebooks were created. However, to programmatically control a game in RL we 
-need it in the form of a Python module, and we need to define a ``step()``
-function and a ``reset()`` function.
+need it in the form of a Python module, and we need to define the ``step()``,
+``observe()``, and ``reset()`` functions.
 
 To convert a Jupylet game into a Python module, simply select 
 `Download as Python` from the Jupyter notebook :guilabel:`File` menu. 
@@ -75,14 +75,25 @@ restrictions as Python variable names and cannot contain dashes; therefore, a
 filename like `pong.py` would be much better.
 
 However, don't rename the file just yet since we have already done that for 
-you, and we have also added the required definitions for ``step()`` and 
-``reset()`` in there. 
+you, and we have also added example definitions for the ``step()``,
+``observe()``, and ``reset()`` functions. 
 
 You can find the final version of the `Pong` game in its module form at 
 `examples/pong.py <https://github.com/nir/jupylet/blob/master/examples/pong.py>`_.
 
-Let's look at the ``step()`` and ``reset()`` functions now. The ``step()`` 
-function is r
+The ``step()``, ``observe()``, and ``reset()`` functions are not strictly 
+required, rather they are recommended as a pattern supported by the Jupylet 
+API, and as a programmer you are free to define their inputs and outputs in 
+any way you wish.
+
+The ``step()`` function should be called with an `action` and should 
+return the next observation and reward from the environment; the 
+``observe()`` function should return an observation of the environment; and 
+the ``reset()`` function should be called to reset the game state to a 
+predefined state (e.g. the beginning of the game).
+
+Let's take a look at how these three functions are defined for our `Pong` 
+game:
 
 .. code-block:: python
 
@@ -95,10 +106,14 @@ function is r
         sl0 = state.sl
         sr0 = state.sr
         
-        if app.mode == 'hidden': 
-            app.step(n)
+        app.step(n)
             
         reward = (state.sl - sl0) - (state.sr - sr0)
+
+        return observe(reward)
+
+
+    def observe(reward=0):
 
         return {
             'screen0': app.observe(),
@@ -108,25 +123,31 @@ function is r
 
 
     def reset():
-        return load('pong-start.state')
-        
-        
+        load('pong-start.state')
+        return observe()
+
+
+The particular ``reset()`` function defined above relies on  
+``load()`` and ``save()`` functions. This is how they are defined in
+the `pong` module:
+
+
+.. code-block:: python
+
     def load(path):
-        return app.load_state(path, state, ball, padl, padr, scorel, scorer)
+        app.load_state(path, state, ball, padl, padr, scorel, scorer)
+        return observe()
         
 
     def save(path=None):
         app.save_state('pong', path, state, ball, padl, padr, scorel, scorer)
 
 
-Reinforcement learning is often episodic. For example in `Pong` the agent 
-does not need to play indefinitely or to a particular score, but instead the 
-game can be periodically reset to its beginning. 
-
-In the case of the this particular implementation of `Pong`, the `state`, 
-`ball`, `padl`, `padr`, `scorel`, `scorer` arguments are the objects that 
-uniquely determine the game state. In general you can pass any object that 
-implements the ``get_state()`` and ``set_state()`` methods.
+The arguments to the ``app.load_state()`` and ``app.save_state()`` functions,
+namely `state`, `ball`, `padl`, `padr`, `scorel`, `scorer` are the global
+game objects that uniquely determine the game state. In general you can 
+include any object that implements the ``get_state()`` and ``set_state()`` 
+methods.
 
 
 Control a Game Instance

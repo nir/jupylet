@@ -281,15 +281,6 @@ def highlights(ct, dt):
             scorer.color = 'white'
 
 
-def observe(reward=0):
-
-    return {
-        'screen0': app.observe(),
-        'player0': {'score': state.sl, 'reward': reward},
-        'player1': {'score': state.sr, 'reward': -reward},
-    }
-
-
 def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
     
     state.key_a, state.key_d = player0[:2]
@@ -305,6 +296,15 @@ def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
     reward = (state.sl - sl0) - (state.sr - sr0)
 
     return observe(reward)
+
+
+def observe(reward=0):
+
+    return {
+        'screen0': app.observe(),
+        'player0': {'score': state.sl, 'reward': reward},
+        'player1': {'score': state.sr, 'reward': -reward},
+    }
 
 
 START = 'pong-start.state'
