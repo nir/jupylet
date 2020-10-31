@@ -104,6 +104,9 @@ get started:
   \- Perhaps not as didactic as Microsoft's guide, but it is a good idea to
   get familiar with Python's official documentation.
 
+- `Mike Dane's Learn Python Yotube tutorial <https://www.youtube.com/watch?v=rfscVS0vtbw>`_
+  \- Appears to be a good didactic introduction to Python.
+
 These guides will instruct you how to start a python interpreter where you
 can type and run Python code. You may do that, but once you gain a little bit
 of confidence or if you feel adventurous try starting a Jupyter notebook

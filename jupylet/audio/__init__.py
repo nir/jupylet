@@ -46,6 +46,10 @@ def sonic_py(resource_dir='.'):
     return app
 
 
+DEFAULT_AMP = 0.5
+
+MIDDLE_C = 261.63
+
 FPS = 44100
 
 
@@ -131,7 +135,7 @@ def play(note, *args, **kwargs):
     tt = dtd.get(hh) or get_time()
     tt += PLAY_EXTRA_LATENCY
 
-    return sy.play_new(note, t=tt, *args, **kwargs)
+    return sy.play_poly(note, t=tt, *args, **kwargs)
 
 
 def sleep(dt=0):
@@ -142,9 +146,9 @@ def sleep(dt=0):
     cn = cf.f_code.co_name
     hh = cn if cn == '<module>' else hash(cf) 
 
-    sy = syd.get(hh)
-    if sy is not None:
-        dt = dt * get_note_value() * 60 / get_bpm()
+    #sy = syd.get(hh)
+    #if sy is not None:
+    dt = dt * get_note_value() * 60 / get_bpm()
 
     t0 = dtd.get(hh)
     if not t0 or t0 + 1 < tt:

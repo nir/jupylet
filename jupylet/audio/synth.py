@@ -32,7 +32,7 @@ from .sound import PhaseModulator
 from .effects import SchroederReverb, Overdrive
 from .filters import ResonantFilter
 
-from ..audio import note
+from ..audio import note, DEFAULT_AMP
 
 import numpy as np
 
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 class Synth(GatedSound):
     
-    def __init__(self, amp=0.33, pan=0., duration=None):
+    def __init__(self, amp=DEFAULT_AMP, pan=0., duration=None):
         
         super().__init__(amp, pan, duration)
 
@@ -65,7 +65,7 @@ class Synth(GatedSound):
 
 class Drums(GatedSound):
     
-    def __init__(self, amp=0.33, pan=0.):
+    def __init__(self, amp=DEFAULT_AMP, pan=0.):
         
         super().__init__(amp, pan)
 
@@ -138,14 +138,14 @@ class Chorus(Sound):
 
 class Hammond(GatedSound):
     
-    def __init__(self, configuration='888000000', amp=0.25, pan=0., duration=None):
+    def __init__(self, configuration='888000000', amp=DEFAULT_AMP, pan=0., duration=None):
         
         super().__init__(amp, pan, duration)
         
         self.configuration = configuration
         
         self.reve = SchroederReverb(mix=0.25, rt=0.750, shared=True) 
-        self.over = Overdrive(gain=4., amp=0.25, shared=True)
+        self.over = Overdrive(gain=1/amp, amp=amp, shared=True)
         self.chor = Chorus(shared=True)
 
         self.leak = Noise(noise_color.violet)
@@ -234,12 +234,9 @@ class Hammond(GatedSound):
         return a2
                
 
-hammond = Hammond()
-
-
 class TB303(GatedSound):
     
-    def __init__(self, resonance=1., amp=0.33, pan=0., duration=None):
+    def __init__(self, resonance=1., amp=DEFAULT_AMP, pan=0., duration=None):
         
         super().__init__(amp, pan, duration)
                 

@@ -37,7 +37,7 @@ import numpy as np
 from ..resource import find_path
 from ..utils import auto
 
-from ..audio import FPS
+from ..audio import FPS, MIDDLE_C, DEFAULT_AMP
 
 from .sound import GatedSound, Envelope, Oscillator, Noise
 from .sound import key2freq
@@ -151,10 +151,10 @@ class Sample(GatedSound):
     def __init__(
         self, 
         path, 
-        freq=262., 
+        freq=MIDDLE_C, 
         key=None, 
         loop=False,
-        amp=1.,
+        amp=DEFAULT_AMP,
         pan=0.,
         duration=None,
     ):

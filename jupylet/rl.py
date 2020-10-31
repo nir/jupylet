@@ -206,12 +206,14 @@ class GameProcess(ModuleProcess):
     
     def start(self, interval=1/24, size=224):
 
-        super(GameProcess, self).start()
+        super().start()
 
         self.call('app.start', interval)
         self.call('app.scale_window_to', size)
         self.call('app._redraw_windows', 0, 0)
         self.call('app.use_shared_memory')        
+
+        return self
 
     def observe(self):
         return self.call('observe')
@@ -251,6 +253,8 @@ class Games(object):
         self.call('app._redraw_windows', 0, 0)
         self.call('app.use_shared_memory')        
 
+        return self 
+        
     def observe(self):
         return self.call('observe') 
 

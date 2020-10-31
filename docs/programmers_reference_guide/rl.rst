@@ -8,7 +8,7 @@ Pong
 ever played back in the 70s, and therefore I like the idea of teaching it to  
 a computer. It feels like returning the favor.
 
-Besides, the great Andrej Karpathy has written a beautifully clear post on 
+Besides, the great Andrej Karpathy has written a wonderfully clear post on 
 training machines to play `Pong` using the conceptually simple 
 `Policy Gradients` technique. You can find the post here - 
 `http://karpathy.github.io/2016/05/31/rl/ <http://karpathy.github.io/2016/05/31/rl/>`_
@@ -20,7 +20,7 @@ Prepare a Game for RL
 ---------------------
 
 When I program a new game in Jupylet I enjoy doing it interactively in a 
-Jupyter notebook while it is running. This is how all the Jupylet example 
+Jupyter notebook while the game is running. This is how the Jupylet example 
 notebooks were created. However, to programmatically control a game in RL we 
 need it in the form of a Python module, and we need to define the ``step()``,
 ``observe()``, and ``reset()`` functions.
@@ -87,8 +87,8 @@ API, and as a programmer you are free to define their inputs and outputs in
 any way you wish.
 
 The ``step()`` function should be called with an `action` and should 
-return the next observation and reward from the environment; the 
-``observe()`` function should return an observation of the environment; and 
+return the next `observation` and `reward` from the game environment; the 
+``observe()`` function should return an `observation` of the environment; and 
 the ``reset()`` function should be called to reset the game state to a 
 predefined state (e.g. the beginning of the game).
 
@@ -97,18 +97,22 @@ game:
 
 .. code-block:: python
 
-    def step(player0=[0, 0, 0, 0, 0], player1=[0, 0, 0, 0, 0], n=1):
+    def step(player0=[0, 0], player1=[0, 0], n=1):
         
-        state.key_a, state.key_d = player0[:2]
+        # Convert the first player's action to pressing the A or D keys.
+        state.key_a, state.key_d = player0
         
-        state.left, state.right = player1[:2]
+        # Convert the second player's action to pressing the left or right key.
+        state.left, state.right = player1
         
-        sl0 = state.sl
-        sr0 = state.sr
+        # Take a snapshot of the scoreboard before the step.
+        score0 = state.score0
+        score1 = state.score1
         
         app.step(n)
             
-        reward = (state.sl - sl0) - (state.sr - sr0)
+        # Compute reward from change in scoreboard.
+        reward = (state.score0 - score0) - (state.score1 - score1)
 
         return observe(reward)
 
@@ -117,8 +121,8 @@ game:
 
         return {
             'screen0': app.observe(),
-            'player0': {'score': state.sl, 'reward': reward},
-            'player1': {'score': state.sr, 'reward': -reward},
+            'player0': {'score': state.score0, 'reward': reward},
+            'player1': {'score': state.score1, 'reward': -reward},
         }
 
 
@@ -153,15 +157,15 @@ methods.
 Control a Game Instance
 -----------------------
 
-To help you get started with Jupylet for Deep RL, I have created the 
+The code to control our little game of `Pong` is in the 
 `examples/22-pong-RL.ipynb <https://github.com/nir/jupylet/blob/master/examples/22-pong-RL.ipynb>`_ 
-notebook. This section walks through that notebook and explains it.
+notebook. Let's see how it's done.
 
 .. note::
     The two functions ``show_image()`` and ``show_images()`` used here to show
-    numpy arrays as bitmap images are defined in `examples/22-pong-RL.ipynb <https://github.com/nir/jupylet/blob/master/examples/22-pong-RL.ipynb>`_.
+    numpy arrays as bitmap images are defined in the notebook.
 
-Starting a game instance is as easy as this:
+Creating a game instance is as easy as this:
 
 .. code-block:: python
 
@@ -169,9 +173,117 @@ Starting a game instance is as easy as this:
 
     pong = jupylet.rl.GameProcess('pong')
 
+Next, to start the game in a new child process, run:
 
-Render Thousands of Frames Per Second
--------------------------------------
+.. code-block:: python
+
+    game.start()
+
+Once the game has started you can observe the game environment. You can 
+program the `pong` module to return anything you want in response to 
+the ``observe()`` call. In the case of our example `Pong` it returns a 
+dictionary such as the following:
+
+.. code-block:: python
+
+    In []: pong.observe()
+    Out[]: {'screen0': array([[[124, 113, 218, 255],
+                    [124, 113, 218, 255],
+                    [124, 113, 218, 255],
+                    ...,
+                    [124, 113, 218, 255],
+                    [124, 113, 218, 255],
+                    [124, 113, 218, 255]],
+            
+                    ...,
+            
+                    [[124, 113, 218, 255],
+                    [124, 113, 218, 255],
+                    [124, 113, 218, 255],
+                    ...,
+                    [124, 113, 218, 255],
+                    [124, 113, 218, 255],
+                    [124, 113, 218, 255]]], dtype=uint8),
+            'player0': {'score': 0, 'reward': 0},
+            'player1': {'score': 0, 'reward': 0}}
+
+The `'screen0'` entry is a numpy array that contains a bitmap image 
+of the game video at time t\ :sub:`0` represented as a 3 dimentional array. 
+Let's show it as an image:
+
+.. code-block:: python
+
+    o = pong.observe()
+    show_image(o['screen0'])
+
+.. image:: ../images/pong.step0.png 
+
+Now, let's play a few steps; both players choose the action to move their 
+game paddles rightward for 5 consecutive steps:
+
+.. code-block:: python
+
+    o = pong.step(player0=[0, 1], player1=[0, 1], n=5)
+    show_image(o['screen0'])
+
+.. image:: ../images/pong.step5.png 
+
+If you wanted them to move leftward you would use [1, 0] instead of [0, 1].
+Finally, let's reset the game and start over:
+
+.. code-block:: python
+
+    pong.reset()
+
+That's all there is to it.
+
+
+Control Multiple Games
+----------------------
+
+It's all fine and dandy to control a game of `Pong` programmatically but we 
+could just as easily control multiple games simultaneously.
+
+Here is how you would create 3 simultaneous games:
+
+.. code-block:: python
+
+    games = jupylet.rl.Games(['pong', 'pong', 'pong'])
+    games.start()
+
+You can create more games with a longer list or mix different games in the
+same list if you wish to.
+
+Let's observe them:
+
+.. code-block:: python
+
+    ol = games.observe()
+    show_images(o['screen0'] for o in ol)
+
+.. image:: ../images/pong.x3.step0.png 
+
+And step through five consecutive steps:
+
+.. code-block:: python
+
+    ol = games.step([[0, 1], [1, 0], [0, 1]], [[0, 1], [1, 0], [1, 0]], n=5)
+    show_images(o['screen0'] for o in ol)
+
+.. image:: ../images/pong.x3.step5.png 
+
+For each of the players we supply an action for each of the simultaneous games. 
+So [[0, 1], [1, 0], [0, 1]] means paddle to the `right` in the first game, to
+`left` in the second, and to the `right` in the third ongoing game.
+
+Finally let's reset them to their initial state:
+
+.. code-block:: python
+
+    games.reset()
+
+By running multiple simultaneous games a single Linux machine with a GPU you 
+can easily reach 4000 `Pong` frames per second. 
 
 
 Jupylet in the Cloud

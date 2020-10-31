@@ -191,6 +191,18 @@ def _stream_callback(outdata, frames, _time, status):
     ))
 
 
+_master_volume = 0.5
+
+
+def get_master_volume():
+    return _master_volume
+
+
+def set_master_volume(amp):
+    global _master_volume
+    _master_volume = amp
+
+
 _effects = []
 
 
@@ -275,7 +287,9 @@ def _mix_sounds(sounds, frames):
         a0 = _apply_effects(el, a0)
         al.append(a0)
         
-    return np.stack(al).sum(0).clip(-1, 1)
+    a0 = np.stack(al).sum(0) * _master_volume
+    
+    return a0.clip(-1, 1)
 
 
 def _mix_sounds0(sounds, frames):

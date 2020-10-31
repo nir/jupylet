@@ -27,6 +27,7 @@
 
 import functools
 import logging
+import weakref
 import random
 import copy
 import math
@@ -38,7 +39,9 @@ import scipy.signal
 import numpy as np
 
 from ..utils import settable, Dict
-from ..audio import FPS, t2frames, frames2t, get_time, get_bpm, get_note_value
+
+from ..audio import FPS, MIDDLE_C, DEFAULT_AMP, t2frames, frames2t   
+from ..audio import get_time, get_bpm, get_note_value
 
 from .note import note2key, key2note
 from .device import add_sound, get_schedule
@@ -99,7 +102,7 @@ def _ampan(amp, pan):
     return np.array([1 - pan, 1 + pan]) * (amp / 2)
 
 
-_LOG_C4 = math.log(262)
+_LOG_C4 = math.log(MIDDLE_C)
 _LOG_CC = math.log(2) / 12
 _LOG_CX = _LOG_C4 - 60 * _LOG_CC
 
@@ -125,7 +128,7 @@ class Sound(object):
     oscillators and effects.
     """
 
-    def __init__(self, freq=262, amp=0.33, pan=0., shared=False):
+    def __init__(self, freq=MIDDLE_C, amp=DEFAULT_AMP, pan=0., shared=False):
         
         self.freq = freq
         
@@ -163,6 +166,8 @@ class Sound(object):
         self._ac = None
         self._al = []
                 
+        self._polys = []
+        
     def _rset(self, key, value, force=False):
         """Recursively, but lazily, set property to given value on all child sounds.
         
@@ -184,11 +189,21 @@ class Sound(object):
             if isinstance(s, Sound):
                 getattr(s, name)(*args, **kwargs)
                 
-    # Switch sound envelope to release phase.
-    def play_release(self, release=None):
-        pass
+    def play_release(self, **kwargs):
         
-    def play_new(self, note=None, **kwargs):
+        polys = []
+
+        while self._polys:
+            wr = self._polys.pop(-1)
+            ps = wr()
+            if ps is not None:
+                ps.play_release(**kwargs)
+                polys.append(wr)
+
+        for wr in polys[:512]:
+            self._polys.append(wr)
+        
+    def play_poly(self, note=None, **kwargs):
         """Play new copy of sound.
 
         If sound is already playing it will play the new copy in parallel. 
@@ -196,7 +211,7 @@ class Sound(object):
         Returns:
             Sound object: The newly copied and playing sound object.
         """
-        o = self.copy()
+        o = self.copy(track=True)
         o.play(note, **kwargs)
 
         return o
@@ -224,7 +239,7 @@ class Sound(object):
     
         return self
 
-    def copy(self):
+    def copy(self, track=False):
         """Create a copy of sound object.
 
         This function is a mixture of shallow and deep copy. It deep-copies 
@@ -239,11 +254,16 @@ class Sound(object):
             Sound object: new copy of sound object. 
         """
         o = copy.copy(self)
-        
+
         for k, v in o.__dict__.items():
             if isinstance(v, Sound) and not v._shared:
                 setattr(o, k, v.copy())
-                
+
+        if track:
+            self._polys.append(weakref.ref(o))
+          
+        o._polys = []
+
         return o
        
     def reset(self, shared=False):
@@ -458,7 +478,7 @@ class Gate(Sound):
 
 class GatedSound(Sound):
     
-    def __init__(self, amp=0.33, pan=0., duration=None):
+    def __init__(self, amp=DEFAULT_AMP, pan=0., duration=None):
         
         super().__init__(amp=amp, pan=pan)
 
@@ -470,7 +490,7 @@ class GatedSound(Sound):
     def done(self):
         return Sound.done.fget(self) if self.gate.opened else False
 
-    def play_new(self, note=None, duration=None, **kwargs):
+    def play_poly(self, note=None, duration=None, **kwargs):
         """Play new copy of sound.
 
         If sound is already playing it will play the new copy in parallel. 
@@ -478,7 +498,7 @@ class GatedSound(Sound):
         Returns:
             Sound object: The newly copied and playing sound object.
         """
-        o = self.copy()
+        o = self.copy(track=True)
         o.play(note, duration, **kwargs)
 
         return o
@@ -498,6 +518,10 @@ class GatedSound(Sound):
             self.gate.close(dt=duration * get_note_value() * 60 / get_bpm())
         
     def play_release(self, **kwargs):
+
+        super().play_release(**kwargs)
+
+        kwargs = dict(kwargs)
 
         t = kwargs.pop('t', None)
         dt = kwargs.pop('dt', None)
@@ -837,7 +861,7 @@ def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
 
 class Oscillator(Sound):
     
-    def __init__(self, shape='sine', freq=262., key=None, phase=0., sign=1, duty=0.5, **kwargs):
+    def __init__(self, shape='sine', freq=MIDDLE_C, key=None, phase=0., sign=1, duty=0.5, **kwargs):
         
         super().__init__(freq=freq)
         

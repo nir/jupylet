@@ -39,14 +39,7 @@ from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
 
-from jupylet.audio.effects import ConvolutionReverb
-from jupylet.audio.device import get_oscilloscope_as_image, set_effects
-from jupylet.audio.sample import Sample
-from jupylet.audio.sound import set_latency
-from jupylet.audio.synth import tb303, hammond
-from jupylet.audio import use, play, sleep
-
-from jupylet.audio import note
+from jupylet.audio.bundle import *
 
 
 app = App(width=512, height=420)#, log_level=logging.INFO)
@@ -54,7 +47,6 @@ app = App(width=512, height=420)#, log_level=logging.INFO)
 oscilloscope = Sprite(np.zeros((256, 512, 4), 'uint8'), x=256, y=292)
 
 keyboard_layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
-
 
 
 state = State(
@@ -133,7 +125,7 @@ def key_event(key, action, modifiers):
         
     if action == keys.ACTION_PRESS and key in keyboard:
         assert key not in _keyd
-        _keyd[key] = tb303.play_new(note=keyboard[key])
+        _keyd[key] = tb303.play_poly(note=keyboard[key])
         
     if action == keys.ACTION_RELEASE and key in keyboard:
         _keyd.pop(key).play_release()
