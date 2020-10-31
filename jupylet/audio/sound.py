@@ -167,6 +167,7 @@ class Sound(object):
         self._al = []
                 
         self._polys = []
+        self._effects = ()
         
     def _rset(self, key, value, force=False):
         """Recursively, but lazily, set property to given value on all child sounds.
@@ -391,7 +392,10 @@ class Sound(object):
         self.key = note2key(value) if type(value) is str else value
 
     def get_effects(self):
-        pass
+        return self._effects
+
+    def set_effects(self, *effects):
+        self._effects = effects
 
 
 class Gate(Sound):

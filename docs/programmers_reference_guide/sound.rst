@@ -174,9 +174,99 @@ that you can instantiate and use like this:
 Playing with Virtual Instruments
 --------------------------------
 
+Besides synthesizers, you can also play music with virtual sampled instruments. 
+Jupylet includes basic support for the `SFZ format <https://sfzformat.com/>`_ 
+that will enable you to play a variety of instruments that you can find online.
+
+The piano notebook `examples/21-pong.ipynb <https://github.com/nir/jupylet/blob/master/examples/21-pong.ipynb>`_ 
+uses a multisampled xylophone from the `VCSL library <https://vis.versilstudios.com/vcsl.html>`_ 
+by Versilian Studios. Let's see how:
+
+.. code-block:: python
+
+    xylo = Sample('sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz', amp=12)
+
+    xylo.play_poly(C)
+    await sleep(1/8)
+
+    xylo.play_poly(D)
+    await sleep(1/8)
+
+    xylo.play_poly(E)
+    await sleep(1/8)
+
+    xylo.play_poly(F)
+    await sleep(1/8)
+
+    xylo.play_poly(G)
+    await sleep(1/8)
+
+    xylo.play_poly(F)
+    await sleep(1/8)
+
+    xylo.play_poly(E)
+    await sleep(1/8)
+
+    xylo.play_poly(D)
+    await sleep(1/8)
+
+    xylo.play_poly(C)
+    await sleep(1/2)
+
+    xylo.play_poly(C5)
+    await sleep(1/2)
+
 
 Make Some Space
 ---------------
+
+Jupylet let's you apply a varaiety of effects to a sound instance or to 
+the entire audio stream.
+
+For example let's add a distortion effect to the tb303 synthesizer:
+
+.. code-block:: python
+
+    tb303.set_effects(Overdrive(gain=4))
+
+    tb303.play_poly(C3)
+    tb303.play_poly(E3)
+    tb303.play_poly(G3)
+    await sleep(4)
+
+    tb303.play_release()
+    tb303.set_effects()
+
+Another kind of effect is the `convolution reverb <https://en.wikipedia.org/wiki/Convolution_reverb>`_ 
+which applies a recorded impulse response to a sound instance or to the 
+entire audio stream. Impulse responses are recorded by specialists and capture 
+the sonic signature of a room or any other kind of physical space.
+
+Jupylet includes `three impulses responses <https://github.com/nir/jupylet/tree/master/jupylet/assets/sounds/impulses>`_ 
+recorded by `Damian Murphy <https://www.openairlib.net/>`_ and you can find 
+many more impulse responses in his website and elsewhere.
+
+I like Damian's `Maes Howe <https://www.openair.hosted.york.ac.uk/?page_id=602>`_ 
+impulse response in particular. It adds a wonderful sense of space and realism 
+to the produced sound.
+
+Let's apply it to the entire audio stream, this time; make sure to try it with 
+a good pair of headphones:
+
+.. code-block:: python
+
+    set_effects(ConvolutionReverb('sounds/impulses/MaesHowe.flac'))
+
+    for i in range(3):
+        
+        tb303.play_poly(C, duration=1)
+        await sleep(1)
+
+        tb303.play_poly(E, duration=1)
+        await sleep(1)
+
+        tb303.play_poly(G, duration=1)
+        await sleep(1)
 
 
 Sonic Py(thon)
@@ -189,8 +279,4 @@ MIDI
 
 The Synthesis Playground
 ------------------------
-
-
-Resources
----------
 

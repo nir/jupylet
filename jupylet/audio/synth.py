@@ -186,7 +186,7 @@ class Hammond(GatedSound):
         if self.overdrive:
             el.append(self.over)
 
-        return tuple(el)
+        return tuple(el) + self._effects
 
     def get_vibrato_and_chorus(self):
         return self.chor.vibrato_and_chorus
