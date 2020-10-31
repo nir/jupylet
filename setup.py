@@ -11,7 +11,7 @@ setuptools.setup(
     name = 'jupylet',
     packages = ['jupylet', 'jupylet.audio'],
     package_data={
-       'jupylet': ['assets/*', 'assets/*/*'],
+       'jupylet': ['assets/*', 'assets/*/*', 'assets/*/*/*'],
     },
     version = '0.8.2',
     license='bsd-2-clause',
