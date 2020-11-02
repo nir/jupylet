@@ -247,18 +247,23 @@ recorded by `Damian Murphy <https://www.openairlib.net/>`_ and you can find
 many more impulse responses in his website and elsewhere.
 
 I like Damian's `Maes Howe <https://www.openair.hosted.york.ac.uk/?page_id=602>`_ 
-impulse response in particular. It adds a wonderful sense of space and realism 
-to the produced sound.
+impulse response in particular. It adds a nice sense of space and a touch of 
+realism to the generated sound.
 
-Let's apply it to the entire audio stream, this time; make sure to try it with 
-a good pair of headphones:
+Let's apply it to the entire audio stream intermittently so you may notice 
+the effect; and make sure to try it with a good pair of headphones:
 
 .. code-block:: python
 
-    set_effects(ConvolutionReverb('sounds/impulses/MaesHowe.flac'))
-
-    for i in range(3):
+    for i in range(5):
         
+        if i % 2:
+            print('Reverb on')
+            set_effects(ConvolutionReverb('sounds/impulses/MaesHowe.flac'))
+        else:
+            print('Reverb off')
+            set_effects()
+
         tb303.play_poly(C, duration=1)
         await sleep(1)
 
@@ -271,6 +276,163 @@ a good pair of headphones:
 
 Sonic Py(thon)
 --------------
+
+You may have noticed how the code above became progressively more elaborate,
+starting with playing a single note, then multiple notes at the same time,
+then a sequence of notes, and finally a sequence of notes in a loop.
+
+As the code becomes more elaborate we can do more interesting stuff but we
+also have a new problem.
+
+When we play a single note the Jupyter notebook appears to remain responsive.
+This allows us for example to type in an instruction to start a second note or 
+to release the first note.
+
+However if you run the loop above you may notice that while you can type in 
+a new instruction in the next notebook cell, it will not be run until the 
+loop is done. In other words, in some sense the notebook becomes unresponsive.
+
+We have already seen a similar problem when we programmed the alien drifting
+animation in the :any:`previous chapter<graphics-3d>` and we solved it there
+by setting up a schedulled handler.
+
+A similar construct can help us here as well. It is called the live loop and
+it is a central concept in Sam Aaron's totally awesome code-based music 
+creation and performance tool `Sonic Pi <https://sonic-pi.net/>`_.
+
+It turns out a Jupyter notebook is the perfect environment for Python based 
+music live coding and live loops.
+
+To program live loops we first need to create an `app` instance like this:
+
+.. code-block:: python
+
+    app = sonic_py()
+
+Now let's rewrite the code above as a live loop:
+
+.. code-block:: python
+
+    @app.sonic_live_loop(times=5)
+    async def loop0(ncall):
+
+        if ncall % 2:
+            print('Reverb on')
+            set_effects(ConvolutionReverb('sounds/impulses/MaesHowe.flac'))
+        else:
+            print('Reverb off')
+            set_effects()
+        
+        tb303.play_poly(C, duration=1)
+        await sleep(1)
+
+        tb303.play_poly(E, duration=1)
+        await sleep(1)
+
+        tb303.play_poly(G, duration=1)
+        await sleep(1)
+
+The function name `loop0` is arbitrary. You can name the function anything you 
+want. The `times` parameter is optional. Without it the loop will continue 
+indefinitely. To stop the loop at any time call:
+
+.. code-block:: python
+
+    app.stop(loop0)
+
+The `ncall` parameter is also optional. A simpler live loop would look like 
+this:
+
+.. code-block:: python
+
+    @app.sonic_live_loop
+    async def loop0():
+
+        tb303.play_poly(C, duration=1)
+        await sleep(1)
+
+        tb303.play_poly(E, duration=1)
+        await sleep(1)
+
+        tb303.play_poly(G, duration=1)
+        await sleep(1)
+
+There is another problem that we need to take care of. When you call 
+``play_poly()`` the new note is scheduled to play as soon as possible. The 
+problem with that is that minor mistimings in "wakeups" from ``sleep()`` calls
+are normal in desktop operating systems and may result in noticeable playing 
+out of tempo. 
+
+The correct way to play notes with accurate tempo in a live loop is the 
+following:
+
+.. code-block:: python
+
+    @app.sonic_live_loop
+    async def loop0():
+
+        use(tb303)
+
+        play(C, duration=1)
+        await sleep(1)
+
+        play(E, duration=1)
+        await sleep(1)
+
+        play(G, duration=1)
+        await sleep(1)
+
+You can play multiple loops simultaneously. Let's add another voice:
+
+.. code-block:: python
+
+    @app.sonic_live_loop
+    async def loop1():
+
+        use(hammond)
+
+        play(E, duration=1)
+        await sleep(1)
+
+        play(C, duration=2)
+        await sleep(2)
+
+        play(G, duration=1)
+        await sleep(1)
+
+        play(C, duration=2)
+        await sleep(2)
+        
+        play(B, duration=2-1/3)
+        await sleep(2-1/3)
+
+        play(G, duration=1/3)
+        await sleep(1/3)
+
+        play(F, duration=2/3)
+        await sleep(2/3)
+
+        play(G, duration=1/3)
+        await sleep(1/3)
+
+        play(F, duration=2/3)
+        await sleep(2/3)
+
+        await sleep(1/3)
+
+        play(E, duration=2)
+        await sleep(2)    
+
+Select both Jupyter cells and run them together to start the two loops in sync.
+
+You can modify the code of a live loop while it is playing, and when you run 
+the Jupyter cell with the new code, the live loop will immediately restart 
+and play the new code.
+
+However, sometimes it is more desirable to wait for the currently running 
+loop to complete its cycle. If you decorate a live loop with 
+``@app.sonic_live_loop2`` and run it, the new code will kick in only after
+the old loop completes a cycle.
 
 
 MIDI

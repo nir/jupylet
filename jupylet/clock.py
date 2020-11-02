@@ -82,23 +82,23 @@ class Scheduler(object):
         self._timer = timer
         self._sched = {}
         
-    def schedule_once(self, foo, delay, *args, **kwargs):
-        logger.info('Enter Scheduler.schedule_once(foo=%r, delay=%r, *args=%r, **kwargs=%r).', foo, delay, args, kwargs) 
+    def schedule_once(self, foo, delay, **kwargs):
+        logger.info('Enter Scheduler.schedule_once(foo=%r, delay=%r, **kwargs=%r).', foo, delay, kwargs) 
 
         self.unschedule(foo)
-        self._sched[self._timer.time + delay, foo] = ('once', self._timer.time, None, args, kwargs)
+        self._sched[self._timer.time + delay, foo] = ('once', self._timer.time, None, kwargs)
         
-    def schedule_interval(self, foo, interval, *args, **kwargs):
-        logger.info('Enter Scheduler.schedule_interval(foo=%r, interval=%r, *args=%r, **kwargs=%r).', foo, interval, args, kwargs) 
+    def schedule_interval(self, foo, interval, **kwargs):
+        logger.info('Enter Scheduler.schedule_interval(foo=%r, interval=%r, **kwargs=%r).', foo, interval, kwargs) 
         
         self.unschedule(foo)
-        self._sched[self._timer.time + interval, foo] = ('interval', self._timer.time, interval, args, kwargs)  
+        self._sched[self._timer.time + interval, foo] = ('interval', self._timer.time, interval, kwargs)  
         
-    def schedule_interval_soft(self, foo, interval, *args, **kwargs):     
-        logger.info('Enter Scheduler.schedule_interval_soft(foo=%r, interval=%r, *args=%r, **kwargs=%r).', foo, interval, args, kwargs) 
+    def schedule_interval_soft(self, foo, interval, **kwargs):     
+        logger.info('Enter Scheduler.schedule_interval_soft(foo=%r, interval=%r, **kwargs=%r).', foo, interval, kwargs) 
 
         self.unschedule(foo)
-        self._sched[self._timer.time + interval, foo] = ('soft', self._timer.time, interval, args, kwargs)
+        self._sched[self._timer.time + interval, foo] = ('soft', self._timer.time, interval, kwargs)
         
     def unschedule(self, foo):
         # Python functions should not be compared for equality, not for identity:
@@ -114,12 +114,12 @@ class Scheduler(object):
         for k, v in reap.items():
             
             t, foo = k
-            _type, t0, i, args, kwargs  = v
+            _type, t0, i, kwargs  = v
             
             t1 = self._timer.time
 
             try:
-                foo(t1, t1 - t0, *args, **kwargs)
+                foo(t1, t1 - t0, **kwargs)
             except:
                 logger.error(trimmed_traceback())
                 _type = 'once'
@@ -127,7 +127,7 @@ class Scheduler(object):
             if _type == 'once':
                 continue
                 
-            v = _type, t1, i, args, kwargs
+            v = _type, t1, i, kwargs
             t = t + i * math.ceil((t1 - t) / i)
             
             if _type == 'interval':
@@ -154,29 +154,30 @@ class ClockLeg(object):
         self.schedules = {}
         
     # TODO: handle errors so application does not exit on user errors.
-    def sonic_live_loop2(self, times=0, *args, **kwargs):
-        return self.schedule_once(0, times, sync=True, *args, **kwargs)
+    def sonic_live_loop2(self, times=0, **kwargs):
+        return self.schedule_once(0, times, sync=True, **kwargs)
     
-    def sonic_live_loop(self, times=0, *args, **kwargs):
-        return self.schedule_once(0, times, sync=False, *args, **kwargs)
+    def sonic_live_loop(self, times=0, **kwargs):
+        return self.schedule_once(0, times, sync=False, **kwargs)
     
-    def run_me(self, delay=0, *args, **kwargs):
-        return self.schedule_once(delay, 1, False, *args, **kwargs)
+    def run_me(self, delay=0, **kwargs):
+        return self.schedule_once(delay, 1, False, **kwargs)
     
-    def run_me_every(self, interval, *args, **kwargs):
-        return self.schedule_interval(interval, *args, **kwargs)
+    def run_me_every(self, interval, **kwargs):
+        return self.schedule_interval(interval, **kwargs)
     
-    def schedule_once(self, delay=0, times=1, sync=False, *args, **kwargs):
+    def schedule_once(self, delay=0, times=1, sync=False, **kwargs):
         """Schedule decorated function to be called once after ``delay`` seconds.
         
         This function uses the default clock. ``delay`` can be a float. The
         arguments passed to ``func`` are ``dt`` (time since last function call),
-        followed by any ``*args`` and ``**kwargs`` given here.
+        followed by any ``**kwargs`` given here.
         
         :Parameters:
             `delay` : float
                 The number of seconds to wait before the timer lapses.
         """
+        #print('...', times)
         def schedule0(foo):
             
             async def fuu(ct, dt):
@@ -188,19 +189,25 @@ class ClockLeg(object):
                         
                         spec = sc['spec']
                         kwargs = sc['kwargs']
-                        args = sc['args']
                         f00 = sc['foo']
 
-                        args0 = (ct, dt) + args
-                        args0 = args0[:len(spec.args)]
+                        if 'ct' in spec.args:
+                            kwargs['ct'] = ct
 
-                        await f00(*args0, **kwargs)
+                        if 'dt' in spec.args:
+                            kwargs['dt'] = dt
+
+                        if 'ncall' in spec.args:
+                            kwargs['ncall'] = sc['ncall']
+
+                        await f00(**kwargs)
                         
-                        dt = time.time() - ct
+                        dt = self.scheduler._timer.time - ct
                         ct = ct + dt
 
-                        sc['times'] -= 1
-                        if sc['times'] == 0:
+                        sc['ncall'] += 1
+
+                        if sc['times'] > 0 and sc['times'] == sc['ncall']:
                             break
 
                 except asyncio.exceptions.CancelledError:
@@ -209,15 +216,16 @@ class ClockLeg(object):
                     logger.error(trimmed_traceback())
 
             @functools.wraps(foo)
-            def bar(ct, dt, *args, **kwargs):
+            def bar(ct, dt, **kwargs):
                 
+                #print('>>>', ct, dt)
                 sc = self.schedules[foo.__name__]
 
                 if inspect.isgeneratorfunction(foo):
                     
                     goo = sc.get('gen')
                     if goo is None:
-                        goo = foo(ct, dt, *args, **kwargs)
+                        goo = foo(ct, dt, **kwargs)
                         sc['gen'] = goo
                         delay = next(goo)
 
@@ -225,37 +233,37 @@ class ClockLeg(object):
                         delay = goo.send((ct, dt))
                     
                     if delay is not None:
-                        self.scheduler.schedule_once(bar, delay, times, *args, **kwargs)
+                        self.scheduler.schedule_once(bar, delay, times, **kwargs)
                         
                 elif inspect.iscoroutinefunction(foo):
 
                     sc['spec'] = inspect.getfullargspec(foo)
-                    sc['times'] = times
                     sc['kwargs'] = kwargs
-                    sc['args'] = args
+                    sc['times'] = times
+                    sc['ncall'] = 0
                     sc['foo'] = foo
 
                     task = asyncio.create_task(fuu(ct, dt))
                     sc['task'] = task
                     
                 else:
-                    foo(ct, dt, *args, **kwargs)
+                    foo(ct, dt, **kwargs)
                 
             if sync and inspect.iscoroutinefunction(foo):
                 sc = self.schedules.get(foo.__name__, {}) 
                 if 'task' in sc:
+                    if sc['times'] == 0 or sc['times'] > sc['ncall']:
+                        sc['spec'] = inspect.getfullargspec(foo)
+                        sc['kwargs'] = kwargs
+                        sc['times'] = times                    
+                        sc['ncall'] = -1
+                        sc['foo'] = foo
 
-                    sc['spec'] = inspect.getfullargspec(foo)
-                    sc['times'] = times                    
-                    sc['kwargs'] = kwargs
-                    sc['args'] = args
-                    sc['foo'] = foo
-
-                    return foo
+                        return foo
 
             self.unschedule(foo)
             self.schedules.setdefault(foo.__name__, {})['func'] = bar
-            self.scheduler.schedule_once(bar, delay, *args, **kwargs)
+            self.scheduler.schedule_once(bar, delay, **kwargs)
 
             return foo
 
@@ -269,17 +277,17 @@ class ClockLeg(object):
 
         return schedule0
 
-    def schedule_interval(self, interval, *args, **kwargs):
+    def schedule_interval(self, interval, **kwargs):
         """Schedule decorated function on the default clock every interval seconds.
         
         The arguments passed to ``func`` are ``dt`` (time since last function
-        call), followed by any ``*args`` and ``**kwargs`` given here.
+        call), followed by any ``**kwargs`` given here.
         
         :Parameters:
             `interval` : float
                 The number of seconds to wait between each call.
         """
-        logger.info('Enter ClockLeg.schedule_interval(interval=%r, *args=%r, **kwargs=%r).', interval, args, kwargs) 
+        logger.info('Enter ClockLeg.schedule_interval(interval=%r, **kwargs=%r).', interval, kwargs) 
 
         def schedule0(foo):
 
@@ -291,13 +299,13 @@ class ClockLeg(object):
                 
             self.unschedule(foo)
             self.schedules.setdefault(foo.__name__, {})['func'] = foo
-            self.scheduler.schedule_interval(foo, interval, *args, **kwargs)
+            self.scheduler.schedule_interval(foo, interval, **kwargs)
 
             return foo
 
         return schedule0
 
-    def schedule_interval_soft(self, interval, *args, **kwargs):
+    def schedule_interval_soft(self, interval, **kwargs):
         """Schedule a function to be called every ``interval`` seconds.
         
         This method is similar to `schedule_interval`, except that the
@@ -314,7 +322,7 @@ class ClockLeg(object):
                 
             self.unschedule(foo)
             self.schedules.setdefault(foo.__name__, {})['func'] = foo
-            self.scheduler.schedule_interval_soft(foo, interval, *args, **kwargs)
+            self.scheduler.schedule_interval_soft(foo, interval, **kwargs)
 
             return foo
 
