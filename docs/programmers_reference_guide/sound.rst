@@ -4,6 +4,11 @@ PROGRAMMING SOUND AND MUSIC
 Da-Da-Da-DUM!
 -------------
 
+.. warning::
+    Loud noise may damage your hearing and your speakers! Make sure to turn 
+    your computer volume down to a safe level so you don't end up like 
+    Beethoven.
+
 *Jupylet* is full of sound. Here are some of its features:
 
 * Play audio tracks and samples in WAV, FLAC, and OGG formats.
@@ -264,22 +269,23 @@ the effect; and make sure to try it with a good pair of headphones:
             print('Reverb off')
             set_effects()
 
-        tb303.play_poly(C, duration=1)
+        tb303.play_poly(C, 1)
         await sleep(1)
 
-        tb303.play_poly(E, duration=1)
+        tb303.play_poly(E, 1)
         await sleep(1)
 
-        tb303.play_poly(G, duration=1)
+        tb303.play_poly(G, 1)
         await sleep(1)
 
 
 Sonic Py(thon)
 --------------
 
-You may have noticed how the code above became progressively more elaborate,
-starting with playing a single note, then multiple notes at the same time,
-then a sequence of notes, and finally a sequence of notes in a loop.
+You may have noticed how the examples above became progressively more 
+elaborate, starting with playing a single note, then multiple notes at the 
+same time, then a sequence of notes, and finally a sequence of notes in a 
+loop.
 
 As the code becomes more elaborate we can do more interesting stuff but we
 also have a new problem.
@@ -323,13 +329,13 @@ Now let's rewrite the code above as a live loop:
             print('Reverb off')
             set_effects()
         
-        tb303.play_poly(C, duration=1)
+        tb303.play_poly(C, 1)
         await sleep(1)
 
-        tb303.play_poly(E, duration=1)
+        tb303.play_poly(E, 1)
         await sleep(1)
 
-        tb303.play_poly(G, duration=1)
+        tb303.play_poly(G, 1)
         await sleep(1)
 
 The function name `loop0` is arbitrary. You can name the function anything you 
@@ -348,13 +354,13 @@ this:
     @app.sonic_live_loop
     async def loop0():
 
-        tb303.play_poly(C, duration=1)
+        tb303.play_poly(C, 1)
         await sleep(1)
 
-        tb303.play_poly(E, duration=1)
+        tb303.play_poly(E, 1)
         await sleep(1)
 
-        tb303.play_poly(G, duration=1)
+        tb303.play_poly(G, 1)
         await sleep(1)
 
 There is another problem that we need to take care of. When you call 
@@ -373,13 +379,13 @@ following:
 
         use(tb303)
 
-        play(C, duration=1)
+        play(C3, 1)
         await sleep(1)
 
-        play(E, duration=1)
+        play(E3, 1)
         await sleep(1)
 
-        play(G, duration=1)
+        play(G3, 1)
         await sleep(1)
 
 You can play multiple loops simultaneously. Let's add another voice:
@@ -391,36 +397,36 @@ You can play multiple loops simultaneously. Let's add another voice:
 
         use(hammond)
 
-        play(E, duration=1)
+        play(E, 1)
         await sleep(1)
 
-        play(C, duration=2)
+        play(C, 2)
         await sleep(2)
 
-        play(G, duration=1)
+        play(G, 1)
         await sleep(1)
 
-        play(C, duration=2)
+        play(C, 2)
         await sleep(2)
         
-        play(B, duration=2-1/3)
+        play(B, 2-1/3)
         await sleep(2-1/3)
 
-        play(G, duration=1/3)
+        play(G, 1/3)
         await sleep(1/3)
 
-        play(F, duration=2/3)
+        play(F, 2/3)
         await sleep(2/3)
 
-        play(G, duration=1/3)
+        play(G, 1/3)
         await sleep(1/3)
 
-        play(F, duration=2/3)
+        play(F, 2/3)
         await sleep(2/3)
 
         await sleep(1/3)
 
-        play(E, duration=2)
+        play(E, 2)
         await sleep(2)    
 
 Select both Jupyter cells and run them together to start the two loops in sync.
@@ -432,11 +438,74 @@ and play the new code.
 However, sometimes it is more desirable to wait for the currently running 
 loop to complete its cycle. If you decorate a live loop with 
 ``@app.sonic_live_loop2`` and run it, the new code will kick in only after
-the old loop completes a cycle.
+the currently playing loop completes a cycle.
 
 
 MIDI
 ----
+
+The `MIDI <https://en.wikipedia.org/wiki/MIDI>`_ (`Musical Instrument Digital Interface`) 
+standard is a specification that makes it possible to connect digital mudical 
+instruments to your computer. 
+
+If you have an electronic (piano) keyboard, chances are it has a MIDI port 
+that you can connect to your computer with a MIDI to USB cable.
+
+If you installed Jupylet with MIDI support you are good to go. If not, open a
+miniconda console and type in:
+
+.. code-block:: bash
+
+    pip install jupylet[midi]
+    
+To enable midi in Jupylet you just need to choose a sound instance to use. 
+Let's hook it up with the hammond synthesizer:
+
+.. code-block:: python
+
+    app.set_midi_sound(hammond)
+
+That's all there is to it.
+
+Well, almost. By default most computer audio systems incur a short delay 
+(also called latency) between the time you issue the insturction to play a 
+note to the time it is actually played by the audio system.
+
+Normally, for games and live loops this short delay is not noticeable, but 
+you may find that it makes it difficult to play a MIDI keyboard.
+
+You may try to minimize audio latency with this command:
+
+.. code-block:: python
+
+    set_latency('lowest')
+
+.. warning::
+    Lowering audio latency may cause the audio system to emit unpleasant 
+    stuttering sound. If this happens Jupylet will automatically attenuate
+    the output volume. Nevertheless, make sure to turn your computer's volume 
+    down to prevent damage to your speakers and ears!
+    
+Lowering audio latency may cause the audio system to emit unpleasant 
+stuttering sounds if your computer is unable to keep up with the required 
+computations. If this happens you may set latency back to its default 
+value with:
+
+.. code-block:: python
+
+    set_latency('high')
+
+Then, you may try to address the problem by eliminating CPU intensive sound 
+computations or by switching your computer's power mode to `Best performance`.
+Once you do that you may try to set latency back to `lowest`.
+
+To reduce CPU load try removing sound effects or changing instruments.
+
+To switch your computer's power mode to `Best performance` on Windows 10 
+select the `Battery` icon on the taskbar and then drag the slider all the way 
+to the right to `Best performance` mode as shown in the following figure:
+
+.. image:: ../images/power-mode.png 
 
 
 The Synthesis Playground

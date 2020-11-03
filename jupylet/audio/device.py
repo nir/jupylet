@@ -139,6 +139,8 @@ _al_seconds = 1
 _al = []
 _dt = []
 
+_safety_event0 = 0
+
 
 def _stream_callback(outdata, frames, _time, status):
     """Compute and set the sound data to be played in a few milliseconds.
@@ -149,6 +151,8 @@ def _stream_callback(outdata, frames, _time, status):
             buffer.
         _time (struct): A bunch of clocks.
     """
+    global _safety_event0
+
     t0 = time.time()
     dt = _time.outputBufferDacTime - _time.currentTime
 
@@ -156,7 +160,8 @@ def _stream_callback(outdata, frames, _time, status):
     
     if status:
         logger.warning('Stream callback called with status: %r.', status)
-    
+        _safety_event0 = t0
+
     #
     # Get all sound objects currently playing, mix them, and set the mixed
     # array into the output buffer.
@@ -170,6 +175,11 @@ def _stream_callback(outdata, frames, _time, status):
         a0 = _mix_sounds(sounds, frames)
 
     a0 = _apply_effects(_effects, a0)
+
+    a0 = (a0 * _master_volume).clip(-1, 1)
+    
+    if t0 < _safety_event0 + 1:
+        a0 *= max(0.01, min(1, t0 - _safety_event0))
 
     outdata[:] = a0
 
@@ -287,9 +297,7 @@ def _mix_sounds(sounds, frames):
         a0 = _apply_effects(el, a0)
         al.append(a0)
         
-    a0 = np.stack(al).sum(0) * _master_volume
-    
-    return a0.clip(-1, 1)
+    return np.stack(al).sum(0)
 
 
 def _mix_sounds0(sounds, frames):

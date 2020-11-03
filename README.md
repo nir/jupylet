@@ -125,9 +125,9 @@ Alternatively, you can run the same game as a Python script from the console wit
 
 ## Documentation
 
-At the moment the bulk of *Jupylet's* documentation is to be found in the [example notebooks](examples/). Head to [examples/01-hello-world.ipynb](examples/01-hello-world.ipynb) to get started. 
-
-I have started writing a [guide](https://jupylet.readthedocs.io/en/latest/). If you like *Jupylet*, one of the best ways to contribute to this project is to help to document it. 
+Jupylet's documentation consists of an extensive guide which you can find at 
+[jupylet.readthedocs.io](https://jupylet.readthedocs.io/) and a growing 
+collection of practical [example notebooks](examples/). 
 
 ## Contact
 

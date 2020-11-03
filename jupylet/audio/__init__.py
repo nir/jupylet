@@ -124,7 +124,7 @@ def use(synth, **kwargs):
 PLAY_EXTRA_LATENCY = 0.150
 
 
-def play(note, *args, **kwargs):
+def play(note, duration=None, *args, **kwargs):
 
     cf = callerframe()
     cn = cf.f_code.co_name
@@ -135,7 +135,7 @@ def play(note, *args, **kwargs):
     tt = dtd.get(hh) or get_time()
     tt += PLAY_EXTRA_LATENCY
 
-    return sy.play_poly(note, t=tt, *args, **kwargs)
+    return sy.play_poly(note, duration, t=tt, *args, **kwargs)
 
 
 def sleep(dt=0):

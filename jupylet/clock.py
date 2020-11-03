@@ -177,7 +177,6 @@ class ClockLeg(object):
             `delay` : float
                 The number of seconds to wait before the timer lapses.
         """
-        #print('...', times)
         def schedule0(foo):
             
             async def fuu(ct, dt):
@@ -218,7 +217,6 @@ class ClockLeg(object):
             @functools.wraps(foo)
             def bar(ct, dt, **kwargs):
                 
-                #print('>>>', ct, dt)
                 sc = self.schedules[foo.__name__]
 
                 if inspect.isgeneratorfunction(foo):
