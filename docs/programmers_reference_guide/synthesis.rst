@@ -90,7 +90,7 @@ You can also play this array hear how it sounds like:
     sd.play(a0)
 
 However, 1024 samples last for about 25ms, so the sound will be shortish. We 
-can generate and second long signal by calling the ``consume()`` method:
+can generate a second long signal by calling the ``consume()`` method:
 
 .. code-block:: python
 
