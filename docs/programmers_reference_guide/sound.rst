@@ -441,11 +441,11 @@ loop to complete its cycle. If you decorate a live loop with
 the currently playing loop completes a cycle.
 
 
-MIDI
-----
+MIDI Keyboards
+--------------
 
 The `MIDI <https://en.wikipedia.org/wiki/MIDI>`_ (`Musical Instrument Digital Interface`) 
-standard is a specification that makes it possible to connect digital mudical 
+standard is a specification that makes it possible to connect digital musical 
 instruments to your computer. 
 
 If you have an electronic (piano) keyboard, chances are it has a MIDI port 
@@ -465,28 +465,38 @@ Let's hook it up with the hammond synthesizer:
 
     app.set_midi_sound(hammond)
 
+Alternatively, if you want full control you can program your own MIDI handler 
+like this:
+
+.. code-block:: python
+
+    @app.event 
+    def midi_message(msg):
+
+        ... do whatever you want here ...
+
 That's all there is to it.
 
 Well, almost. By default most computer audio systems incur a short delay 
-(also called latency) between the time you issue the insturction to play a 
-note to the time it is actually played by the audio system.
+(also called latency) between the time you insturct the computer to play a 
+note to the time it is actually played.
 
 Normally, for games and live loops this short delay is not noticeable, but 
 you may find that it makes it difficult to play a MIDI keyboard.
 
-You may try to minimize audio latency with this command:
+To minimize audio latency you can try this command:
 
 .. code-block:: python
 
-    set_latency('lowest')
+    set_latency('minimal')
 
 .. warning::
-    Lowering audio latency may cause the audio system to emit unpleasant 
-    stuttering sound. If this happens Jupylet will automatically attenuate
-    the output volume. Nevertheless, make sure to turn your computer's volume 
-    down to prevent damage to your speakers and ears!
+    Reducing audio latency may cause the computer audio system to emit 
+    unpleasant stuttering sound. If this happens Jupylet will automatically 
+    attenuate output volume. Nevertheless, make sure to turn your computer's 
+    volume down to prevent damage to your speakers and ears!
     
-Lowering audio latency may cause the audio system to emit unpleasant 
+Lowering audio latency may cause the computer audio system to emit unpleasant 
 stuttering sounds if your computer is unable to keep up with the required 
 computations. If this happens you may set latency back to its default 
 value with:
@@ -495,11 +505,9 @@ value with:
 
     set_latency('high')
 
-Then, you may try to address the problem by eliminating CPU intensive sound 
-computations or by switching your computer's power mode to `Best performance`.
+Then, you may try to address the problem by switching your computer's power 
+mode to `Best performance` or by eliminating CPU intensive sound computations. 
 Once you do that you may try to set latency back to `lowest`.
-
-To reduce CPU load try removing sound effects or changing instruments.
 
 To switch your computer's power mode to `Best performance` on Windows 10 
 select the `Battery` icon on the taskbar and then drag the slider all the way 
@@ -507,7 +515,5 @@ to the right to `Best performance` mode as shown in the following figure:
 
 .. image:: ../images/power-mode.png 
 
-
-The Synthesis Playground
-------------------------
+To reduce CPU load try removing sound effects or changing instruments.
 

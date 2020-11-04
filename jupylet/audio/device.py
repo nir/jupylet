@@ -106,9 +106,9 @@ LOWEST_LATENCY = 0.050
 
 def set_device_latency(latency='high'):
 
-    assert latency in ['high', 'low', 'lowest']
+    assert latency in ['high', 'low', 'lowest', 'minimal']
 
-    if latency == 'lowest':
+    if latency in ['lowest', 'minimal']:
         _set_stream_params(latency=LOWEST_LATENCY, blocksize=1024)
         return
 

@@ -56,6 +56,24 @@ DEBUG = False
 EPSILON = 1e-6
 
 
+def get_plot(*args, grid=True, figsize=(10, 5), **kwargs):
+    
+    import matplotlib.pyplot as plt
+    import PIL.Image
+    import io
+    
+    b = io.BytesIO()
+
+    plt.figure(figsize=figsize)
+    plt.grid(grid)
+    
+    plt.plot(*args, **kwargs)    
+    plt.savefig(b, format='PNG', bbox_inches='tight')
+    plt.close()
+    
+    return PIL.Image.open(b)
+
+    
 #
 # Played sounds are schedulled a little into the future so as to start at a 
 # particular planned moment in time rather than at the arbitrary time of the 
@@ -66,7 +84,7 @@ _latency = get_device_latency_ms() / 1000
 
 def set_latency(latency='high'):
 
-    assert latency in ['high', 'low', 'lowest']
+    assert latency in ['high', 'low', 'lowest', 'minimal']
 
     global _latency
 
