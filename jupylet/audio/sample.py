@@ -159,7 +159,7 @@ class Sample(GatedSound):
         duration=None,
     ):
         
-        super().__init__(amp, pan, duration)
+        super().__init__(amp=amp, pan=pan, duration=duration)
         
         self.env0 = Envelope(0., 0., 1., 1., linear=False)
 

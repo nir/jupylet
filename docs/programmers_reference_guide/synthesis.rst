@@ -23,7 +23,7 @@ computing library, for you to play with:
 * Phase modulator.
 * Overdrive.
 
-A sound synthesizer is in essense a audio signal processing graph. Audio 
+A sound synthesizer is in essense an audio signal processing graph. Audio 
 signals are manipulated and transformed as they travel through the signal 
 processing graph from its inputs to its output.
 
@@ -38,6 +38,10 @@ One of the most successful and surely the most Pythonic of them all is the
 wonderful `Pytorch <https://pytorch.org/>`_. Jupylet borrows from Pytorch 
 `the natural way in which it represents computational graphs <https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html#define-the-network>`_. 
 
+
+Oscillators
+-----------
+
 Let's start with a simple sawtooth oscillator:
 
 .. code-block:: python
@@ -45,15 +49,16 @@ Let's start with a simple sawtooth oscillator:
     osc = Oscillator('saw')
 
 In Jupylet, all audio elements from basic building blocks to compound
-synthesizers are ``Sound`` instances - the parallel of a Pytorch nn.Module; 
-and as done in Pytorch you typically apply them to an input to produce output.
+synthesizers are ``Sound`` instances, the parallel of a Pytorch ``nn.Module``, 
+and similarly you typically apply them to an input to produce output.
 
-In some cases you do not need to provide an input; an oscillator can generate
-output without receiving any input:
+Let's ask the oscilator to generate `44100 frames <https://en.wikipedia.org/wiki/44,100_Hz>`_ 
+which is the default number of samples per second used by Jupylet and the 
+sampling rate most commonly used in recorded audio:
 
 .. code-block:: python
 
-    In []: a0 = osc()
+    In []: a0 = osc(frames=44100)
     In []: a0
     Out[]: array([[-0.07100377],
                   [-0.05801778],
@@ -63,16 +68,8 @@ output without receiving any input:
                   [-0.81941793],
                   [-0.83591645]])
 
-The oscillator output a Numpy array of 1024 numbers. You can verify this with
-the following instruction:
-
-.. code-block:: python
-
-    In []: a0.shape
-    Out[]: (1024, 1)
-
-More interestingly we can visualize the sawtooth signal. Let's plot the first 
-169 numbers:
+These numbers are time series values corresponding to a sawtooth signal. Let's 
+visualize them by plotting the first 169 numbers:
 
 .. code-block:: python
 
@@ -80,19 +77,100 @@ More interestingly we can visualize the sawtooth signal. Let's plot the first
     
 .. image:: ../images/sawtooth.png 
 
-The little waves that can be seen in the plot are actually a good thing. This 
-is how an anti-aliased sawtooth wave should look like.
+The little waves on the sawtooth are actually a good thing. This is how an 
+anti-aliased sawtooth wave should look like.
 
-You can also play this array hear how it sounds like:
+You can play this array to hear how it sounds with:
 
 .. code-block:: python
 
     sd.play(a0)
 
-However, 1024 samples last for about 25ms, so the sound will be shortish. We 
-can generate a second long signal by calling the ``consume()`` method:
+.. raw:: html
+
+   <audio controls="controls">
+         <source src="../_static/audio/sawtooth.ogg" type="audio/ogg">
+         Your browser does not support the <code>audio</code> element.
+   </audio>
+   <br>
+   <br>
+
+In Jupylet you can use an audio signal to modulate the frequency of an 
+oscillator; it is called `frequency modulation (FM) <https://en.wikipedia.org/wiki/Frequency_modulation>`_. 
+Let's use a 100Hz sine wave to modulate the frequency of a 1000Hz sine wave:
 
 .. code-block:: python
 
-    sd.play(osc.consume(FPS))
+    osc0 = Oscillator('sine', 100)
+    osc1 = Oscillator('sine', 1000)
 
+    a0 = osc0() * 12
+    a1 = osc1(a0)
+
+Frequency modulation is done in logarithmic scale with semitones as units;
+in this case we multiply the modulating signal by 12 so the carrier signal is 
+modulated by one octave (12 semitones) up and down. Let's see how the signal 
+looks like:
+
+.. code-block:: python
+
+    get_plot(a1)
+
+.. image:: ../images/fm-sawtooth.png 
+
+
+A Simple Synthesizer
+--------------------
+
+We can now take these two oscillators and write our first simple FM 
+synthesizer:
+
+.. code-block:: python
+
+    class SimpleFMSynth(Sound):
+        
+        def __init__(self):
+            
+            super().__init__()
+                    
+            self.osc0 = Oscillator('sine', 10)
+            self.osc1 = Oscillator('sine')
+        
+        def forward(self):
+            
+            a0 = self.osc0() * 12
+            a1 = self.osc1(a0, freq=self.freq)
+            
+            return a1
+
+Let's instantiate it and play a few notes:
+
+.. code-block:: python
+
+    synth = SimpleFMSynth()
+
+    synth.play(C6)
+    await sleep(3/8)
+
+    synth.play_release()
+    await sleep(1/8)
+
+    synth.play(D6)
+    await sleep(3/8)
+
+    synth.play_release()
+    await sleep(1/8)
+
+    synth.play(E6)
+    await sleep(3/8)
+
+    synth.play_release()
+
+.. raw:: html
+
+   <audio controls="controls">
+         <source src="../_static/audio/simple-fm-synth.ogg" type="audio/ogg">
+         Your browser does not support the <code>audio</code> element.
+   </audio>
+   <br>
+   <br>

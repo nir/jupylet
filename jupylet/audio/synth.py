@@ -44,7 +44,7 @@ class Synth(GatedSound):
     
     def __init__(self, amp=DEFAULT_AMP, pan=0., duration=None):
         
-        super().__init__(amp, pan, duration)
+        super().__init__(amp=amp, pan=pan, duration=duration)
 
         self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
         self.osc0 = Oscillator('sine', 4)
@@ -67,7 +67,7 @@ class Drums(GatedSound):
     
     def __init__(self, amp=DEFAULT_AMP, pan=0.):
         
-        super().__init__(amp, pan)
+        super().__init__(amp=amp, pan=pan)
 
         self.env0 = Envelope(0.002, 0.15, 0., 0., linear=False)
         self.noise = Noise()
@@ -140,7 +140,7 @@ class Hammond(GatedSound):
     
     def __init__(self, configuration='888000000', amp=DEFAULT_AMP, pan=0., duration=None):
         
-        super().__init__(amp, pan, duration)
+        super().__init__(amp=amp, pan=pan, duration=duration)
         
         self.configuration = configuration
         
@@ -238,7 +238,7 @@ class TB303(GatedSound):
     
     def __init__(self, resonance=1., amp=DEFAULT_AMP, pan=0., duration=None):
         
-        super().__init__(amp, pan, duration)
+        super().__init__(amp=amp, pan=pan, duration=duration)
                 
         self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
         self.env1 = Envelope(0., 2., 0., 2., linear=False)

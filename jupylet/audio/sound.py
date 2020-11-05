@@ -26,6 +26,7 @@
 
 
 import functools
+import inspect
 import logging
 import weakref
 import random
@@ -73,7 +74,7 @@ def get_plot(*args, grid=True, figsize=(10, 5), **kwargs):
     
     return PIL.Image.open(b)
 
-    
+
 #
 # Played sounds are schedulled a little into the future so as to start at a 
 # particular planned moment in time rather than at the arbitrary time of the 
@@ -183,10 +184,12 @@ class Sound(object):
         self._a0 = None
         self._ac = None
         self._al = []
-                
+
         self._polys = []
         self._effects = ()
-        
+
+        self._fargs = None  
+
     def _rset(self, key, value, force=False):
         """Recursively, but lazily, set property to given value on all child sounds.
         
@@ -208,7 +211,7 @@ class Sound(object):
             if isinstance(s, Sound):
                 getattr(s, name)(*args, **kwargs)
                 
-    def play_release(self, **kwargs):
+    def play_release(self, stop=True, **kwargs):
         
         polys = []
 
@@ -216,11 +219,14 @@ class Sound(object):
             wr = self._polys.pop(-1)
             ps = wr()
             if ps is not None:
-                ps.play_release(**kwargs)
+                ps.play_release(stop=stop, **kwargs)
                 polys.append(wr)
 
         for wr in polys[:512]:
             self._polys.append(wr)
+
+        if stop:
+            self._done = self.index or 1
         
     def play_poly(self, note=None, **kwargs):
         """Play new copy of sound.
@@ -347,11 +353,14 @@ class Sound(object):
     # *frames* to be sent to the sound device for playing.
     #
 
-    def consume(self, frames, channels=2, *args, **kwargs):
+    def consume(self, frames, channels=2, raw=False, *args, **kwargs):
         
         self._rset('frames', frames)
         
         a0 = self(*args, **kwargs)
+
+        if raw:
+            return a0
 
         # The following mechanism is a brittle way to minimize the
         # computation time in case the sound is done but is kept around for 
@@ -364,23 +373,36 @@ class Sound(object):
             if channels == 2:
                 self._ac = a0 * _ampan(self.velocity / 128 * self.amp, self.pan)
             else:
-                self._ac = self.velocity / 128 * self.amp * a0
+                self._ac = a0 * (self.velocity / 128 * self.amp)
 
         return self._ac
 
     def __call__(self, *args, **kwargs):
         
-        assert getattr(self, 'frames', None) is not None, 'You must call super() from your sound class constructor'
+        assert getattr(self, 'frames', None) is not None, 'You must call super() from the sound class constructor'
         
+        for k in list(kwargs.keys()):
+            if hasattr(self, k) and k not in self._get_forward_args():
+                if k == 'frames':
+                    self._rset('frames', kwargs.pop('frames'))
+                else:        
+                    setattr(self, k, kwargs.pop(k))
+
         if not self._done or self._a0 is None or len(self._a0) != self.frames:
             self._a0 = self.forward(*args, **kwargs)
 
-        self.index += len(self._a0)
+        if isinstance(self._a0, np.ndarray):
+            self.index += len(self._a0)
         
         if DEBUG:
             self._al = self._al[-255:] + [self._a0]
 
         return self._a0
+
+    def _get_forward_args(self):
+        if self._fargs is None:
+            self._fargs = set(inspect.getfullargspec(self.forward).args)
+        return self._fargs
 
     # This is for debugging.
     @property
@@ -449,12 +471,17 @@ class Gate(Sound):
 
         states = []
         end = self.index + self.frames
+        sch = get_schedule()
         
         while self.states:
             
             t, event = self.states[0]
             
-            dt = max(0, t + _latency - get_schedule())
+            if sch:
+                dt = max(0, t + _latency - sch)
+            else:
+                dt = max(0, t - time.time())
+                
             index = self.index + t2frames(dt)
 
             if index >= end:
@@ -466,7 +493,9 @@ class Gate(Sound):
             self.states.pop(0)
             states.append((index, event))
         
-        return states
+        self.index = end
+        
+        return states + [(end, 'continue')]
         
     def open(self, t=None, dt=None, **kwargs):
         self.schedule('open', t, dt)
@@ -500,9 +529,9 @@ class Gate(Sound):
 
 class GatedSound(Sound):
     
-    def __init__(self, amp=DEFAULT_AMP, pan=0., duration=None):
+    def __init__(self, freq=MIDDLE_C, amp=DEFAULT_AMP, pan=0., duration=None):
         
-        super().__init__(amp=amp, pan=pan)
+        super().__init__(freq=freq, amp=amp, pan=pan)
 
         self.gate = Gate()
 
@@ -539,9 +568,9 @@ class GatedSound(Sound):
         if duration is not None:
             self.gate.close(dt=duration * get_note_value() * 60 / get_bpm())
         
-    def play_release(self, **kwargs):
+    def play_release(self, stop=False, **kwargs):
 
-        super().play_release(**kwargs)
+        super().play_release(stop=stop, **kwargs)
 
         kwargs = dict(kwargs)
 
@@ -653,20 +682,17 @@ class Envelope(Sound):
         
     def forward(self, states):
         
-        end = self.index + self.frames
         index = self.index
         
         # TODO: This code assumes the envelope frame index and the gate frame
         # index are synchronized (the same). In practice this is correct, but
         # it should not be assumed. Instead the gate itself should include 
-        # its buffer start and end index. also, in this way there will be no 
-        # need to add the end (continue) index artificially here.
+        # its buffer start and end index. 
 
-        states = states + [(end, 'continue')]
         curves = []
         
         for event_index, event in states:
-            #print(frame, event)
+            #print(event_index, event)
             
             while index < event_index:
                 curves.append(self.get_curve(index, event_index))

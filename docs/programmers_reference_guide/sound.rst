@@ -57,7 +57,7 @@ the left side try:
 
 .. code-block:: python
     
-    pong_sound.play(pan=-1, amp=0.5)
+    pong_sound.play(amp=0.5, pan=-1)
 
 By default, Jupylet sounds are `monophonic <https://en.wikipedia.org/wiki/Polyphony_and_monophony_in_instruments#Monophonic>`_, 
 which means that if you call the ``play()`` method twice in quick succession 
@@ -507,7 +507,7 @@ value with:
 
 Then, you may try to address the problem by switching your computer's power 
 mode to `Best performance` or by eliminating CPU intensive sound computations. 
-Once you do that you may try to set latency back to `lowest`.
+Once you do that you may try to set latency back to `minimal`.
 
 To switch your computer's power mode to `Best performance` on Windows 10 
 select the `Battery` icon on the taskbar and then drag the slider all the way 
