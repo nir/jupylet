@@ -33,6 +33,7 @@ import random
 import copy
 import math
 import time
+import sys
 import os
 
 import scipy.signal
@@ -438,7 +439,7 @@ class Sound(object):
         self._effects = effects
 
 
-class Gate(Sound):
+class LatencyGate(Sound):
     """A synthesizer gate is traditionally an on/off signal that is used to 
     indicate key presses and other events.
 
@@ -454,6 +455,7 @@ class Gate(Sound):
         
         self.states = []
         self.opened = False
+        self.value = 0
 
     def reset(self, shared=False):
         
@@ -461,6 +463,7 @@ class Gate(Sound):
         
         self.states = []
         self.opened = False
+        self.value = 0
 
     def forward(self):
         
@@ -469,33 +472,52 @@ class Gate(Sound):
         # timestamps are converted into a frame index.
         #
 
-        states = []
-        end = self.index + self.frames
-        sch = get_schedule()
+        #states = []
+
+        a0 = np.zeros((self.frames, 1))
+        v0 = self.value
+        i0 = 0
+
+        t0 = time.time()
+        schedule = get_schedule()
         
         while self.states:
             
             t, event = self.states[0]
             
-            if sch:
-                dt = max(0, t + _latency - sch)
+            if schedule:
+                dt = max(0, t + _latency - schedule)
             else:
-                dt = max(0, t - time.time())
+                dt = max(0, t - t0)
                 
-            index = self.index + t2frames(dt)
+            df = t2frames(dt)
+            i1 = min(df, self.frames)
 
-            if index >= end:
+            if df > i1:
                 break
 
-            if event == 'open':
+            if self.value == 0 and event == 'open':
+                self.value = 1
                 self.opened = True
+                i0 = i1
+                #if df <= i1:
+                #    states.append((self.index + i1, 'open'))          
+
+            elif self.value == 1 and event == 'close':
+                self.value = 0
+                a0[i0:i1] += 1
+                #if df <= i1:
+                #    states.append((self.index + i1, 'close'))          
 
             self.states.pop(0)
-            states.append((index, event))
-        
-        self.index = end
-        
-        return states + [(end, 'continue')]
+
+        if self.value == 1 and i0 < self.frames:
+            a0[i0:self.frames] += 1
+
+        #states.append((self.index + self.frames, 'continue'))          
+
+        return a0
+
         
     def open(self, t=None, dt=None, **kwargs):
         self.schedule('open', t, dt)
@@ -504,7 +526,7 @@ class Gate(Sound):
         self.schedule('close', t, dt)
         
     def schedule(self, event, t=None, dt=None):
-        logger.debug('Enter Gate.schedule(event=%r, t=%r, dt=%r).', event, t, dt)
+        logger.debug('Enter LatencyGate.schedule(event=%r, t=%r, dt=%r).', event, t, dt)
 
         tt = get_time()
 
@@ -527,13 +549,53 @@ class Gate(Sound):
         self.states.append((t, event))
 
 
+def gate2events(gate, v0=0, index=0):
+    
+    states = []
+
+    end = index + len(gate)
+    gate = gate > 0
+    
+    while len(gate):
+
+        if v0 == 0:
+
+            am = int(gate.argmax())
+            gv = int(bool(gate[am]))
+
+            if gv == v0:
+                break
+            
+            v0 = gv
+            index += am            
+            states.append((index, 'open'))
+            gate = gate[am:]
+            
+        else:
+            
+            am = int(gate.argmin())
+            gv = int(bool(gate[am]))
+
+            if gv == v0:
+                break
+            
+            v0 = gv
+            index += am            
+            states.append((index, 'close'))
+            gate = gate[am:]
+            
+    states.append((end, 'continue'))
+    
+    return states, v0, end
+
+    
 class GatedSound(Sound):
     
     def __init__(self, freq=MIDDLE_C, amp=DEFAULT_AMP, pan=0., duration=None):
         
         super().__init__(freq=freq, amp=amp, pan=pan)
 
-        self.gate = Gate()
+        self.gate = LatencyGate()
 
         self.duration = duration
         
@@ -655,7 +717,10 @@ class Envelope(Sound):
 
         # Linear or exponential envelope curve.
         self.linear = linear
-        
+
+        # Last gate value.
+        self._lgate = 0
+
         # The current state of the envelope, one of attack, decay, ...
         self._state = None
 
@@ -680,8 +745,15 @@ class Envelope(Sound):
         self._valu0 = 0
         self._valu1 = 0
         
-    def forward(self, states):
+    def forward(self, gate):
         
+        if isinstance(gate, np.ndarray):
+            states, self._lgate, end = gate2events(gate, self._lgate, self.index)
+        else:
+            states = gate
+
+        #print(states)
+
         index = self.index
         
         # TODO: This code assumes the envelope frame index and the gate frame
