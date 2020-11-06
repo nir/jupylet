@@ -137,8 +137,27 @@ def _set_stream_params(**kwargs):
 
 _al_seconds = 1
 _al = []
-_dt = []
 
+
+def start_recording(limit=60):
+
+    global _al_seconds
+    global _al
+    
+    _al_seconds = limit    
+    _al.clear()
+
+
+def stop_recording():
+
+    global _al_seconds
+
+    a0 = np.concatenate(_al)
+    _al_seconds = 1
+    return a0
+
+
+_dt = []
 _safety_event0 = 0
 
 
@@ -257,17 +276,20 @@ def add_sound(sound):
 def _get_sounds():
     """Get currently playing sound objects."""
 
+    sd = set()
     sl = []
 
     while _sounds0:
         s = _sounds0.pop(0)
-        if not s.done:
+        if s not in sd and not s.done:
             sl.append(s)
+            sd.add(s)
 
     while _sounds1:
         s = _sounds1.pop(0)
-        if not s.done:
+        if s not in sd and not s.done:
             sl.append(s)
+            sd.add(s)
 
     _sounds1[:] = sl
 

@@ -143,28 +143,29 @@ synthesizer:
             
             return a1
 
-Let's instantiate it and play a few notes:
+Let's instantiate it and play a few notes, and while we're at it, let's also 
+learn how to grab a recording of the audio output:
 
 .. code-block:: python
 
     synth = SimpleFMSynth()
 
-    synth.play(C6)
-    await sleep(3/8)
+    start_recording()
 
+    synth.play(C6)
+    await sleep(1)
     synth.play_release()
-    await sleep(1/8)
 
     synth.play(D6)
-    await sleep(3/8)
-
+    await sleep(1)
     synth.play_release()
-    await sleep(1/8)
 
     synth.play(E6)
-    await sleep(3/8)
-
+    await sleep(1)
     synth.play_release()
+
+    a0 = stop_recording()
+    sf.write('simple-fm-synth.ogg', a0, 44100)
 
 .. raw:: html
 
@@ -174,3 +175,4 @@ Let's instantiate it and play a few notes:
    </audio>
    <br>
    <br>
+

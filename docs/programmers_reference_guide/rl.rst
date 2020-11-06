@@ -1,5 +1,5 @@
-DEEP REINFORCEMENT LEARNING
-===========================
+REINFORCEMENT LEARNING
+======================
 
 Pong
 ----
