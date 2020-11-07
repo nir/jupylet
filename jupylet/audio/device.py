@@ -117,9 +117,9 @@ def set_device_latency(latency='high'):
 
 def get_device_latency_ms(latency='high'):
 
-    assert latency in ['high', 'low', 'lowest']
+    assert latency in ['high', 'low', 'lowest', 'minimal']
 
-    if latency == 'lowest':
+    if latency in ['lowest', 'minimal']:
         return LOWEST_LATENCY * 1000
 
     if sd is None:
