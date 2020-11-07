@@ -118,6 +118,11 @@ looks like:
 
 .. image:: ../images/fm-sawtooth.png 
 
+.. note::
+    The units on the `x` axis are frames or samples; therefore, at a sampling 
+    rate of 44100Hz the 1024 samples shown in the plot correspond to 
+    approximately 23ms.
+
 
 A Simple Synthesizer
 --------------------
@@ -274,8 +279,96 @@ And if we use it in a live loop, notes will be played with precise timing:
         play(E6, 1/2)
         await sleep(1)
 
-Remember you can stop the live loop above anytime with ``app.stop(loop0)``.
+.. note::
+    Remember you can stop the live loop above anytime with ``app.stop(loop0)``.
 
-And now that we've entered through the `gate` of sound synthesis, it's 
+And now that we've entered the `gate` of sound synthesis, it's 
 finally time for the `evnvelope`.
+
+In `sound synthesis, envelopes <https://en.wikipedia.org/wiki/Envelope_(music)>`_ 
+control the amplitude of the generated audio signal through time. In the latest 
+version of our simple synthesizer the notes start and end abruptly. An envelope 
+can let us shape the way in which each note starts and ends.
+
+The Jupylet envelope generator is a traditional four stages envelope generator 
+consisting of an `attack` stage specified by the time it takes the envelope to 
+reach its peak amplitude, a `decay` stage specified by the time it takes the 
+envelope to decay to the `sustain` level of it third stage, and finally a 
+`release` stage specified by the time it takes the envelope to decay back to 
+zero amplitude once it is released.
+
+.. note::
+    The envelope generator was invented by `Robert Moog <https://en.wikipedia.org/wiki/Robert_Moog>`_ 
+    the creator of the first commercial synthesizer, the Moog synthesizer, 
+    and later the classic `Minimoog synthesizer <https://en.wikipedia.org/wiki/Minimoog>`_
+    which was a staple of progressive rock music.
+
+The Jupylet envelope generator expects a `gate` signal in its input to 
+control the timing of the `attack` and `release` stages. Let's see an 
+example: 
+
+.. code-block:: python
+
+    gate = LatencyGate()
+    adsr = Envelope(attack=0.1, decay=0.1, sustain=0.5, release=0.3)
+
+    gate.open(dt=0.1)
+    gate.close(dt=0.4)
+
+    g0 = gate(frames=44100)
+    e0 = adsr(g0)
+
+Here is a plot of the generated `envelope` signal in red overlayed on top of 
+the `gate` signal in light blue. Note how the `gate` signal correponds to 
+the `attack` and `release` stages of the `envelope`:
+
+.. image:: ../images/adsr.png
+
+And now that we know how to generate an evelope, let's see how to apply it to 
+our simple synthesizer:
+
+.. code-block:: python
+
+    class SimpleFMSynth3(GatedSound):
+        
+        def __init__(self):
+            
+            super().__init__()
+                    
+            self.adsr = Envelope(attack=0.1, decay=0.1, sustain=0.5, release=0.5)
+            
+            self.osc0 = Oscillator('sine', 10)
+            self.osc1 = Oscillator('sine')
+        
+        def forward(self):
+            
+            g0 = self.gate()
+            e0 = self.adsr(g0)
+            
+            a0 = self.osc0() * 12
+            a1 = self.osc1(a0, freq=self.freq)
+            
+            return a1 * e0
+
+.. code-block:: python
+
+    synth = SimpleFMSynth3()
+
+    synth.play(C6, 1/2)
+    await sleep(1)
+
+    synth.play(D6, 1/2)
+    await sleep(1)
+
+    synth.play(E6, 1/2)
+    await sleep(1)
+
+.. raw:: html
+
+   <audio controls="controls">
+         <source src="../_static/audio/adsr.ogg" type="audio/ogg">
+         Your browser does not support the <code>audio</code> element.
+   </audio>
+   <br>
+   <br>
 
