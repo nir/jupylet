@@ -25,7 +25,7 @@ computing library, for you to play with:
 
 A sound synthesizer is in essense an audio signal processing graph. Audio 
 signals are manipulated and transformed as they travel through the signal 
-processing graph from its inputs to its output.
+processing graph from its input to its output.
 
 More generally, since each transformation applied to the audio signal is a 
 computation, a software sound synthesizer is a computational graph. 
@@ -50,9 +50,9 @@ Let's start with a simple sawtooth oscillator:
 
 In Jupylet, all audio elements from basic building blocks to compound
 synthesizers are ``Sound`` instances, the parallel of a Pytorch ``nn.Module``, 
-and similarly you typically apply them to an input to produce output.
+and similarly you typically apply them to an input to produce an output.
 
-Let's ask the oscilator to generate `44100 frames <https://en.wikipedia.org/wiki/44,100_Hz>`_ 
+Let's apply the oscilator to generate `44100 frames <https://en.wikipedia.org/wiki/44,100_Hz>`_ 
 which is the default number of samples per second used by Jupylet and the 
 sampling rate most commonly used in recorded audio:
 
@@ -208,7 +208,7 @@ construct to control the precise timing of the onset and duration of sounds.
 
 The concept of a synthesizer `gate` fits elegantly into the conception of 
 a synthesizer as a computational graph, as a simple multiplcation operation. 
-Let's see one in action:
+Let's see it in action:
 
 .. code-block:: python
 
@@ -217,12 +217,12 @@ Let's see one in action:
     gate.open(dt=0.005)
     gate.close(dt=0.012)
 
-    a0 = gate()
-    get_plot(a0)
+    g0 = gate()
+    get_plot(g0)
 
 .. image:: ../images/gate.png 
 
-The ``GatedSound`` class uses a ``LatencyGate`` to implement precise onset
+The ``GatedSound`` class employs a ``LatencyGate`` to implement precise onset
 and duration of notes. Let's see how to use it to improve our simple 
 synthesizer:
 
@@ -288,7 +288,7 @@ finally time for the `evnvelope`.
 In `sound synthesis, envelopes <https://en.wikipedia.org/wiki/Envelope_(music)>`_ 
 control the amplitude of the generated audio signal through time. In the latest 
 version of our simple synthesizer the notes start and end abruptly. An envelope 
-can let us shape the way in which each note starts and ends.
+can let us shape the way in which each note starts, progresses, and ends.
 
 The Jupylet envelope generator is a traditional four stages envelope generator 
 consisting of an `attack` stage specified by the time it takes the envelope to 
@@ -371,4 +371,106 @@ our simple synthesizer:
    </audio>
    <br>
    <br>
+
+
+The Colors of Noise
+-------------------
+
+I always thought the term `white noise` was just a figure of speech, a slang. 
+I was wrong. It turns out the term `white noise` is so called in analogy to 
+`white light` - that is, the signal you would get if you mix together all the 
+different sine waves in the world, all equally powerful.
+
+And just as it is with light, `acoustic noise can have colors too <https://en.wikipedia.org/wiki/Colors_of_noise>`_,
+ranging from `red` noise where the low frequency waves are more powerful, 
+to `pink` noise, to `white` noise where all frequencies have equal power, to
+`blue` noise, and finally to `violet` noise the high frequency 
+waves are more powerful.
+
+Imagine that we took apart a noise signal back to the separate sine waves 
+it is made of and measured how powerful each of the sine waves is. If we did 
+that we could then plot the power as a function of frequency, or as it is 
+commonly known a `power spectrum <https://mathworld.wolfram.com/PowerSpectrum.html>`_.
+
+Since the power of all the sine waves that make up white noise is equal, the 
+`power spectrum` of white noise would look like an horizontal line. Similarly 
+the power spectrum of `red` and `pink` noise would look like a downward slope 
+and that of `blue` and `violet` noise would look like an upward slope, as 
+illustrated in the following figure (from Wikimedia Common):
+
+.. image:: https://upload.wikimedia.org/wikipedia/commons/6/6c/The_Colors_of_Noise.png
+    :width: 67 %
+    :alt: Copyright Wikimedia Common, Creative Commons (CC BY-SA 3.0)
+
+You can create a noise generator by specifying its color name or a value 
+between -6 for `red` noise, and 6 for `violet` noise. Let's create and play 
+some `violet` noise:
+
+.. code-block:: python
+
+    noise = Noise('violet')
+    sd.play(noise(frames=44100))
+
+.. raw:: html
+
+   <audio controls="controls">
+         <source src="../_static/audio/violet.ogg" type="audio/ogg">
+         Your browser does not support the <code>audio</code> element.
+   </audio>
+   <br>
+   <br>
+
+Noise generators can be used to create a variety of effects. One interesting
+application is to use `red` noise to modulate the frequency of another signal:
+
+.. code-block:: python
+
+    class Wobbly(GatedSound):
+        
+        def __init__(self):
+            
+            super().__init__()
+                    
+            self.adsr = Envelope(attack=0.01, decay=0.5, sustain=0., release=0., linear=False)
+            
+            self.noise = Noise('red')
+            self.osc0 = Oscillator('tri')
+            
+        def forward(self):
+            
+            g0 = self.gate()
+            e0 = self.adsr(g0)
+            
+            n0 = self.noise() 
+            a0 = self.osc0(n0, freq=self.freq)
+
+            return a0 * e0
+
+
+    wobbly = Wobbly()
+
+    wobbly.play_poly(C5)
+    await sleep(1/4)
+
+    wobbly.play_poly(E5)
+    await sleep(1/4)
+
+    wobbly.play_poly(G5)
+    await sleep(1/4)
+
+    wobbly.play_poly(B5)
+    await sleep(1/4)
+
+    wobbly.play_poly(C6)
+    await sleep(1)
+
+.. raw:: html
+
+   <audio controls="controls">
+         <source src="../_static/audio/wobbly.ogg" type="audio/ogg">
+         Your browser does not support the <code>audio</code> element.
+   </audio>
+   <br>
+   <br>
+
 

@@ -40,7 +40,7 @@ import scipy.signal
 
 import numpy as np
 
-from ..utils import settable, Dict
+from ..utils import settable, Dict, trimmed_traceback
 
 from ..audio import FPS, MIDDLE_C, DEFAULT_AMP, t2frames, frames2t   
 from ..audio import get_time, get_bpm, get_note_value
@@ -58,7 +58,7 @@ DEBUG = False
 EPSILON = 1e-6
 
 
-def get_plot(*args, grid=True, figsize=(10, 5), **kwargs):
+def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, **kwargs):
     
     import matplotlib.pyplot as plt
     import PIL.Image
@@ -69,6 +69,12 @@ def get_plot(*args, grid=True, figsize=(10, 5), **kwargs):
     plt.figure(figsize=figsize)
     plt.grid(grid)
     
+    if xlim:
+        plt.xlim(*xlim)
+
+    if ylim:
+        plt.ylim(*ylim)
+
     plt.plot(*args, **kwargs)    
     plt.savefig(b, format='PNG', bbox_inches='tight')
     plt.close()
@@ -190,6 +196,7 @@ class Sound(object):
         self._effects = ()
 
         self._fargs = None  
+        self._error = None
 
     def _rset(self, key, value, force=False):
         """Recursively, but lazily, set property to given value on all child sounds.
@@ -308,7 +315,9 @@ class Sound(object):
         self._a0 = None
         self._ac = None
         self._al = []
-        
+
+        self._error = None
+
         self._ccall('reset', shared=shared or self._shared)
         
     @property
@@ -326,6 +335,9 @@ class Sound(object):
         # However, in the case effects are applied to the sound, it may be
         # needed around for a while longer even if its output has become 
         # zero. For example in the case of a reverb effect.
+
+        if self._error:
+            return True
 
         if self.index < FPS / 8:
             return False
@@ -390,7 +402,12 @@ class Sound(object):
                     setattr(self, k, kwargs.pop(k))
 
         if not self._done or self._a0 is None or len(self._a0) != self.frames:
-            self._a0 = self.forward(*args, **kwargs)
+            try:
+                self._a0 = self.forward(*args, **kwargs)
+            except:
+                self._error = trimmed_traceback()
+                logger.error(self._error)
+                self._a0 = np.zeros((self.frames, 1))
 
         if isinstance(self._a0, np.ndarray):
             self.index += len(self._a0)
@@ -601,6 +618,10 @@ class GatedSound(Sound):
         
     @property
     def done(self):
+
+        if self._error:
+            return True
+
         return Sound.done.fget(self) if self.gate.opened else False
 
     def play_poly(self, note=None, duration=None, **kwargs):
@@ -718,9 +739,6 @@ class Envelope(Sound):
         # Linear or exponential envelope curve.
         self.linear = linear
 
-        # Last gate value.
-        self._lgate = 0
-
         # The current state of the envelope, one of attack, decay, ...
         self._state = None
 
@@ -736,6 +754,9 @@ class Envelope(Sound):
         self._valu0 = 0
         self._valu1 = 0
         
+        # Last gate value.
+        self._lgate = 0
+
     def reset(self, shared=False):
         
         super().reset(shared)
@@ -744,6 +765,7 @@ class Envelope(Sound):
         self._start = 0
         self._valu0 = 0
         self._valu1 = 0
+        self._lgate = 0        
         
     def forward(self, gate):
         
@@ -809,7 +831,7 @@ class Envelope(Sound):
             
         elif self._state == 'decay':
             target = self.sustain * self._valu0
-            next_state = 'sustain'
+            next_state = 'sustain' if self.sustain else None
             
         elif self._state == 'release':
             target = 0.
@@ -945,7 +967,7 @@ len(get_square_cycle(128))
 def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
     
     if isinstance(duty, np.ndarray):
-        duty = duty.reshape(-1)
+        duty = duty.reshape(-1).clip(0.01, 0.99)
         
     radians, phase_o = get_radians(freq, phase, frames)
 
@@ -1039,6 +1061,7 @@ noise_color = Dict(
     white = 0,
     blue = 3,
     violet = 6,
+    purple = 6,
 )
 
 
@@ -1048,6 +1071,9 @@ class Noise(Sound):
         
         super().__init__()
         
+        if type(color) is str:
+            assert color in noise_color, 'Noise color name should be one of %s.' % ', '.join(noise_color.keys())
+
         self.color = color
         self.state = None
         self.noise = None
@@ -1056,10 +1082,15 @@ class Noise(Sound):
 
     def forward(self, color_modulation=0):
         
-        if isinstance(color_modulation, np.ndarray):
-            color = self.color + np.mean(color_modulation[-1]).item()
+        if type(self.color) is str:
+            color = noise_color[self.color]
         else:
-            color = self.color + color_modulation
+            color = self.color
+
+        if isinstance(color_modulation, np.ndarray):
+            color = color + np.mean(color_modulation[-1]).item()
+        else:
+            color = color + color_modulation
             
         if self._color != color:
             self._color = color

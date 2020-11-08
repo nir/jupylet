@@ -189,6 +189,7 @@ Coordinates in 3D space have 3 components `x`, `y`, `z`, with the `z` axis
 pointing towards us as shown in this figure:
 
 .. image:: ../images/coordinate_systems_right_handed.png 
+    :alt: Copyright Joey de Vries - learnopengl.com (CC BY 4.0)
 
 More generally the `(x, y, z)` components combined are called a `vector <https://www.khanacademy.org/math/algebra-home/alg-vectors>`_:
 
