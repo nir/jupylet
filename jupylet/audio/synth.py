@@ -243,7 +243,7 @@ class TB303(GatedSound):
         self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
         self.env1 = Envelope(0., 2., 0., 2., linear=False)
         
-        self.osc0 = Oscillator('saw')
+        self.osc0 = Oscillator('sawtooth')
         
         self.filter = ResonantFilter(btype='lowpass', resonance=resonance)
         

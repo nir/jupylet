@@ -260,3 +260,11 @@ def settable(o, name):
 def np_is_zero(a):
     return np.abs(a).sum().item() == 0
 
+
+class Enum(object):
+    
+    def __init__(self, **kwargs):
+        
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+

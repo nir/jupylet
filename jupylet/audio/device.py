@@ -206,7 +206,7 @@ def _stream_callback(outdata, frames, _time, status):
     # Aggregate the output data and timers for the oscilloscope.
     #
 
-    if len(_al) * frames > _al_seconds * FPS:
+    while len(_al) * frames > _al_seconds * FPS:
         _al.pop(0)
         _dt.pop(0)
 

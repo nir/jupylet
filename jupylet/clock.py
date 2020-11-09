@@ -254,7 +254,7 @@ class ClockLeg(object):
                         sc['spec'] = inspect.getfullargspec(foo)
                         sc['kwargs'] = kwargs
                         sc['times'] = times                    
-                        sc['ncall'] = -1
+                        #sc['ncall'] = -1
                         sc['foo'] = foo
 
                         return foo

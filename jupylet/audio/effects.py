@@ -36,7 +36,7 @@ import soundfile as sf
 import numpy as np
 
 from ..resource import find_path
-from ..utils import np_is_zero
+from ..utils import np_is_zero, Enum
 from ..audio import FPS, t2frames
 
 from .filters import ButterFilter
@@ -44,7 +44,14 @@ from .sound import Sound
 
 
 logger = logging.getLogger(__name__)
-    
+
+
+impulse = Enum(
+    StAndrewsChurch='sounds/impulses/StAndrewsChurch.flac',
+    InsidePiano='sounds/impulses/InsidePiano.flac',
+    MaesHowe='sounds/impulses/MaesHowe.flac',
+)
+ 
 
 class ConvolutionReverb(Sound):
     

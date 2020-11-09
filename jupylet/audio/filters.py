@@ -234,7 +234,7 @@ class ResonantFilter(ButterFilter):
         db=24, 
         bandwidth=500, 
         output='ba',
-        resonance=1,
+        resonance=0,
         q=10,
         ):
         

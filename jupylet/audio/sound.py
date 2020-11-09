@@ -82,6 +82,41 @@ def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, **kwargs):
     return PIL.Image.open(b)
 
 
+def compute_running_mean(x, n=1024):
+    
+    nb = n // 2
+    na = n - nb
+    
+    px = np.pad(x, (na, nb))
+    cs = np.cumsum(px) 
+    
+    po = np.pad(np.ones(len(x)), (na, nb))
+    ns = np.cumsum(po) 
+
+    return (cs[n:] - cs[:-n]) / (ns[n:] - ns[:-n])
+
+
+def get_power_spectrum_plot(a0, sampling_frequency=FPS, window=None, **kwargs):
+    
+    ft = np.fft.fft(a0.squeeze())
+    sa = np.square(np.abs(ft))
+    ps = 10 * np.log10(sa)
+    
+    ff = np.fft.fftfreq(len(a0), 1/sampling_frequency)
+
+    #print(a0.shape, ps.shape, ff.shape)
+    
+    if window == 1:
+        return get_plot(ff, ps, **kwargs)
+    
+    if window is None:
+        window = len(a0) // 4096
+    
+    rm = compute_running_mean(ps, window)
+    
+    return get_plot(ff, rm, **kwargs)
+
+
 #
 # Played sounds are schedulled a little into the future so as to start at a 
 # particular planned moment in time rather than at the arbitrary time of the 
@@ -1036,9 +1071,12 @@ class Oscillator(Sound):
         
         get_wave = dict(
             sine = get_sine_wave,
-            tri = get_triangle_wave,
-            saw = get_sawtooth_wave,
+            triangle = get_triangle_wave,
+            sawtooth = get_sawtooth_wave,
+            square = get_square_wave,
             pulse = get_square_wave,
+            saw = get_sawtooth_wave,
+            tri = get_triangle_wave,
         ).get(self.shape, self.shape)
         
         a0, self.phase = get_wave(
