@@ -399,7 +399,6 @@ and that of `blue` and `violet` noise would look like an upward slope, as
 illustrated in the following figure (from Wikimedia Common):
 
 .. image:: https://upload.wikimedia.org/wikipedia/commons/6/6c/The_Colors_of_Noise.png
-    :width: 67 %
     :alt: Copyright Wikimedia Common, Creative Commons (CC BY-SA 3.0)
 
 You can create a noise generator by specifying its color name or a value 
@@ -487,8 +486,9 @@ speak or sing.
 Jupylet includes a resonant filter parameterized by a `cutoff` frequency, that 
 can operate in one of three modes; as a `lowpass` filter that attenuates 
 frequencies above the `cutoff` frequency, a `highpass` filter that attenuates
-frequencies below the `cutoff` frequency, or a `bandpass` filter that attenuates
-frequencies outside a band of frequencies around the `cutoff` frequency.
+frequencies below the `cutoff` frequency, or a `bandpass` filter that 
+attenuates frequencies outside a band of frequencies centered around the 
+`cutoff` frequency.
 
 As we saw above, `white` noise is made of sine waves of all frequencies, all 
 having equal power. We can therefore apply a filter to white noise to see how 
@@ -529,8 +529,7 @@ amplify particular frequencies.
 You may have wondered about the little waves that were visible in the 
 antialiased sawtooth wave that we saw in the beginning of this chapter. They 
 were there because a `sawtooth wave <https://en.wikipedia.org/wiki/Sawtooth_wave>`_ 
-is actually made by combining many simple sine waves of different frequencies 
-together. 
+is actually made of many simple sine waves of different frequencies and power. 
 
 These waves are also called `tones` or `partials`. The preceived pitch of the 
 sawtooth wave is determined by the `partial` with the lowest frequency, which 
@@ -542,8 +541,14 @@ multiple.
 You can read more about it in the Wikipedia article on the 
 `Harmonic series <https://en.wikipedia.org/wiki/Harmonic_series_(music)>`_.
 
-OK, it's time to put all of this into use. Let's implement a synthesizer 
-inspired by the sound of the `Roland TB-303 Bass Line <https://en.wikipedia.org/wiki/Roland_TB-303>`_:
+OK, it's time to put all together into a synthesizer inspired by the sound of 
+the `Roland TB-303 Bass Line <https://en.wikipedia.org/wiki/Roland_TB-303>`_. 
+The distinctive sound of the TB-303 is created by sweeping the cutoff 
+frequency of a resonant lowpass filter from an initial high cutoff frequency 
+down to the frequency of the note being played. To implement the sweep we 
+employ a second envelope and configure it to decay nonlinearly from 1 to 0, 
+and then we use it to modulate the cutoff frequency of the filter. As usual 
+the modulation is done in logarithmic scale with semitones as units.
 
 .. code:: python
 
@@ -554,7 +559,7 @@ inspired by the sound of the `Roland TB-303 Bass Line <https://en.wikipedia.org/
             super().__init__()
             
             self.shape = 'sawtooth'
-            self.resonance = 10
+            self.resonance = 2
             self.cutoff = 0
             self.decay = 1
 
@@ -563,7 +568,7 @@ inspired by the sound of the `Roland TB-303 Bass Line <https://en.wikipedia.org/
             
             self.osc0 = Oscillator('sawtooth')
             
-            self.filter = ResonantFilter(btype='lowpass', db=24, resonance=2)
+            self.filter = ResonantFilter(btype='lowpass', resonance=2)
             
         def forward(self):
             
@@ -576,17 +581,28 @@ inspired by the sound of the `Roland TB-303 Bass Line <https://en.wikipedia.org/
             
             a1 = self.filter(
                 a0, 
-                key_modulation=e1 + self.cutoff, 
+                key_modulation=e1+self.cutoff, 
                 resonance=self.resonance,
                 freq=self.freq,
             )
             
             return a1 * e0
 
+.. note::
+    We declared the `shape`, `resonance`, `cutoff`, and `decay` variables as 
+    members of the synthesizer class since this will enable us to specify 
+    their values in calls to the ``use()`` and ``play()`` functions - for 
+    example ``play(C4, 1/2, resonance=4, decay=2)``.
 
-    set_effects(ConvolutionReverb(impulse.InsidePiano))
+And now that the synthesizer is ready let's instantiate it, set up a nice 
+reverb effect, and start a simple loop. Note how the ``ncall`` argument is 
+used to play a note once every 4 cycles through the loop:
+
+.. code:: python
 
     tb303 = TB303()
+
+    set_effects(ConvolutionReverb(impulse.InsidePiano))
 
     @app.sonic_live_loop2
     async def loop0(ncall):
@@ -605,9 +621,10 @@ inspired by the sound of the `Roland TB-303 Bass Line <https://en.wikipedia.org/
         
 .. raw:: html
 
-   <audio controls="controls" loop>
+   <audio controls="controls">
          <source src="../_static/audio/tb303.2.ogg" type="audio/ogg">
          Your browser does not support the <code>audio</code> element.
    </audio>
    <br>
    <br>
+

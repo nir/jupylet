@@ -236,29 +236,46 @@ class Hammond(GatedSound):
 
 class TB303(GatedSound):
     
-    def __init__(self, resonance=1., amp=DEFAULT_AMP, pan=0., duration=None):
+    def __init__(
+        self, 
+        shape='sawtooth',
+        resonance=1,
+        cutoff=0,
+        decay=2,
+        amp=DEFAULT_AMP, 
+        pan=0., 
+        duration=None
+    ):
         
         super().__init__(amp=amp, pan=pan, duration=duration)
-                
-        self.env0 = Envelope(0.01, 0., 1., 0.01, linear=False)
-        self.env1 = Envelope(0., 2., 0., 2., linear=False)
+                        
+        self.shape = shape
+        self.resonance = resonance
+        self.cutoff = cutoff
+        self.decay = decay
+
+        self.env0 = Envelope(0.01, 0., 1., 0.01)
+        self.env1 = Envelope(0., decay, 0., 0., linear=False)
         
-        self.osc0 = Oscillator('sawtooth')
+        self.osc0 = Oscillator(shape)
         
         self.filter = ResonantFilter(btype='lowpass', resonance=resonance)
         
     def forward(self):
         
-        self.osc0.freq = self.freq
-        self.filter.freq = self.freq
-
         g0 = self.gate()
         
         e0 = self.env0(g0)
-        e1 = self.env1(g0) * 12 * 8
+        e1 = self.env1(g0, decay=self.decay) * 12 * 8
                 
-        a0 = self.osc0()      
-        a1 = self.filter(a0, key_modulation=e1)
+        a0 = self.osc0(shape=self.shape, freq=self.freq) 
+        
+        a1 = self.filter(
+            a0, 
+            key_modulation=e1+self.cutoff, 
+            resonance=self.resonance,
+            freq=self.freq,
+        )
         
         return a1 * e0
 

@@ -1226,12 +1226,6 @@ def fftnoise(freqs):
 class PhaseModulator(Sound):
     
     def __init__(self, beta=1., shared=False):
-        """A sort of phase modulator.
-        
-        It can be used for aproximate frequency modulation by using the 
-        normalized cumsum of the modulated signal, but the signal should be 
-        balanced so its cumsum does not drift.
-        """
         
         super().__init__(shared=shared)
         
