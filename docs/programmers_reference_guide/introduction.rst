@@ -43,6 +43,9 @@ game court to experiment with cooperation between multiple agents. And since you
 can modify the game interactively in Jupyter this process is not only easy but 
 also fun.
 
+See the :any:`Programming Graphics<graphics>` and the 
+:any:`Reinforcement Learning<rl>` chapters for more information.
+
 
 Jupylet for Musicians
 ---------------------
@@ -58,4 +61,6 @@ In addition *Jupylet* draws inspiration from the wonderful `Sonic Pi <https://so
 and brings live loops and live music coding to Jupyter and Python. Hook up 
 your MIDI keyboard and take off.
 
-See :any:`Programming Sound and Music<sound>` for more.
+See the :any:`Programming Sound and Music<sound>` and the 
+:any:`Programming Synthesizers<synthesis>` chapters for more information.
+

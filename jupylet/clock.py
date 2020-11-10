@@ -212,7 +212,8 @@ class ClockLeg(object):
                 except asyncio.exceptions.CancelledError:
                     pass
                 except:
-                    logger.error(trimmed_traceback())
+                    sc['errors'] = trimmed_traceback()
+                    logger.error(sc['errors'])
 
             @functools.wraps(foo)
             def bar(ct, dt, **kwargs):
@@ -236,6 +237,7 @@ class ClockLeg(object):
                 elif inspect.iscoroutinefunction(foo):
 
                     sc['spec'] = inspect.getfullargspec(foo)
+                    sc['errors'] = None
                     sc['kwargs'] = kwargs
                     sc['times'] = times
                     sc['ncall'] = 0
@@ -249,7 +251,7 @@ class ClockLeg(object):
                 
             if sync and inspect.iscoroutinefunction(foo):
                 sc = self.schedules.get(foo.__name__, {}) 
-                if 'task' in sc:
+                if 'task' in sc and sc['errors'] is None:
                     if sc['times'] == 0 or sc['times'] > sc['ncall']:
                         sc['spec'] = inspect.getfullargspec(foo)
                         sc['kwargs'] = kwargs
@@ -350,4 +352,4 @@ class ClockLeg(object):
         
         if 'task' in d:
             d['task'].cancel()
-        
+ 

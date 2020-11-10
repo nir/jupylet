@@ -40,7 +40,9 @@ game court to experiment with cooperation between multiple agents. And since you
 can modify the game interactively in Jupyter this process is not only easy but 
 also fun.  
 
-Head to [examples/22-pong-RL.ipynb](examples/22-pong-RL.ipynb) to see how to programmatically control a 2-player version of pong.
+Check out the [*Programming Graphics*](https://jupylet.readthedocs.io/en/latest/programmers_reference_guide/graphics.html) 
+and the [*Reinforcement Learning*](https://jupylet.readthedocs.io/en/latest/programmers_reference_guide/rl.html) 
+chapters in the Jupylet Programmer's Reference Guide.
 
 ## Jupylet for Musicians
 
@@ -51,11 +53,13 @@ generators, resonant filters with cutoff frequency sweeping, oscillators with
 LFO modulation, multi sampled instruments, and much more... And all of it in 
 pure Python for you to modify and experiment with.
 
-In addition *Jupylet* draws inspiration from the wonderful [Sonic Pi](https://sonic-pi.net/)
+In addition *Jupylet* draws inspiration from the wonderful [*Sonic Pi*](https://sonic-pi.net/)
 and brings live loops and live music coding to Jupyter and Python. Hook up 
 your MIDI keyboard and take off.
 
-See [examples/14-piano.ipynb](examples/14-piano.ipynb) for a basic demo.
+Check out the [*Programming Sound and Music*](https://jupylet.readthedocs.io/en/latest/programmers_reference_guide/sound.html) 
+and the [*Programming Synthesizers*](https://jupylet.readthedocs.io/en/latest/programmers_reference_guide/synthesis.html)
+chapters in the Jupylet Programmer's Reference Guide.
 
 ## Requirements
 
@@ -119,15 +123,20 @@ canvas should appear with the spaceship example:
 
 <img src="docs/images/spaceship.gif" width="256" height="256" />
 
-Alternatively, you can run the same game as a Python script from the console with:
+Alternatively, you can run the same game as a Python script from the console 
+with:
 
     python spaceship.py
 
 ## Documentation
 
-Jupylet's documentation consists of an extensive guide which you can find at 
-[jupylet.readthedocs.io](https://jupylet.readthedocs.io/) and a growing 
-collection of practical [example notebooks](examples/). 
+To get started with Jupylet head over to the *Jupylet Programmer's Reference 
+Guide* which you can find at 
+[jupylet.readthedocs.io](https://jupylet.readthedocs.io/).  
+
+To complement the online guide check out the growing collection of 
+[*example notebooks*](examples/) that you can download and run on your 
+computer as explained above.
 
 ## Contact
 

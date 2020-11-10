@@ -234,6 +234,10 @@ def set_master_volume(amp):
 
 _effects = []
 
+ 
+def get_effects():
+    return _effects
+
 
 def set_effects(*effects):
 

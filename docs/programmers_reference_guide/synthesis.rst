@@ -541,8 +541,8 @@ multiple.
 You can read more about it in the Wikipedia article on the 
 `Harmonic series <https://en.wikipedia.org/wiki/Harmonic_series_(music)>`_.
 
-OK, it's time to put all together into a synthesizer inspired by the sound of 
-the `Roland TB-303 Bass Line <https://en.wikipedia.org/wiki/Roland_TB-303>`_. 
+OK, it's time to put it all together into a synthesizer inspired by the sound 
+of the `Roland TB-303 Bass Line <https://en.wikipedia.org/wiki/Roland_TB-303>`_. 
 The distinctive sound of the TB-303 is created by sweeping the cutoff 
 frequency of a resonant lowpass filter from an initial high cutoff frequency 
 down to the frequency of the note being played. To implement the sweep we 
@@ -595,8 +595,7 @@ the modulation is done in logarithmic scale with semitones as units.
     example ``play(C4, 1/2, resonance=4, decay=2)``.
 
 And now that the synthesizer is ready let's instantiate it, set up a nice 
-reverb effect, and start a simple loop. Note how the ``ncall`` argument is 
-used to play a note once every 4 cycles through the loop:
+reverb effect, and start two simple simultaneous loops:
 
 .. code:: python
 
@@ -604,27 +603,67 @@ used to play a note once every 4 cycles through the loop:
 
     set_effects(ConvolutionReverb(impulse.InsidePiano))
 
-    @app.sonic_live_loop2
-    async def loop0(ncall):
-                
-        use(tb303, resonance=8, decay=1/8, cutoff=60)
-        
-        if not ncall % 4:
-            play(C3, 1/2, decay=1/2, cutoff=24)
 
+    @app.sonic_live_loop2
+    async def loop0():
+
+        use(tb303, resonance=8, decay=1, cutoff=12, amp=1)
+
+        play(C3, 1/2)
+        await sleep(2)
+        
+        play(G2, 1/2)
+        await sleep(2)
+        
+        play(Ds3, 1/2)
+        await sleep(2)
+        
+        play(C3, 1/2)
+        await sleep(2)
+        
+
+    @app.sonic_live_loop2
+    async def loop1():
+                
+        use(tb303, resonance=8, decay=1/8, cutoff=48, amp=1)
+        
         play(C2, 1/8)
         await sleep(1/4)
         
         play(C3, 1/8)
         await sleep(1/4)
     
-        
 .. raw:: html
 
-   <audio controls="controls">
-         <source src="../_static/audio/tb303.2.ogg" type="audio/ogg">
+   <audio controls="controls" loop>
+         <source src="../_static/audio/tb303.5.ogg" type="audio/ogg">
          Your browser does not support the <code>audio</code> element.
    </audio>
    <br>
    <br>
+
+.. note::
+    If you update a live loop decorated with ``@app.sonic_live_loop2`` the 
+    new code will kick in once the current cycle through the loop completes.
+
+
+What Next?
+----------
+
+Now it's up to you. There are plenty of subjects we did not cover here but
+what has been covered should be just enough to get you started like a 
+ballistic missile into sound synthesis play land.
+
+Go on and create your own synthesizers and even your own components and 
+algorithms; the main take away is that this framework gives you complete 
+flexibility to create whatever you imagine; this is exactly how all the 
+existing components and effects came to be.
+
+One thing to keep in mind though, is that sound processing is real time, and
+you should therefore code your algorithms to be as efficient as possible.
+
+Finally, the world of sound synthesis is as deep and as wide as an ocean and
+there is a tremendous amount of information online. However, if I need to
+pick one starting point to recommend it would be 
+`the online article series by Sound On Sound called Synth Secrets <https://www.soundonsound.com/series/synth-secrets>`_.
 
