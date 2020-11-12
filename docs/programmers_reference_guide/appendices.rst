@@ -69,7 +69,7 @@ take a look:
 
 .. image:: ../images/Commodore-64-Computer-FL-small.png 
 
-Just like with the `Atari 2600` I spent countless hours playing its wonderful
+Just as with the `Atari 2600` I spent countless hours playing its wonderful
 games, which made my parents worry quite a bit 😎 but like many other kids I 
 soon tried to program it, and then to program basic games with graphics and
 sound, and soon I got carried away down the rabbit hole of computation into 
@@ -95,4 +95,25 @@ which was a very sophisticated sound synthesizer for its time:
     <iframe width="560" height="315" src="https://www.youtube.com/embed/PRksQbrDprA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     <br>
     <br>
+
+As I was programming the sound synthesis framework of Jupylet I revisited the 
+epic `Commodore 64 Programmers's Reference Guide <https://archive.org/details/c64-programmer-ref/page/n213/mode/2up>`_ 
+and I was stunned to see how advanced it really was. 
+
+It had three independant waveform generators that could generate `sine`, 
+`triangle`, `sawtooth`, `pulse` waveform with variable duty, and `white noise`,
+and you could use the amplitude of one to modulate the frequency of another! 
+It had a classic ADSR envelope generator. It had a filter that you could use 
+as `lowpass`, `highpass`, or `bandpass`, and you could sweep its `cutoff` 
+frequency dynamically.
+
+And its epic guide explained all of it clearly in a language that a child could
+understand and in depth that a musician would find useful and professional 
+programmers appreciate, starting with what sound waves really are, 
+explaining fundamental frequencies and harmonics, and all the way to describing 
+frequency sweeping and how to code the computer to control all of the 
+synthesizer's parameters dynamically.
+
+It was recently included in `IEEE Chip Hall of Fame <https://spectrum.ieee.org/tech-history/silicon-revolution/chip-hall-of-fame-mos-technology-6581>`_
+and nearly 40 years later it still has a following of fans.
 
