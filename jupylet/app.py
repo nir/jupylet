@@ -258,8 +258,12 @@ class App(EventLeg, ClockLeg):
         EventLeg.set_event_handler(self, name, func)
 
     def set_midi_sound(self, s):
-        """Start a MIDI handler with given sound object as its intrument."""
-
+        """Start the default MIDI handler with given sound object as its intrument.
+        
+        Args:
+            s (jupylet.audio.sound.Sound): The sound object to use as MIDI 
+                instrument.
+        """
         midi.set_midi_sound(s)
         midi.set_midi_callback(midi.simple_midi_callback)
         
@@ -268,17 +272,28 @@ class App(EventLeg, ClockLeg):
 
     @property
     def width(self):
-        """Width of game canvas."""
+        """Width of game canvas in pixels."""
         return self._width
 
     @property
     def height(self):
-        """Height of game canvas."""
+        """Height of game canvas in pixels."""
         return self._height
     
     def run(self, interval=1/30):
-        """"""
+        """Start the game.
+        
+        If the game is run in a Jupyter notebook, the call will return
+        immedately with the canvas object on which the game frames will be 
+        redrawn, otherwise the call will block until the game is done.
 
+        Args:
+            interval (float): The interval in seconds between frame redraws.
+
+        Returns:
+            ipywidgets.widgets.widget_media.Image: The ipywidgets object on 
+            which the game will be redrawn.
+        """
         #assert self.window._context, 'Window has closed. Create a new app object to run.'
 
         hasattr(self, '_show_remote_warning') and sys.stderr.write(REMOTE_WARNING + '\n')
@@ -346,8 +361,11 @@ class App(EventLeg, ClockLeg):
             self.is_running = False
 
     def stop(self, foo=None):
-        """Stop given handler from running. If no handler is given stop game."""
-
+        """Stop given handler from running. If no handler is given stop the game.
+        
+        Args:
+            foo (function): The handler to stop running.
+        """
         if foo is not None:
             return self.unschedule(foo, levels_up=2)
 
@@ -393,8 +411,12 @@ class App(EventLeg, ClockLeg):
         self.ndraws += 1
 
     def observe(self):
-        """Return canvas content as upside-down-flipped numpy array."""
-
+        """Return game canvas content as upside-down-flipped numpy array.
+        
+        Returns:
+            numpy.ndarray: The content of the game canvas an a Numpy array with
+            the shape H x W x 4 corresponding to an RGBA bitmap image.
+        """
         w, h = self.window.fbo.size
         b = self.get_buffer() 
 
@@ -435,10 +457,13 @@ class App(EventLeg, ClockLeg):
 
     # TODO: check if this still works
     def scale_window_to(self, px):
-        """Scale window size so that its bigges dimension (either width or height)
+        """Scale window size so that its biggest dimension (either width or height)
         is px pixels.
 
         This is useful for RL applications since smaller windows render faster.
+
+        Args:
+            px (int): The target size of the rescaled canvas in pixels.
         """
         #assert self.mode == 'hidden', 'Can only scale hidden window.'
         assert self.is_running, 'Window can only be scaled once app has been started.'
@@ -448,8 +473,19 @@ class App(EventLeg, ClockLeg):
 
         self.window.create_framebuffer(s * w, s * h)
 
-    def save_state(self, name, path, *args):
-        
+    def save_state(self, name, path=None, *args):
+        """Save the state of given game objects to disk.
+
+        Args:
+            name (str): If explicit path is not given, `name` will be used
+                to automatically generate a filename.
+            path (str, optional): An explicit path to use for file.
+            *args: A list of object implementing the save_state() method, to 
+                save to disk.
+
+        Returns:
+            str: path to saved file.
+        """
         if not path:
             path = '%s-%s.state' % (name, o2h(random.random()))
 
@@ -460,7 +496,15 @@ class App(EventLeg, ClockLeg):
         return path
             
     def load_state(self, path, *args):
-        
+        """Load the state of given game objects from disk.
+
+        Will also render the scene once all objects are loaded.
+
+        Args:
+            path (str, optional): An explicit path to use for file.
+            *args: A list of object implementing the load_state() method, to load
+                from disk.
+        """
         with open(path, 'rb') as f:
             sl = pickle.load(f)
             for o, s in zip(args, sl):
@@ -469,6 +513,12 @@ class App(EventLeg, ClockLeg):
         self._redraw_windows(0, 0)
 
     def get_logging_widget(self, height='256px', quiet_default_logger=True):
+        """Returns an output ipywidget to which log messages will be printed.
+
+        Returns:
+            ipywidgets.widgets.widget_output.Output: an output ipywidget for 
+            log messages.
+        """
         return get_logging_widget(height, quiet_default_logger)
        
 

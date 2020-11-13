@@ -460,10 +460,25 @@ class EventLeg(mglw.WindowConfig):
         self.dispatch_event('mouse_release_event', x, y, button)
 
     def key_event(self, key, action, modifiers):
+        """Handle the on_key event. 
+
+        Args:
+            key (int): An integer specifying the key.
+            action (int): An integer specifying whether the key was pressed or
+                released.
+            modifiers (dict): A dictionary specifying the state the CTRL, ALT, 
+                and SHIFT, keys at the time of the event.
+        """
         logger.debug('Enter EventLeg.key_event(%r, %r, %r).', key, action, modifiers)
         self.dispatch_event('key_event', key, action, modifiers)
         
     def render(self, current_time: float, delta: float):
+        """Handle the on_render event. 
+
+        Args:
+            current_time (float): Time in seconds since start of game.
+            delta (float): Time in seconds since previous call to handler.
+        """
         #logger.debug('Enter EventLeg.render(%r, %r).', current_time, delta)
         self.dispatch_event('render', current_time, delta)
 

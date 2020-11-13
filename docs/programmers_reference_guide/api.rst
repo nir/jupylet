@@ -88,9 +88,20 @@ Properties
 .. autoattribute:: Sprite.color
 
 .. py:attribute:: Sprite.flip
+
+    Flip the image upside down while rendering.
+
 .. py:attribute:: Sprite.mipmap
+
+    Compute mipmap textures when first loading the sprite image.
+
 .. py:attribute:: Sprite.autocrop
+
+    Auto crop the image to its bounding box when first loading the sprite image.
+
 .. py:attribute:: Sprite.anisotropy
+
+    Use anisotropic filtering when rendering the sprite image.
 
 
 Module jupylet.label
@@ -108,10 +119,76 @@ Properties
 """"""""""    
 
 .. py:attribute:: Label.text
+
+    Text to render as label.
+
 .. py:attribute:: Label.font_path
+
+    Path to a true type or open type font.
+
 .. py:attribute:: Label.font_size=16
+
+    Font size to use. 
+
 .. py:attribute:: Label.line_height=1.2
+
+    Determines the distance between lines.
+
 .. py:attribute:: Label.align='left'
+
+    The desired alignment for the text label. May be one of 'left', 'center', 
+    and 'right'.
+
+
+Module jupylet.model
+--------------------
+
+
+Class Scene
+^^^^^^^^^^^
+
+.. py:currentmodule:: jupylet.model
+.. autoclass:: Scene
+
+
+Methods
+"""""""
+
+.. automethod:: Scene.draw
+
+
+Properties
+""""""""""    
+
+.. py:attribute:: Scene.meshes
+.. py:attribute:: Scene.lights
+.. py:attribute:: Scene.cameras
+.. py:attribute:: Scene.materials
+
+
+Class Mesh
+^^^^^^^^^^
+
+.. py:currentmodule:: jupylet.model
+.. autoclass:: Mesh
+
+
+Methods
+"""""""
+
+.. automethod:: Mesh.move_local
+.. automethod:: Mesh.move_global
+.. automethod:: Mesh.rotate_local
+.. automethod:: Mesh.rotate_global
+
+
+Properties
+""""""""""    
+
+.. autoattribute:: Mesh.draw
+.. autoattribute:: Mesh.matrix
+.. autoattribute:: Mesh.up
+.. autoattribute:: Mesh.front
 
 
 Module jupylet.audio

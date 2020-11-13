@@ -57,8 +57,8 @@ It's actually nice to be able to run the `Pong` game from the command line,
 so let's keep that functionality and modify `21-pong.py` to double as a python 
 module.
 
-To do that open the file in a text editor and replace the ``app.run()`` call 
-at the end of the file with:
+To do that open the file in a text editor and replace the 
+:meth:`app.run() <jupylet.app.App.run>` call at the end of the file with:
 
 .. code-block:: python
 
@@ -147,7 +147,8 @@ the `pong` module:
         app.save_state('pong', path, state, ball, padl, padr, scorel, scorer)
 
 
-The arguments to the ``app.load_state()`` and ``app.save_state()`` functions,
+The arguments to the :meth:`app.load_state() <jupylet.app.App.load_state>` 
+and :meth:`app.save_state() <jupylet.app.App.save_state>` functions,
 namely `state`, `ball`, `padl`, `padr`, `scorel`, `scorer` are the global
 game objects that uniquely determine the game state. In general you can 
 include any object that implements the ``get_state()`` and ``set_state()`` 

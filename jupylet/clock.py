@@ -155,28 +155,62 @@ class ClockLeg(object):
         
     # TODO: handle errors so application does not exit on user errors.
     def sonic_live_loop2(self, times=0, **kwargs):
+        """Schedule an async function to run repeatedly in a loop.
+
+        The function is scheduled to run based on its name, so updating
+        its definition in a Jupyter notebook will cause the new definition
+        to replace the previous one.
+
+        The new definition will kick in once the current iteration through 
+        the loop completes.
+
+        Args:
+            times (int): the number of times to run through the loop, or
+                indefinately if 0.
+        """
         return self.schedule_once(0, times, sync=True, **kwargs)
     
     def sonic_live_loop(self, times=0, **kwargs):
+        """Schedule an async function to run repeatedly in a loop.
+
+        The function is scheduled to run based on its name, so updating
+        its definition in a Jupyter notebook will cause the new definition
+        to replace the previous one.
+
+        The new definition will kick in immediately.
+
+        Args:
+            times (int): the number of times to run through the loop, or
+                indefinately if 0.
+        """
         return self.schedule_once(0, times, sync=False, **kwargs)
     
     def run_me(self, delay=0, **kwargs):
+        """Schedule a function to run after the specified delay.
+
+        The function is scheduled to run based on its name, so updating
+        its definition in a Jupyter notebook will cause the new definition
+        to replace the previous one.
+
+        Args:
+            delay (float): the schedule delay in seconds.
+        """
         return self.schedule_once(delay, 1, False, **kwargs)
     
     def run_me_every(self, interval, **kwargs):
+        """Schedule a function to run after the specified delay.
+
+        The function is scheduled to run based on its name, so updating
+        its definition in a Jupyter notebook will cause the new definition
+        to replace the previous one.
+
+        Args:
+            delay (float): the schedule delay in seconds.
+        """
         return self.schedule_interval(interval, **kwargs)
     
     def schedule_once(self, delay=0, times=1, sync=False, **kwargs):
-        """Schedule decorated function to be called once after ``delay`` seconds.
-        
-        This function uses the default clock. ``delay`` can be a float. The
-        arguments passed to ``func`` are ``dt`` (time since last function call),
-        followed by any ``**kwargs`` given here.
-        
-        :Parameters:
-            `delay` : float
-                The number of seconds to wait before the timer lapses.
-        """
+
         def schedule0(foo):
             
             async def fuu(ct, dt):
@@ -278,15 +312,6 @@ class ClockLeg(object):
         return schedule0
 
     def schedule_interval(self, interval, **kwargs):
-        """Schedule decorated function on the default clock every interval seconds.
-        
-        The arguments passed to ``func`` are ``dt`` (time since last function
-        call), followed by any ``**kwargs`` given here.
-        
-        :Parameters:
-            `interval` : float
-                The number of seconds to wait between each call.
-        """
         logger.info('Enter ClockLeg.schedule_interval(interval=%r, **kwargs=%r).', interval, kwargs) 
 
         def schedule0(foo):
@@ -306,7 +331,7 @@ class ClockLeg(object):
         return schedule0
 
     def schedule_interval_soft(self, interval, **kwargs):
-        """Schedule a function to be called every ``interval`` seconds.
+        """Schedule a function to run every `interval` seconds.
         
         This method is similar to `schedule_interval`, except that the
         clock will move the interval out of phase with other scheduled
@@ -329,15 +354,8 @@ class ClockLeg(object):
         return schedule0
 
     def unschedule(self, foo=None, **kwargs):
-        """Remove function from the default clock's schedule.
+        """Unschedule a function so it will not be called again."""
         
-        No error is raised if the ``func`` was never scheduled.
-        
-        :Parameters:
-            `foo` : callable
-                The function to remove from the schedule. If no function is given
-                unschedule the caller.
-        """
         if foo is None:
             fname = inspect.stack()[kwargs.get('levels_up', 1)][3] 
         elif type(foo) is str:

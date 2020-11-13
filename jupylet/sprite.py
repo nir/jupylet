@@ -142,12 +142,16 @@ class Sprite(Node):
         pass
 
     def draw(self, shader=None):
-        """Draw sprite on canvas (this is just an alias to Sprite.render)."""
+        """Draw sprite on canvas - this is an alias to Sprite.render()."""
         return self.render(shader)
         
     def render(self, shader=None):
-        """Draw sprite on canvas."""
-
+        """Draw sprite on canvas.
+        
+        Args:
+            shader (moderngl.program.Program, optional): OpenGL shader program
+                to use for rendering.
+        """
         shader = shader or get_shader_2d()
         
         if self._dirty:
@@ -165,7 +169,12 @@ class Sprite(Node):
 
     @property
     def scale(self):
-        """Scale of sprite."""
+        """Scale of sprite.
+        
+        The scale equals the rendered width in pixels divided by the actual
+        width of the texture. E.g a scale of 2 will make the sprite appear
+        twice as big than it originally is, and a scale of 1/2 twice as small.
+        """
         return self.scale0.x / self.texture.width
 
     @scale.setter
@@ -174,7 +183,7 @@ class Sprite(Node):
 
     @property
     def x(self):
-        """x coordinate of anchor's position."""
+        """The x coordinate of the anchor position."""
         return self.position.x
         
     @x.setter
@@ -183,7 +192,7 @@ class Sprite(Node):
         
     @property
     def y(self):
-        """x coordinate of anchor's position."""
+        """The y coordinate of anchor position."""
         return self.position.y
         
     @y.setter
@@ -192,7 +201,7 @@ class Sprite(Node):
         
     @property
     def angle(self):
-        """Angle in degrees rotated around anchor."""
+        """The rotation angle around the anchor in degrees."""
         angle, axis = q2aa(self.rotation)
         return round(glm.degrees(angle * glm.sign(axis.z)), 4)
 
@@ -201,12 +210,12 @@ class Sprite(Node):
         self.rotation = aa2q(glm.radians(angle))
 
     def set_anchor(self, ax=None, ay=None):
-        """Set anchor point of sprite.
+        """Set the anchor point of the sprite.
 
         The anchor is a point in the sprite that is used for rotation and 
         positioning. Imagine a pin going through the sprite and that you use
         this pin to position the sprite on the canvas and to rotate it. The
-        point at which the pin goes through the canvas is the anchor point.
+        point at which the pin goes through the texture is the anchor point.
 
         The anchor point is set separately for the x axis, and for the y axis.
 
@@ -289,7 +298,15 @@ class Sprite(Node):
             self.hitmap, self.outline = hitmap_and_outline_from_alpha(self.image)
 
     def collisions_with(self, o, debug=False):
-        """Check if sprite collides with given other sprite."""
+        """Compute collisions with given sprite.
+        
+        Args:
+            o (Sprite): The other sprite with which to check collisions.
+
+        Returns:
+            numpy.ndarray: An 2d array with collision points or an empty array
+            if sprites do not collide. 
+        """
 
         #if self.distance_to(o) > self.radius + o.radius:
         #    return
@@ -309,8 +326,15 @@ class Sprite(Node):
         return compute_collisions(o, self, debug=debug)
 
     def distance_to(self, o=None, pos=None):
-        """Compute the distance to another sprite."""
+        """Compute the distance to another sprite or coordinate.
 
+        Args:
+            o (Sprite, optional): Other sprite to compute distance to.
+            pos (tuple, optional): An (x, y) coordinate to compute distance to.
+
+        Returns:
+            float: Distance in pixels.
+        """
         x, y = pos or (o.position.x, o.position.y)
         
         dx = x - self.position.x
@@ -319,7 +343,15 @@ class Sprite(Node):
         return (dx ** 2 + dy ** 2) ** 0.5
     
     def angle_to(self, o=None, pos=None):
-        """Compute clockwise angle in degrees to another sprite."""
+        """Compute clockwise angle in degrees to another sprite or coordinate.
+
+        Args:
+            o (Sprite, optional): Other sprite to compute angle to.
+            pos (tuple, optional): An (x, y) coordinate to compute angle to.
+
+        Returns:
+            float: Angle in degrees.
+        """
 
         qd = {
             (True, True): 0,
@@ -339,26 +371,31 @@ class Sprite(Node):
 
     @property
     def top(self):
+        """Get the top coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.y + t
         
     @property
     def right(self):
+        """Get the right coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.x + r
         
     @property
     def bottom(self):
+        """Get the bottom coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.y + b
         
     @property
     def left(self):
+        """Get the left coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.x + l
         
     @property
     def radius(self):
+        """Get the radius of a circle containing the sprite's bounding box."""
         t, r, b, l = self._trbl()
         rs = max(t, b) ** 2 + max(r, l) ** 2
         return rs ** .5
@@ -375,15 +412,41 @@ class Sprite(Node):
         )
 
     def wrap_position(self, width, height, margin=50):
+        """Wrap sprite's coordinates around given canvas width and height.
+
+        Use this method to make the sprite come back from one side of the 
+        canvas if it goes out from the opposite side.
+
+        Args:
+            width (float): The canvas width to wrap around.
+            height (float): The canvas height to wrap around.
+            margin (float, optional): An extra margin to add around canvas 
+                before wrapping the sprite around to the opposite side.
+        """
         self.position.x = (self.position.x + margin) % (width + 2 * margin) - margin
         self.position.y = (self.position.y + margin) % (height + 2 * margin) - margin
 
     def clip_position(self, width, height, margin=0):
+        """Clip sprite's coordinates to given canvas width and height.
+
+        Use this method to prevent the sprite from going out of the canvas. 
+
+        Args:
+            width (float): The canvas width to clip to.
+            height (float): The canvas height to clip to.
+            margin (float, optional): An extra margin to add around canvas 
+                before clipping the sprite's coordinates.
+        """
         self.position.x = max(-margin, min(margin + width, self.position.x))
         self.position.y = max(-margin, min(margin + height, self.position.y))
 
     @property
     def opacity(self):
+        """Get or set the opacity of the sprite.
+
+        Setting opacity to 0 would render the sprite completely transparent.
+        Settint opacity to 1 would render the sprite completely opaque.
+        """
         return self.color4.a
 
     @opacity.setter
@@ -392,6 +455,17 @@ class Sprite(Node):
         
     @property
     def color(self):
+        """Get or set the color of the sprite.
+        
+        The sprite color will be multiplied by the color values of its bitmap
+        image. 
+
+        The color can be specified by name (e.g. 'white') or in hex notation
+        (e.g '#cc4488') or as a 4-tuple or glm.vec4 value.
+
+        Returns:
+            glm.vec4: The RGBA color of the sprite as 4-vector.
+        """
         return self.color4
 
     @color.setter
@@ -399,6 +473,11 @@ class Sprite(Node):
         self.color4 = c2v(color, self.color4.a)
 
     def get_state(self):
+        """Get dictionary with the properties that define the sprite's state.
+        
+        Returns:
+            dict: A dictionary of properties.
+        """
         return dict(
             node = super().get_state(),
             color4 = glm_dumps(glm.vec4(self.color4)),
@@ -412,7 +491,12 @@ class Sprite(Node):
         )
 
     def set_state(self, s):
+        """Set sprite's state from given dictionary of properties.
         
+        Args:
+            s (dict): A dictionary of properties previously returned by a call 
+                to ``get_state()``.
+        """
         for k, v in s.items():
             if k != 'node':
                 setattr(self, k, glm_loads(v))

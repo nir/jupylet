@@ -102,8 +102,8 @@ Shadows are turned off by default. You can turn them on with:
 
     scene.shadows = True
 
-If you just want to draw the scene, simply call the ``scene.draw()`` 
-method in the ``render()`` function. That's it:
+If you just want to draw the scene, simply call the :meth:`scene.draw() <jupylet.model.Scene.draw>` 
+method in the :func:`~jupylet.app.App.render` function. That's it:
 
 .. code-block:: python
 
@@ -272,11 +272,11 @@ Or stop the alien in its tracks with:
     
     app.stop(drift)
 
-Our alien has two interesting vector attributes ``alien.up`` and 
-``alien.front``. The `up` vector can be visualized as a personal `+y` axis that 
-always points upward through the alien's head regardless of the alien's 
-orientation, while the `front` vector always points in the direction the alien
-is facing.
+Our alien has two interesting vector attributes :attr:`alien.up <jupylet.model.Mesh.up>` 
+and :attr:`alien.front <jupylet.model.Mesh.front>`. The `up` vector can be 
+visualized as a personal `+y` axis that always points upward through the 
+alien's head regardless of the alien's orientation, while the `front` vector 
+always points in the direction the alien is facing.
 
 The spaceship notebook includes a ``spin()`` function that keeps the alien
 spinning clockwise perpetually. Let's combine this spinning with a small 
@@ -317,9 +317,10 @@ it with a proper ballet dancing spinning around the `up` (`+y`) axis:
     def spin(ct, dt):
         alien.rotate_local(2 * math.pi * dt, y_direction)
 
-The ``alien.rotate_local(angle, axis)`` function expects two arguments; an 
-angle specifying how many `radians <https://www.mathopenref.com/radians.html>`_ 
-to rotate, and a vector specifying the axis to rotate around.
+The :attr:`alien.rotate_local(angle, axis) <jupylet.model.Mesh.rotate_local>` 
+function expects two arguments; an angle specifying how many 
+`radians <https://www.mathopenref.com/radians.html>`_ to rotate, and a vector 
+specifying the axis to rotate around.
 
 By multiplying ``2 * math.pi``, the number of radians in a full circle, by 
 `dt`, the number of seconds since the last time the function was called, we 

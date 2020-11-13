@@ -130,12 +130,13 @@ class Label(Sprite):
     """A text label.
 
     Since a text label is actually implemented as a 2D sprite, it has all the
-    functionality and methods of a sprite.
+    functionality and methods of a Sprite.
 
     Args:
-        text (str): text to display in label.
+        text (str): text to render as label.
         font (path): path to a true type or open type font.
         font_size (float): font size to use. 
+        line_height (float): determines the distance between lines.
         align (str): the desired alignment for the text label. May be one
             of 'left', 'center', and 'right'.
         color (str or 3-tuple): a color name, color hex notation, or a 
