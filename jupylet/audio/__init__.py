@@ -96,7 +96,7 @@ def get_note_value():
 _bpm = 240
 
 
-def set_bpm(bpm=4):
+def set_bpm(bpm=240):
     global _bpm
     _bpm = bpm
 

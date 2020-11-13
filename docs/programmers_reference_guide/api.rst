@@ -2,15 +2,18 @@ API REFERENCE
 =============
 
 
+Module jupylet.app
+------------------
+
 Class App
----------
+^^^^^^^^^
 
 .. py:currentmodule:: jupylet.app
 .. autoclass:: App
 
 
 Methods
-~~~~~~~
+"""""""
 
 .. automethod:: App.run
 .. automethod:: App.stop
@@ -35,20 +38,24 @@ Methods
 
 
 Properties
-~~~~~~~~~~
+""""""""""
 
 .. autoattribute:: App.width
 .. autoattribute:: App.height
 
 
+Module jupylet.sprite
+---------------------
+
+
 Class Sprite
-------------
+^^^^^^^^^^^^
 
 .. py:currentmodule:: jupylet.sprite
 .. autoclass:: Sprite
 
 Methods
-~~~~~~~
+"""""""
 
 .. automethod:: Sprite.render
 .. automethod:: Sprite.draw
@@ -63,7 +70,7 @@ Methods
 
 
 Properties
-~~~~~~~~~~    
+""""""""""    
 
 .. autoattribute:: Sprite.scale
 .. autoattribute:: Sprite.x
@@ -86,15 +93,19 @@ Properties
 .. py:attribute:: Sprite.anisotropy
 
 
+Module jupylet.label
+--------------------
+
+
 Class Label
------------
+^^^^^^^^^^^
 
 .. py:currentmodule:: jupylet.label
 .. autoclass:: Label
 
 
 Properties
-~~~~~~~~~~    
+""""""""""    
 
 .. py:attribute:: Label.text
 .. py:attribute:: Label.font_path
@@ -103,15 +114,34 @@ Properties
 .. py:attribute:: Label.align='left'
 
 
+Module jupylet.audio
+--------------------
+
+.. py:currentmodule:: jupylet.audio
+.. py:module:: jupylet.audio
+
+
+.. autofunction:: sonic_py
+.. autofunction:: set_bpm
+.. autofunction:: set_note_value
+.. autofunction:: use
+.. autofunction:: play
+.. autofunction:: sleep
+
+
+Module jupylet.audio.sound
+--------------------------
+
+
 Class Sound
------------
+^^^^^^^^^^^
 
 .. py:currentmodule:: jupylet.audio.sound
 .. autoclass:: Sound
 
 
 Methods
-~~~~~~~
+"""""""
 
 .. automethod:: Sound.play
 .. automethod:: Sound.play_poly
@@ -121,7 +151,7 @@ Methods
 
 
 Properties
-~~~~~~~~~~    
+""""""""""    
 
 .. autoattribute:: Sound.note
 .. autoattribute:: Sound.key
@@ -133,20 +163,20 @@ Properties
 
 
 Class Oscillator
-----------------
+^^^^^^^^^^^^^^^^
 
 .. py:currentmodule:: jupylet.audio.sound
 .. autoclass:: Oscillator
 
 
 Methods
-~~~~~~~
+"""""""
 
 .. automethod:: Oscillator.forward
 
 
 Properties
-~~~~~~~~~~    
+""""""""""    
 
 .. py:attribute:: Oscillator.freq
 .. py:attribute:: Oscillator.shape
@@ -155,30 +185,56 @@ Properties
 
 
 Class LatencyGate
------------------
+^^^^^^^^^^^^^^^^^
 
 .. py:currentmodule:: jupylet.audio.sound
 .. autoclass:: LatencyGate
 
 
 Methods
-~~~~~~~
+"""""""
 
 .. automethod:: LatencyGate.open
 .. automethod:: LatencyGate.close
 
 
 Class GatedSound
-----------------
+^^^^^^^^^^^^^^^^
 
 .. py:currentmodule:: jupylet.audio.sound
 .. autoclass:: GatedSound
 
 
 Methods
-~~~~~~~
+"""""""
 
 .. automethod:: GatedSound.play
 .. automethod:: GatedSound.play_poly
 .. automethod:: GatedSound.play_release
+
+
+Module jupylet.audio.sample
+---------------------------
+
+
+Class Sample
+^^^^^^^^^^^^
+
+.. py:currentmodule:: jupylet.audio.sample
+.. autoclass:: Sample
+
+
+Methods
+"""""""
+
+.. automethod:: Sample.load
+.. automethod:: Sample.play
+.. automethod:: Sample.play_poly
+.. automethod:: Sample.play_release
+
+
+Properties
+""""""""""    
+
+.. py:attribute:: Sample.path
 

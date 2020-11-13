@@ -30,8 +30,8 @@ import statement:
 
     from jupylet.audio.bundle import *
 
-Then create a ``Sample`` instance and load it into memory. Here is how its 
-done in the `examples/21-pong.ipynb <https://github.com/nir/jupylet/blob/master/examples/21-pong.ipynb>`_
+Then create a :class:`~jupylet.audio.sample.Sample` instance and load it into 
+memory. Here is how its done in the `examples/21-pong.ipynb <https://github.com/nir/jupylet/blob/master/examples/21-pong.ipynb>`_
 example notebook:
 
 .. code-block:: python
@@ -50,19 +50,20 @@ Once you have loaded the sample you can play it any time you want with:
     
     pong_sound.play()
 
-The ``Sample.play()`` method accepts an `amp` parameter between 0 and 1 that 
-controls output volume, and a `pan` parameter between -1 and 1 that controls
-the left-right balance. So to play the sound effect half as loud and just on
-the left side try:
+The :meth:`~jupylet.audio.sound.GatedSound.play()` method accepts an `amp` 
+parameter between 0 and 1 that controls output volume, and a `pan` parameter 
+between -1 and 1 that controls the left-right balance. So to play the sound 
+effect half as loud and just on the left side try:
 
 .. code-block:: python
     
     pong_sound.play(amp=0.5, pan=-1)
 
 By default, Jupylet sounds are `monophonic <https://en.wikipedia.org/wiki/Polyphony_and_monophony_in_instruments#Monophonic>`_, 
-which means that if you call the ``play()`` method twice in quick succession 
-you will not hear two instances of the sample being played simultaneously. 
-Instead Jupylet will stop the first sound before it starts playing the second.
+which means that if you call the :meth:`~jupylet.audio.sound.GatedSound.play()` 
+method twice in quick succession you will not hear two instances of the sample 
+being played simultaneously. Instead Jupylet will stop the first sound before 
+it starts playing the second.
 
 You can play multiple instances of the same sound polyphonically (e.g. think 
 of how fireworks sound) like this:
@@ -124,12 +125,14 @@ To play a sequence of notes insert a special sleep instructions between them:
 
 In the code above `Eb` means `E flat`, and similarly `Es` would mean `E sharp`. 
 The unit of duration is a full note, and you can set the `beats per minute` and 
-the `note value` with ``set_bpm()`` and ``set_note_value()`` respectively.
+the `note value` with :func:`~jupylet.audio.set_bpm` and 
+:func:`~jupylet.audio.set_note_value` respectively.
 
 Normally if you play a new note the previous note will cease as if the 
 synthesizer is monophonic. If you would like to play multiple notes together 
-call the ``play_poly()`` method instead. It will start playing a new note and 
-return a reference to the new sound instance so you may control it as it plays:
+call the :meth:`~jupylet.audio.sound.GatedSound.play_poly` method instead. It 
+will start playing a new note and return a reference to the new sound instance 
+so you may control it as it plays:
 
 .. code-block:: python
 
@@ -144,8 +147,9 @@ return a reference to the new sound instance so you may control it as it plays:
 
 Playing the tb303 without specifying a duration will generate a note that goes
 on indefinitely, like pressing a keyboard key without releasing it. The code 
-above calls ``play_release()`` to release the notes individually. You can also 
-release all the currently playing sounds of a synthesizer like this:
+above calls :meth:`~jupylet.audio.sound.GatedSound.play_release` to release the 
+notes individually. You can also release all the currently playing sounds of a 
+synthesizer like this:
 
 .. code-block:: python
 
@@ -364,10 +368,10 @@ this:
         await sleep(1)
 
 There is another problem that we need to take care of. When you call 
-``play_poly()`` the new note is scheduled to play as soon as possible. The 
-problem with that is that minor mistimings in "wakeups" from ``sleep()`` calls
-are normal in desktop operating systems and may result in noticeable playing 
-out of tempo. 
+:meth:`~jupylet.audio.sound.GatedSound.play_poly` the new note is scheduled to 
+play as soon as possible. The problem with that is that minor mistimings in 
+"wakeups" from :func:`~jupylet.audio.sleep` calls are normal in desktop 
+operating systems and may result in noticeable playing out of tempo. 
 
 The correct way to play notes with accurate tempo in a live loop is the 
 following:
@@ -437,8 +441,9 @@ and play the new code.
 
 However, sometimes it is more desirable to wait for the currently running 
 loop to complete its cycle. If you decorate a live loop with 
-``@app.sonic_live_loop2`` and run it, the new code will kick in only after
-the currently playing loop completes a cycle.
+:func:`@app.sonic_live_loop2 <jupylet.app.App.sonic_live_loop2>` and run it, 
+the new code will kick in only after the currently playing loop completes a 
+cycle.
 
 
 MIDI Keyboards
