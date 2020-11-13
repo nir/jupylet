@@ -173,3 +173,8 @@ def is_python_script():
         
     return False
 
+
+def is_sphinx_build():
+    return 'SPHINXBUILD' in os.environ
+
+    

@@ -44,6 +44,7 @@ except:
 import numpy as np
 
 from ..audio import FPS
+from ..env import is_sphinx_build
 
 
 logger = logging.getLogger(__name__)
@@ -122,7 +123,7 @@ def get_device_latency_ms(latency='high'):
     if latency in ['lowest', 'minimal']:
         return LOWEST_LATENCY * 1000
 
-    if sd is None:
+    if sd is None or is_sphinx_build():
         return 100
 
     dd = sd.query_devices(sd.default.device[-1])

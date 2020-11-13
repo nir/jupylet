@@ -42,15 +42,16 @@ wonderful `Pytorch <https://pytorch.org/>`_. Jupylet borrows from Pytorch
 Oscillators
 -----------
 
-Let's start with a simple sawtooth oscillator:
+Let's start with a simple sawtooth :class:`~jupylet.audio.sound.Oscillator`\:
 
 .. code-block:: python
 
     osc = Oscillator('sawtooth')
 
 In Jupylet, all audio elements from basic building blocks to compound
-synthesizers are ``Sound`` instances, the parallel of a Pytorch ``nn.Module``, 
-and similarly you typically apply them to an input to produce an output.
+synthesizers are :class:`~jupylet.audio.sound.Sound` instances, the parallel 
+of a Pytorch ``nn.Module``, and similarly you typically apply them to an input 
+to produce an output.
 
 Let's apply the oscilator to generate `44100 frames <https://en.wikipedia.org/wiki/44,100_Hz>`_ 
 which is the default number of samples per second used by Jupylet and the 
@@ -222,7 +223,8 @@ Let's see it in action:
 
 .. image:: ../images/gate.png 
 
-The ``GatedSound`` class employs a ``LatencyGate`` to implement precise onset
+The :class:`~jupylet.audio.sound.GatedSound` class employs a 
+:class:`~jupylet.audio.sound.LatencyGate` to implement precise onset
 and duration of notes. Let's see how to use it to improve our simple 
 synthesizer:
 
@@ -643,8 +645,9 @@ reverb effect, and start two simple simultaneous loops:
    <br>
 
 .. note::
-    If you update a live loop decorated with ``@app.sonic_live_loop2`` the 
-    new code will kick in once the current cycle through the loop completes.
+    If you update a live loop decorated with :func:`@app.sonic_live_loop2 <jupylet.app.App.sonic_live_loop2>`
+    the new code will kick in once the current cycle through the loop 
+    completes.
 
 
 What Next?

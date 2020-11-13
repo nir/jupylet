@@ -102,3 +102,83 @@ Properties
 .. py:attribute:: Label.line_height=1.2
 .. py:attribute:: Label.align='left'
 
+
+Class Sound
+-----------
+
+.. py:currentmodule:: jupylet.audio.sound
+.. autoclass:: Sound
+
+
+Methods
+~~~~~~~
+
+.. automethod:: Sound.play
+.. automethod:: Sound.play_poly
+.. automethod:: Sound.play_release
+.. automethod:: Sound.set_effects
+.. automethod:: Sound.get_effects
+
+
+Properties
+~~~~~~~~~~    
+
+.. autoattribute:: Sound.note
+.. autoattribute:: Sound.key
+
+.. py:attribute:: Sound.velocity
+.. py:attribute:: Sound.freq
+.. py:attribute:: Sound.amp
+.. py:attribute:: Sound.pan
+
+
+Class Oscillator
+----------------
+
+.. py:currentmodule:: jupylet.audio.sound
+.. autoclass:: Oscillator
+
+
+Methods
+~~~~~~~
+
+.. automethod:: Oscillator.forward
+
+
+Properties
+~~~~~~~~~~    
+
+.. py:attribute:: Oscillator.freq
+.. py:attribute:: Oscillator.shape
+.. py:attribute:: Oscillator.sign
+.. py:attribute:: Oscillator.duty
+
+
+Class LatencyGate
+-----------------
+
+.. py:currentmodule:: jupylet.audio.sound
+.. autoclass:: LatencyGate
+
+
+Methods
+~~~~~~~
+
+.. automethod:: LatencyGate.open
+.. automethod:: LatencyGate.close
+
+
+Class GatedSound
+----------------
+
+.. py:currentmodule:: jupylet.audio.sound
+.. autoclass:: GatedSound
+
+
+Methods
+~~~~~~~
+
+.. automethod:: GatedSound.play
+.. automethod:: GatedSound.play_poly
+.. automethod:: GatedSound.play_release
+

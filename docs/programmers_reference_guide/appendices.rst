@@ -40,7 +40,7 @@ like the one shown in this picture:
 I spent endless hours of fun playing so many of its games. 
 
 In 2013 Deepmind published a `Reinforcement Learning` algorithm that surpassed 
-human level performance on some of its games. The video of their agent 
+human level performance on some of its classic games. The video of their agent 
 learning to play and then master the game of `Breakout <https://en.wikipedia.org/wiki/Breakout_(video_game)>`_
 stunned the world:
 
@@ -54,10 +54,11 @@ Since then Atari games are used as a benchmark for `Reinforcement Learning`
 algorithms. 
 
 When I started learning `Deep Learning` and `Deep Reinforcement
-Learning` I found myself spending too much time trying to customize the 
-computer code running the classic `Atari` games, and so it made perfect sense 
-to me to spend a whole lot more time, I mean, way more time, programming a 
-completely new environment, and so Jupylet came to be.
+Learning` I found myself spending too much time trying to customize 
+`the computer code running the Atari games <https://gym.openai.com/envs/Breakout-v0/>`_, 
+and so it made perfect sense to me to spend a whole lot more time, I mean, 
+way more time, programming a completely new environment, and so Jupylet came 
+to be.
 
 
 The Commodore 64
@@ -103,9 +104,9 @@ and I was stunned to see how advanced it really was.
 It had three independant waveform generators that could generate `sine`, 
 `triangle`, `sawtooth`, `pulse` waveform with variable duty, and `white noise`,
 and you could use the amplitude of one to modulate the frequency of another! 
-It had a classic ADSR envelope generator. It had a filter that you could use 
-as `lowpass`, `highpass`, or `bandpass`, and you could sweep its `cutoff` 
-frequency dynamically.
+It had a classic ADSR envelope generator, and it had a filter that you could 
+use as `lowpass`, `highpass`, or `bandpass` and sweep its `cutoff` frequency 
+dynamically.
 
 And its epic guide explained all of it clearly in a language that a child could
 understand and in depth that a musician would find useful and professional 
@@ -114,6 +115,6 @@ explaining fundamental frequencies and harmonics, and all the way to describing
 frequency sweeping and how to code the computer to control all of the 
 synthesizer's parameters dynamically.
 
-It was recently included in `IEEE Chip Hall of Fame <https://spectrum.ieee.org/tech-history/silicon-revolution/chip-hall-of-fame-mos-technology-6581>`_
+It was recently included in `IEEE Spectrum Chip Hall of Fame <https://spectrum.ieee.org/tech-history/silicon-revolution/chip-hall-of-fame-mos-technology-6581>`_
 and nearly 40 years later it still has a following of fans.
 

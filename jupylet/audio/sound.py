@@ -1037,9 +1037,12 @@ def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
 
 
 class Oscillator(Sound):
+
+    """"""
     
     def __init__(self, shape='sine', freq=MIDDLE_C, key=None, phase=0., sign=1, duty=0.5, **kwargs):
-        
+        """"""
+
         super().__init__(freq=freq)
         
         self.shape = shape

@@ -50,14 +50,15 @@ effectively position the label just outside the right hand side of the game
 canvas in `pixels <https://en.wikipedia.org/wiki/Pixel>`_.
 
 The label color can be any name defined by the `W3C SVG standard <https://www.w3.org/TR/SVG11/types.html#ColorKeywords>`_
-or it can be any RGB color of the form :code:`"#abcdef"` as explained here 
+or it can be any RGB color of the form ``"#abcdef"`` as explained here 
 `<https://www.color-hex.com/>`_.
 
 Next, we define a function to scroll the label from right to left. The 
-code :code:`@app.run_me_every(1/30)` above the function definition is called a 
-decorator. Python decorators are kind of "magical", and this one will make 
-*Jupylet* automatically call the ``scroll()`` function once every 1/30 of a 
-second, or 30 times per second, once the game is run:
+code :func:`@app.run_me_every(1/30) <jupylet.app.App.run_me_every>` above the 
+function definition is called a decorator. Python decorators are kind of 
+"magical", and this one will make *Jupylet* automatically call the 
+``scroll()`` function once every 1/30 of a second, or 30 times per second, 
+once the game is run:
 
 .. code-block:: python
 
@@ -73,7 +74,7 @@ these arguments to do interesting stuff, but you can ignore them for now.
 
 The function above does not actually draw the label in its new position, 
 rather it only updates the *x* property of the label. To draw the label in its 
-new position we need the ``render()`` function. The ``render()`` function is a 
+new position we need the :func:`~jupylet.app.App.render` function; it is a 
 special function responsible for drawing each new frame of the game video 
 while it is running. In this particular case it will clear the game canvas 
 (paint it black) and draw the label in its new position:
@@ -223,8 +224,8 @@ velocity.
 
 When we engage the ship's rocket engine we would like it to accelerate in 
 the direction it is pointing. To compute that direction we read the 
-angle of the ship's sprite ``ship.angle`` and add 90 degrees, because when 
-the sprite angle is 0 the ship actually points up. 
+:attr:`~jupylet.sprite.Sprite.angle` of the ship's sprite and add 90 degrees, 
+because when the sprite angle is 0 the ship actually points up. 
 
 If you would like to understand more about the components of velocity and what 
 cosine snd sine have to do with it, the Khan Academy has 
@@ -240,9 +241,9 @@ Once we have updated the velocity components we use them to update the ship's
 
 The problem with incrementing and decrementing the `x` and `y` coordinates 
 like that is that very quickly the ship will disappear from view. That's what 
-the ``ship.wrap_position()`` function is for. It will modify the ship's 
-position such that if it goes out of the canvas from one side it will show up 
-again at the opposite side:
+the :func:`~jupylet.sprite.Sprite.wrap_position` function is for. It will 
+modify the ship's position such that if it goes out of the canvas from one 
+side it will show up again at the opposite side:
 
 .. code-block:: python
 
@@ -259,10 +260,10 @@ yellow circle sprite:
     else:
         circle.opacity = 0.0
 
-The ``ship.collisions_with(alien)`` function call checks if the ship sprite
-collides with the alien sprite and returns a list with contact points. If all 
-we care about is whether they collide or not we can simply test if the length
-of the returned list is greater than 0 (think about it).
+The :func:`~jupylet.sprite.Sprite.collisions_with` function call checks if the 
+ship sprite collides with the alien sprite and returns a list with contact 
+points. If all we care about is whether they collide or not we can simply 
+test if the length of the returned list is greater than 0 (think about it).
 
 If the spaceship and the alien do not collide, we hide the yellow circle by 
 setting its opacity to 0.0 making it fully transparent.
@@ -292,11 +293,11 @@ Here it is:
         circle.x = x
         circle.y = y    
 
-The function begins with the special decorator ``@app.event``. This decorator
-makes sure our function is recorgnized as the handler for the 
-`mouse_position_event`. The function itself is pretty simple. It just sets the
-position of the alien sprite and the yellow circle sprite behind it to that of 
-the mouse cursor.
+The function begins with the special decorator :func:`@app.event <jupylet.app.App.event>`. 
+This decorator makes sure our function is recorgnized as the handler for the 
+:func:`~jupylet.app.App.mouse_position_event`. The function itself is pretty 
+simple. It just sets the position of the alien sprite and the yellow circle 
+sprite behind it to that of the mouse cursor.
 
 Here is a more complicated hander. The spaceship keyboard handler:
 
@@ -333,7 +334,7 @@ Here is a more complicated hander. The spaceship keyboard handler:
             if key == keys.RIGHT:
                 right = False
 
-Let's go over the parameters of the ``key_event()`` function. 
+Let's go over the parameters of the :func:`~jupylet.app.App.key_event` function. 
 The `key` parameter tells us which keyboard key this event is all about; 
 the `action` parameter tells us whether it was pressed or released; and 
 the `modifiers` parameter tells us wheter any of the ``SHIFT``, ``ALT``, 
