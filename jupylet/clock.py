@@ -266,7 +266,7 @@ class ClockLeg(object):
                         delay = goo.send((ct, dt))
                     
                     if delay is not None:
-                        self.scheduler.schedule_once(bar, delay, times, **kwargs)
+                        self.scheduler.schedule_once(bar, delay, **kwargs)
                         
                 elif inspect.iscoroutinefunction(foo):
 
