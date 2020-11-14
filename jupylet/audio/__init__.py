@@ -144,7 +144,11 @@ def use(sound, **kwargs):
 
     cf = callerframe()
     cn = cf.f_code.co_name
-    hh = cn if cn == '<module>' else hash(cf) 
+
+    if cn in ['<module>', 'async-def-wrapper']:
+        hh = '<module>'
+    else:
+        hh = hash(cf) 
 
     syd[hh] = sound
 
@@ -165,9 +169,14 @@ def play(note, duration=None, **kwargs):
         duration (float, optional): Duration to play note, in whole notes.
         **kwargs: Properties of intrument to modify.
     """
+
     cf = callerframe()
     cn = cf.f_code.co_name
-    hh = cn if cn == '<module>' else hash(cf) 
+    
+    if cn in ['<module>', 'async-def-wrapper']:
+        hh = '<module>'
+    else:
+        hh = hash(cf) 
 
     sy = syd[hh]
     
@@ -205,7 +214,11 @@ def sleep(duration=0):
 
     cf = callerframe()
     cn = cf.f_code.co_name
-    hh = cn if cn == '<module>' else hash(cf) 
+
+    if cn in ['<module>', 'async-def-wrapper']:
+        hh = '<module>'
+    else:
+        hh = hash(cf) 
 
     #sy = syd.get(hh)
     #if sy is not None:

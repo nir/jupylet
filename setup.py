@@ -35,6 +35,7 @@ setuptools.setup(
         'kids', 
         'RL',
     ],
+    python_requires='>=3.6, <3.9',
     install_requires=[
         'glfw',
         'wget',

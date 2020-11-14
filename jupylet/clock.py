@@ -243,7 +243,7 @@ class ClockLeg(object):
                         if sc['times'] > 0 and sc['times'] == sc['ncall']:
                             break
 
-                except asyncio.exceptions.CancelledError:
+                except asyncio.CancelledError:
                     pass
                 except:
                     sc['errors'] = trimmed_traceback()
@@ -277,7 +277,7 @@ class ClockLeg(object):
                     sc['ncall'] = 0
                     sc['foo'] = foo
 
-                    task = asyncio.create_task(fuu(ct, dt))
+                    task = asyncio.get_event_loop().create_task(fuu(ct, dt))
                     sc['task'] = task
                     
                 else:

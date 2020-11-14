@@ -142,9 +142,10 @@ class CubeLoader0(moderngl_window.loaders.texture.cube.Loader):
     def _load_texture(self, path):
 
         switch = self.meta._kwargs['flip_left_right'] and path in [self.meta.pos_y, self.meta.neg_y]
+        flip_key = 'flip_y' if 'flip_y' in self.meta._kwargs else 'flip'
 
         if switch:
-            self.meta._kwargs['flip'], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs['flip']
+            self.meta._kwargs[flip_key], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs[flip_key]
 
         #print(repr(self.meta._kwargs))
         image = super(CubeLoader0, self)._load_texture(path)
@@ -152,7 +153,7 @@ class CubeLoader0(moderngl_window.loaders.texture.cube.Loader):
             image = image.transpose(PIL.Image.FLIP_LEFT_RIGHT)
 
         if switch:
-            self.meta._kwargs['flip'], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs['flip']
+            self.meta._kwargs[flip_key], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs[flip_key]
 
         return image
 
