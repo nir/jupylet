@@ -52,6 +52,12 @@ def load_blender_gltf(path):
     Note that in principle this function should be able to load any gltf 2.0 scene,
     however it was only tested with and tuned to load scenes exported with 
     Blender 2.83.
+
+    Args:
+        path (str): path to glTF 2.0 file.
+
+    Returns:
+        Scene: A scene object.
     """
 
     pp = find_path(path)

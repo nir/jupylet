@@ -34,7 +34,16 @@ from ..utils import callerframe, callerpath
 
 
 def sonic_py(resource_dir='.'):
+    """Start an audio application.
 
+    An audio application is need to run live loops.
+    
+    Args:
+        resource_dir (str): Path to root of resource dir, for samples, etc...
+
+    Returns:
+        App: A running application object.
+    """
     from ..app import App
 
     red = os.path.join(callerpath(), resource_dir)
@@ -85,6 +94,11 @@ _note_value = 4
 
 
 def set_note_value(v=4):
+    """Set the note value representing one beat.
+    
+    Args:
+        v (float): Note value.
+    """
     global _note_value
     _note_value = v
 
@@ -97,6 +111,11 @@ _bpm = 240
 
 
 def set_bpm(bpm=240):
+    """Set the tempo to the given beats per minute.
+    
+    Args:
+        bpm (float): Beats per minute.
+    """
     global _bpm
     _bpm = bpm
 
@@ -109,23 +128,43 @@ dtd = {}
 syd = {}
 
 
-def use(synth, **kwargs):
+def use(sound, **kwargs):
+    """Set the instrument to use in subsequent calls to :func:`play`.
+    
+    You can supply key/value pairs of properties to modify in the given 
+    instrument. If you do, the instrument will be copied first, and
+    the modifications will be applied to the new copy.
 
+    Args:
+        sound (GatedSound): Instrument to use.
+        **kwargs: Properties of intrument to modify.
+    """
     if kwargs:
-        synth = synth.copy().set(**kwargs)
+        sound = sound.copy().set(**kwargs)
 
     cf = callerframe()
     cn = cf.f_code.co_name
     hh = cn if cn == '<module>' else hash(cf) 
 
-    syd[hh] = synth
+    syd[hh] = sound
 
 
 PLAY_EXTRA_LATENCY = 0.150
 
 
-def play(note, duration=None, *args, **kwargs):
+def play(note, duration=None, **kwargs):
+    """Play given note polyphonically with the instrument previously set by 
+    call to :func:`use`.
+    
+    You can supply key/value pairs of properties to modify in the given 
+    instrument.
 
+    Args:
+        note (float): Note to play in units of semitones 
+            where 60 is middle C.
+        duration (float, optional): Duration to play note, in whole notes.
+        **kwargs: Properties of intrument to modify.
+    """
     cf = callerframe()
     cn = cf.f_code.co_name
     hh = cn if cn == '<module>' else hash(cf) 
@@ -135,12 +174,34 @@ def play(note, duration=None, *args, **kwargs):
     tt = dtd.get(hh) or get_time()
     tt += PLAY_EXTRA_LATENCY
 
-    return sy.play_poly(note, duration, t=tt, *args, **kwargs)
+    return sy.play_poly(note, duration, t=tt, **kwargs)
 
 
-def sleep(dt=0):
+def sleep(duration=0):
+    """Get some sleep.
     
+    Example: 
+        ::
+    
+            @app.sonic_live_loop2
+            async def boom_pam():
+                        
+                use(tb303, resonance=8, decay=1/8, cutoff=48, amp=1)
+                
+                play(C2, 1/8)
+                await sleep(1/4)
+                
+                play(C3, 1/8)
+                await sleep(1/4)
+
+    Args:
+        duration (float): Duration to sleep in whole notes.
+
+    Returns:
+        coroutine: A sleep coroutine to use with `await`.
+    """
     tt = get_time()
+    dt = duration
 
     cf = callerframe()
     cn = cf.f_code.co_name

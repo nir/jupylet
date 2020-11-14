@@ -116,6 +116,12 @@ class ShadowMap(object):
 
 class Scene(Object):
     
+    """A 3D Scene object.
+
+    While it is possible to create a Scene object manually, it is probably a 
+    better idea to call :func:`jupylet.loader.load_blender_gltf` instead.
+    """
+
     def __init__(self, name, shadows=False):
         
         super(Scene, self).__init__()
@@ -146,7 +152,12 @@ class Scene(Object):
         self.cameras[camera.name] = camera
         
     def draw(self, shader=None):
-        
+        """Render scene to canvas.
+
+        Args:
+            shader (moderngl.program.Program, optional): OpenGL shader program
+                to use for rendering.
+        """
         ctx = get_context()
         ctx.enable_only(moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.CULL_FACE)
 
@@ -654,6 +665,12 @@ class Camera(Node):
     
 class Mesh(Node):
     
+    """A 3D Mesh object.
+
+    While it is possible to create a Mesh object manually, it is probably a 
+    better idea to call :func:`jupylet.loader.load_blender_gltf` instead.
+    """
+
     def __init__(self, name, rotation=None, scale=None, position=None, parent=None):
         
         super(Mesh, self).__init__(name, None, scale, rotation, position)

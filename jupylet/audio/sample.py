@@ -147,7 +147,23 @@ def read_sfz(path):
 
 
 class Sample(GatedSound):
-    
+    """A class to play audio files and samples.
+
+    The Sample class can play audio files of type WAV, OGG, or FLAC, and it 
+    can also play basic SFZ format multi sampled virtual instruments. If a 
+    sample of a virtual instrument includes markers for a loop segment, the 
+    `loop` argument will cause the sample to loop around its loop segment.
+
+    Args:
+        path (str): Path to audio file.
+        freq (float): Fundamental frequency.
+        key (float, optional): Fundamental frequency of generator in semitone
+            units where middle C is 60.
+        loop (str): Loop sample back to its beginning.
+        amp (float): Output amplitude - a value between 0 and 1.
+        pan (float): Balance between left (-1) and right (1) output channels.
+        duration (float, optional): Duration to play note, in whole notes.    
+    """
     def __init__(
         self, 
         path, 
@@ -247,7 +263,11 @@ class Sample(GatedSound):
             return self.loop_power ** p0
         
     def load(self):
+        """Load specified sample file into memory.
         
+        Returns:
+            Sample: self
+        """
         if self.path.endswith('.sfz'):
             self.load_sfz()
             return self

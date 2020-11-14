@@ -272,12 +272,12 @@ class App(EventLeg, ClockLeg):
 
     @property
     def width(self):
-        """Width of game canvas in pixels."""
+        """bool: Width of game canvas in pixels."""
         return self._width
 
     @property
     def height(self):
-        """Height of game canvas in pixels."""
+        """bool: Height of game canvas in pixels."""
         return self._height
     
     def run(self, interval=1/30):

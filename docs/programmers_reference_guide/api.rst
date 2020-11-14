@@ -87,22 +87,30 @@ Properties
 .. autoattribute:: Sprite.opacity
 .. autoattribute:: Sprite.color
 
-.. py:attribute:: Sprite.flip
+.. py:attribute:: Sprite.flip=True
 
     Flip the image upside down while rendering.
 
-.. py:attribute:: Sprite.mipmap
+    :type: bool
+
+.. py:attribute:: Sprite.mipmap=True
 
     Compute mipmap textures when first loading the sprite image.
 
-.. py:attribute:: Sprite.autocrop
+    :type: bool
+
+.. py:attribute:: Sprite.autocrop=False
 
     Auto crop the image to its bounding box when first loading the sprite image.
 
-.. py:attribute:: Sprite.anisotropy
+    :type: bool
+    
+.. py:attribute:: Sprite.anisotropy=8.0
 
     Use anisotropic filtering when rendering the sprite image.
 
+    :type: float
+    
 
 Module jupylet.label
 --------------------
@@ -122,22 +130,41 @@ Properties
 
     Text to render as label.
 
+    :type: str
+
 .. py:attribute:: Label.font_path
 
     Path to a true type or open type font.
 
+    :type: str
+    
 .. py:attribute:: Label.font_size=16
 
     Font size to use. 
 
+    :type: float
+    
 .. py:attribute:: Label.line_height=1.2
 
     Determines the distance between lines.
 
+    :type: float
+    
 .. py:attribute:: Label.align='left'
 
     The desired alignment for the text label. May be one of 'left', 'center', 
     and 'right'.
+
+    :type: str
+    
+
+Module jupylet.loader
+---------------------
+
+.. py:currentmodule:: jupylet.loader
+.. py:module:: jupylet.loader
+
+.. autofunction:: load_blender_gltf
 
 
 Module jupylet.model
@@ -161,10 +188,47 @@ Properties
 """"""""""    
 
 .. py:attribute:: Scene.meshes
+
+    A list of meshes.
+
+    :type: list
+
 .. py:attribute:: Scene.lights
+
+    A list of lights.
+
+    :type: list
+    
 .. py:attribute:: Scene.cameras
+
+    A list of cameras.
+
+    :type: list
+    
 .. py:attribute:: Scene.materials
 
+    A list of materials.
+
+    :type: list
+    
+.. py:attribute:: Scene.skybox
+
+    A Skybox object.
+
+    :type: Skybox
+    
+.. py:attribute:: Scene.shadows
+
+    Set to True to enable shadows.
+
+    :type: bool
+    
+.. py:attribute:: Scene.name
+
+    Name of scene.
+
+    :type: str
+ 
 
 Class Mesh
 ^^^^^^^^^^
@@ -185,11 +249,33 @@ Methods
 Properties
 """"""""""    
 
-.. autoattribute:: Mesh.draw
-.. autoattribute:: Mesh.matrix
-.. autoattribute:: Mesh.up
 .. autoattribute:: Mesh.front
+.. autoattribute:: Mesh.up
 
+.. py:attribute:: Mesh.primitives
+
+    List of primitives the mesh consists of.
+
+    :type: list 
+
+.. py:attribute:: Mesh.children
+
+    List of child meshes.
+
+    :type: list 
+    
+.. py:attribute:: Mesh.hide
+
+    Set to False to hide mesh from view.
+
+    :type: bool 
+    
+.. py:attribute:: Mesh.name
+
+    Name of mesh.
+
+    :type: str 
+    
 
 Module jupylet.audio
 --------------------
@@ -233,10 +319,23 @@ Properties
 .. autoattribute:: Sound.note
 .. autoattribute:: Sound.key
 
-.. py:attribute:: Sound.velocity
 .. py:attribute:: Sound.freq
+
+    Fundamental requency of sound object.
+
+    :type: float
+
 .. py:attribute:: Sound.amp
+
+    Output amplitude - a value between 0 and 1.
+
+    :type: float
+
 .. py:attribute:: Sound.pan
+
+    Balance between left (-1) and right (1) output channels.
+
+    :type: float
 
 
 Class Oscillator
@@ -255,10 +354,23 @@ Methods
 Properties
 """"""""""    
 
-.. py:attribute:: Oscillator.freq
 .. py:attribute:: Oscillator.shape
+
+    Waveform to generate - one of `sine`, `triangle`, `sawtooth`, or `square`.
+
+    :type: str
+    
 .. py:attribute:: Oscillator.sign
+
+    Set to -1 to flip sawtooth waveform upside down.
+
+    :type: float
+
 .. py:attribute:: Oscillator.duty
+
+    The fraction of the square waveform cycle its value is 1.
+
+    :type: float
 
 
 Class LatencyGate
@@ -305,9 +417,6 @@ Methods
 """""""
 
 .. automethod:: Sample.load
-.. automethod:: Sample.play
-.. automethod:: Sample.play_poly
-.. automethod:: Sample.play_release
 
 
 Properties
@@ -315,3 +424,7 @@ Properties
 
 .. py:attribute:: Sample.path
 
+    Path to audio file.
+
+    :type: str
+    

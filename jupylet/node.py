@@ -34,6 +34,12 @@ from .utils import glm_dumps, glm_loads
 
 class Object(object):
     
+    """Implement an object that tracks changes to its properties.
+
+    It is used for implementing lazy mechanisms that only engage in costly
+    computations when necessary.
+    """
+
     def __init__(self, dirty=True):
         
         self._items = {}
@@ -45,14 +51,14 @@ class Object(object):
     def __getattr__(self, k):
         
         if k not in self._items:
-            return super(Object, self).__getattribute__(k)
+            return super().__getattribute__(k)
             
         return self._items[k]
     
     def __setattr__(self, k, v):
         
         if k == '_items' or k not in self._items:
-            return super(Object, self).__setattr__(k, v)
+            return super().__setattr__(k, v)
         
         self._items[k] = v
         self._dirty.add(k)
@@ -92,6 +98,16 @@ _i4 = glm.mat4(1.)
 
 class Node(Object):
   
+    """Handle and represent geometric operations as matrix transformation.
+    
+    Handle and represent scaling, rotation, and translation in local and global
+    3D coordinates as a single matrix (lazily maintained) transformation.
+
+    Args:
+        name (str, optional): Name of object.
+        anchor (glm.vec3, optional): 
+    """
+
     def __init__(
         self, 
         name='', 
@@ -101,7 +117,7 @@ class Node(Object):
         position=None,
     ):
         
-        super(Node, self).__init__()
+        super().__init__()
         
         self.name = name
 
@@ -145,29 +161,58 @@ class Node(Object):
         return self._matrix
 
     def move_local(self, xyz):
+        """Move by given displacement in local coordinate system.
+
+        Args:
+            xyz (glm.vec3): Displacement.
+        """
         rxyz = glm.mat4_cast(self.rotation) * glm.vec4(xyz, 1.)
         self.position += rxyz.xyz
         
     def rotate_local(self, angle, axis=(0., 0., 1.)):
+        """Rotate counter clockwise by given angle around given axis in local 
+        coordinate system.
+
+        Args:
+            angle (float): Angle in radians.
+            axis (glm.vec3): Rotation axis.
+        """
         self.rotation *= aa2q(angle, glm.vec3(axis))
             
     def move_global(self, xyz):
+        """Move by given displacement in global coordinate system.
+
+        Args:
+            xyz (glm.vec3): Displacement.
+        """
         self.position += xyz
         
     def rotate_global(self, angle, axis=(0., 0., 1.)):
-        self.rotation *= aa2q(angle, axis)
+        """Rotate counter clockwise by given angle around given axis in global 
+        coordinate system.
+
+        Args:
+            angle (float): Angle in radians.
+            axis (glm.vec3): Rotation axis.
+        """
+        self.rotation = aa2q(angle, glm.vec3(axis)) * self.rotation
             
     @property
     def up(self):
-        """Return the local up (+y) axis."""
+        """glm.vec3: Return the local up (+y) axis."""
         return (self.matrix * glm.vec4(0, 1, 0, 0)).xyz
 
     @property
     def front(self):
-        """Return the local front (+z) axis."""
+        """glm.vec3: Return the local front (+z) axis."""
         return (self.matrix * glm.vec4(0, 0, 1, 0)).xyz
 
     def get_state(self):
+        """Get a dictionary of properties defining the object state.
+        
+        Returns:
+            dict: A dictionary of properties.
+        """
         return dict(
             rotation = glm_dumps(glm.quat(self.rotation)), 
             position = glm_dumps(glm.vec3(self.position)),
@@ -176,6 +221,12 @@ class Node(Object):
         )
 
     def set_state(self, s):
+        """Set object state from given dictionary of properties.
+        
+        Args:
+            s (dict): A dictionary of properties previously returned by a call 
+                to ``get_state()``.
+        """
         for k, v in s.items():
             setattr(self, k, glm_loads(v))
 

@@ -142,11 +142,11 @@ class Sprite(Node):
         pass
 
     def draw(self, shader=None):
-        """Draw sprite on canvas - this is an alias to Sprite.render()."""
+        """Render sprite to canvas - this is an alias to Sprite.render()."""
         return self.render(shader)
         
     def render(self, shader=None):
-        """Draw sprite on canvas.
+        """Render sprite to canvas.
         
         Args:
             shader (moderngl.program.Program, optional): OpenGL shader program
@@ -169,7 +169,7 @@ class Sprite(Node):
 
     @property
     def scale(self):
-        """Scale of sprite.
+        """float: Scale of sprite.
         
         The scale equals the rendered width in pixels divided by the actual
         width of the texture. E.g a scale of 2 will make the sprite appear
@@ -183,7 +183,7 @@ class Sprite(Node):
 
     @property
     def x(self):
-        """The x coordinate of the anchor position."""
+        """float: The x coordinate of the anchor position."""
         return self.position.x
         
     @x.setter
@@ -192,7 +192,7 @@ class Sprite(Node):
         
     @property
     def y(self):
-        """The y coordinate of anchor position."""
+        """float: The y coordinate of anchor position."""
         return self.position.y
         
     @y.setter
@@ -201,7 +201,7 @@ class Sprite(Node):
         
     @property
     def angle(self):
-        """The rotation angle around the anchor in degrees."""
+        """float: The rotation angle around the anchor in degrees."""
         angle, axis = q2aa(self.rotation)
         return round(glm.degrees(angle * glm.sign(axis.z)), 4)
 
@@ -251,7 +251,7 @@ class Sprite(Node):
 
     @property
     def width(self):
-        """Width in pixels after scaling."""
+        """float: Width in pixels after scaling."""
         return self.scale0.x
 
     @width.setter
@@ -260,7 +260,7 @@ class Sprite(Node):
 
     @property
     def height(self):
-        """Height in pixels after scaling."""
+        """float: Height in pixels after scaling."""
         return self.scale0.y
 
     @height.setter
@@ -269,7 +269,7 @@ class Sprite(Node):
 
     @property
     def image(self):
-        """Bitmap image of sprite.
+        """PIL.Image.Image: Bitmap image of sprite.
         
         You can set this property with a new image or with a path to an image 
         on disk to change the current sprite image.
@@ -371,31 +371,31 @@ class Sprite(Node):
 
     @property
     def top(self):
-        """Get the top coordinate of the sprite's bounding box."""
+        """float: Get the top coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.y + t
         
     @property
     def right(self):
-        """Get the right coordinate of the sprite's bounding box."""
+        """float: Get the right coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.x + r
         
     @property
     def bottom(self):
-        """Get the bottom coordinate of the sprite's bounding box."""
+        """float: Get the bottom coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.y + b
         
     @property
     def left(self):
-        """Get the left coordinate of the sprite's bounding box."""
+        """float: Get the left coordinate of the sprite's bounding box."""
         t, r, b, l = self._trbl()
         return self.position.x + l
         
     @property
     def radius(self):
-        """Get the radius of a circle containing the sprite's bounding box."""
+        """float: Get the radius of a circle containing the sprite's bounding box."""
         t, r, b, l = self._trbl()
         rs = max(t, b) ** 2 + max(r, l) ** 2
         return rs ** .5
@@ -442,7 +442,7 @@ class Sprite(Node):
 
     @property
     def opacity(self):
-        """Get or set the opacity of the sprite.
+        """float: Get or set the opacity of the sprite.
 
         Setting opacity to 0 would render the sprite completely transparent.
         Settint opacity to 1 would render the sprite completely opaque.
@@ -455,16 +455,13 @@ class Sprite(Node):
         
     @property
     def color(self):
-        """Get or set the color of the sprite.
+        """glm.vec4: Get or set the color of the sprite.
         
         The sprite color will be multiplied by the color values of its bitmap
         image. 
 
         The color can be specified by name (e.g. 'white') or in hex notation
         (e.g '#cc4488') or as a 4-tuple or glm.vec4 value.
-
-        Returns:
-            glm.vec4: The RGBA color of the sprite as 4-vector.
         """
         return self.color4
 
@@ -473,7 +470,7 @@ class Sprite(Node):
         self.color4 = c2v(color, self.color4.a)
 
     def get_state(self):
-        """Get dictionary with the properties that define the sprite's state.
+        """Get a dictionary of properties defining the object state.
         
         Returns:
             dict: A dictionary of properties.
@@ -491,7 +488,7 @@ class Sprite(Node):
         )
 
     def set_state(self, s):
-        """Set sprite's state from given dictionary of properties.
+        """Set object state from given dictionary of properties.
         
         Args:
             s (dict): A dictionary of properties previously returned by a call 

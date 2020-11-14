@@ -187,8 +187,22 @@ def freq2key(freq):
 class Sound(object):
     """The base class for all other sound classes, including audio samples, 
     oscillators and effects.
-    """
 
+    The Jupylet Sound class is the basic element for defining a sound 
+    processing computational graph, as a hierarchy of sound classes; e.g, a 
+    synthesizer containing a reverb effect containing an allpass filter.
+
+    Audio building blocks and components such as oscillators, effects, etc...,
+    typically inherit from the Sound class, while instruments such as 
+    synthesizers should typically inherit the :class:`GatedSound` class.
+
+    Args:
+        freq (float): Default frequency.
+        amp (float): Output amplitude - a value between 0 and 1.
+        pan (float): Balance between left (-1) and right (1) output channels.
+        shared (bool): Designate sound object as shared by multiple other
+            sound instances. 
+    """
     def __init__(self, freq=MIDDLE_C, amp=DEFAULT_AMP, pan=0., shared=False):
         
         self.freq = freq
@@ -255,7 +269,8 @@ class Sound(object):
                 getattr(s, name)(*args, **kwargs)
                 
     def play_release(self, stop=True, **kwargs):
-        
+        """Stop playing sound and all of its polyphonic copies."""
+
         polys = []
 
         while self._polys:
@@ -272,12 +287,18 @@ class Sound(object):
             self._done = self.index or 1
         
     def play_poly(self, note=None, **kwargs):
-        """Play new copy of sound.
+        """Play given note polyphonically.
 
-        If sound is already playing it will play the new copy in parallel. 
+        This function will play note on a new copy of self.
+        If sound is already playing, the new note will join it.
+        
+        Args:
+            note (float): Note to play in units of semitones 
+                where 60 is middle C.
+            **kwargs: Properties of intrument to modify.
         
         Returns:
-            Sound object: The newly copied and playing sound object.
+            Sound: The sound object representing the newly playing note.
         """
         o = self.copy(track=True)
         o.play(note, **kwargs)
@@ -285,6 +306,15 @@ class Sound(object):
         return o
 
     def play(self, note=None, **kwargs):
+        """Play given note monophonically.
+
+        If sound is already playing, it will be reset.
+        
+        Args:
+            note (float): Note to play in units of semitones 
+                where 60 is middle C.
+            **kwargs: Properties of intrument to modify.
+        """
         #logger.info('Enter Sample.play(note=%r, **kwargs=%r).', note, kwargs)
         
         self.reset(self._shared)
@@ -470,6 +500,7 @@ class Sound(object):
     
     @property
     def key(self):
+        """float: Get current sound frequency in semitone units where 60 is middle C."""
         return freq2key(self.freq)
     
     @key.setter
@@ -478,6 +509,7 @@ class Sound(object):
         
     @property
     def note(self):
+        """str: Get note closest to current sound frequency, as a string."""
         return key2note(self.key)
     
     @note.setter
@@ -485,21 +517,31 @@ class Sound(object):
         self.key = note2key(value) if type(value) is str else value
 
     def get_effects(self):
+        """Get list of effects for this sound object.
+        
+        Returns:
+            list: A (possibly empty) list of sound effects.
+        """
         return self._effects
 
     def set_effects(self, *effects):
+        """Set effects to be applied to the output of this sound instance.
+
+        Args:
+            *effects: Sound effects instances.
+        """
         self._effects = effects
 
 
 class LatencyGate(Sound):
-    """A synthesizer gate is traditionally an on/off signal that is used to 
-    indicate key presses and other events.
+    """A synthesizer on/off gate.
+    
+    A synthesizer gate outputs an on/off signal that is used to 
+    trigger signal processing such as envelope generators etc...
 
-    This gate class functions by producing schedulled on/off events in its
-    output. These events can be fed to other sound objects designed to 
-    consume such events; for example envelopes.
-
-    For more info: https://www.synthesizers.com/gates.html
+    This particular latency gate is designed to schedule `on` and `off` 
+    transitions using system time to enable triggering notes with precise 
+    timing despite fluctuations in the latency of the operating system.
     """
     def __init__(self):
         
@@ -572,9 +614,31 @@ class LatencyGate(Sound):
 
         
     def open(self, t=None, dt=None, **kwargs):
+        """Schedule gate open at specified time.
+
+        The schedule can be an absolute time given by the argument `t`, or 
+        a delta `dt` after the schedule of the latest event already scheduled.
+
+        Args:
+            t (float, optional): Time in seconds since epoch, as returned by 
+                Python's standard library ``time.time()``.
+            dt (float, optional): Time in seconds after the current last 
+                scheduled event.
+        """
         self.schedule('open', t, dt)
         
     def close(self, t=None, dt=None, **kwargs):
+        """Schedule gate close at specified time.
+
+        The schedule can be an absolute time given by the argument `t`, or 
+        a delta `dt` after the schedule of the latest event already scheduled.
+
+        Args:
+            t (float, optional): Time in seconds since epoch, as returned by 
+                Python's standard library ``time.time()``.
+            dt (float, optional): Time in seconds after the current last 
+                scheduled event.
+        """
         self.schedule('close', t, dt)
         
     def schedule(self, event, t=None, dt=None):
@@ -642,7 +706,14 @@ def gate2events(gate, v0=0, index=0):
 
     
 class GatedSound(Sound):
-    
+    """A sound class capable of precise timing and duration of notes.
+
+     Args:
+        freq (float): Fundamental frequency.
+        amp (float): Output amplitude - a value between 0 and 1.
+        pan (float): Balance between left (-1) and right (1) output channels.
+        duration (float, optional): Duration to play note, in whole notes.    
+    """
     def __init__(self, freq=MIDDLE_C, amp=DEFAULT_AMP, pan=0., duration=None):
         
         super().__init__(freq=freq, amp=amp, pan=pan)
@@ -660,12 +731,19 @@ class GatedSound(Sound):
         return Sound.done.fget(self) if self.gate.opened else False
 
     def play_poly(self, note=None, duration=None, **kwargs):
-        """Play new copy of sound.
+        """Play given note polyphonically.
 
-        If sound is already playing it will play the new copy in parallel. 
+        This function will play note on a new copy of self.
+        If sound is already playing, the new note will join it.
+        
+        Args:
+            note (float): Note to play in units of semitones 
+                where 60 is middle C.
+            duration (float, optional): Duration to play note, in whole notes.    
+            **kwargs: Properties of intrument to modify.
         
         Returns:
-            Sound object: The newly copied and playing sound object.
+            GatedSound: The sound object representing the newly playing note.
         """
         o = self.copy(track=True)
         o.play(note, duration, **kwargs)
@@ -673,7 +751,16 @@ class GatedSound(Sound):
         return o
 
     def play(self, note=None, duration=None, **kwargs):
+        """Play given note monophonically.
 
+        If sound is already playing, it will be reset.
+        
+        Args:
+            note (float): Note to play in units of semitones 
+                where 60 is middle C.
+            duration (float, optional): Duration to play note, in whole notes.    
+            **kwargs: Properties of intrument to modify.
+        """
         if duration is None:
             duration = self.duration
 
@@ -1038,7 +1125,21 @@ def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
 
 class Oscillator(Sound):
 
-    """"""
+    """Waveform generator for `sine`, `triangle`, anti-aliased `sawtooth`, and 
+    variable duty anti-aliased `square` waveforms.
+
+    Args:
+        shape (str): Waveform to generate - one of `sine`, `triangle`, 
+            `sawtooth`, or `square`.
+        freq (float): Fundamental frequency of generator.
+        key (float, optional): Fundamental frequency of generator in semitone
+            units where middle C is 60.
+        sign (float): Set to -1 to flip sawtooth waveform upside down.
+        duty (float): The fraction of the square waveform cycle its value is 1.
+
+    Note:
+        An Oscillator inherits all the methods and properties of a Sound class.
+    """
     
     def __init__(self, shape='sine', freq=MIDDLE_C, key=None, phase=0., sign=1, duty=0.5, **kwargs):
         """"""
