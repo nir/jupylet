@@ -141,3 +141,9 @@ computer as explained above.
 ## Contact
 
 For questions and feedback send an email to [Nir Aides](mailto:nir@winpdb.org).
+
+## Spread the Word
+
+Jupylet is a new library; if you would like to see it grow and evelove you can 
+help it tremendously with a few clicks - let your friends know about it!
+
