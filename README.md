@@ -67,7 +67,7 @@ _jupylet_ should run on Python 3.6+ on Windows, Mac, and Linux.
 
 ## How to Install and Run Jupylet
 
-If you are new to Python, I strongly recommend that you install and use the
+If you are new to Python, I recommend that you install and use the
 [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html)
 distribution. Download and run the 64-bit installer and stick to the default
 install options.
