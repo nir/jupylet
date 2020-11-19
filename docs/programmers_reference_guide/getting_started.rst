@@ -4,7 +4,7 @@ GETTING STARTED
 How to Install and Run Jupylet
 ------------------------------
 
-If you are new to Python, I strongly recommend that you install and use the
+If you are new to Python, I recommend that you install and use the
 `Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
 distribution. Download and run the 64-bit installer and stick to the default
 install options.
