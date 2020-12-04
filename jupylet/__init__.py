@@ -32,12 +32,20 @@ import os
 from .env import is_remote, has_display
 
 
-VERSION = '0.8.2'
+VERSION = '0.8.3'
 
 
 if platform.system() == 'Linux' and not has_display():
     setattr(sys, 'is_pyglet_doc_run', True)
     
+
+#
+# Workaround segmentation fault when calling np.linalg.inv() in 
+# mutlithreaded app.
+#
+if platform.system() == 'Darwin':
+   os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 
 #
 # Work around problem in pip install jupyter in python 3.8 as described in:

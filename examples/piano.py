@@ -179,7 +179,7 @@ def render(ct, dt):
 
 app.set_midi_sound(tb303)
 
-#set_latency('lowest')
+set_latency('lowest')
 set_effects(ConvolutionReverb('./sounds/impulses/MaesHowe.flac'))
 
 xylo = Sample('sounds/VCSL/Xylophone/Xylophone - Medium Mallets.sfz')

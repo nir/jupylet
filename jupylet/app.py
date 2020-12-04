@@ -154,7 +154,7 @@ class App(EventLeg, ClockLeg):
 
         conf.update(kwargs)
 
-        if mode == 'window':
+        if mode == 'window' and is_python_script():
             for k, v in vars(parse_args()).items():
                 if v is not None:
                     conf[k] = v
