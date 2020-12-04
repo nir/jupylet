@@ -28,8 +28,6 @@
 import sys
 import os
 
-import numpy as np
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import jupylet.color
@@ -40,6 +38,8 @@ from jupylet.label import Label
 from jupylet.sprite import Sprite
 
 from jupylet.audio.bundle import *
+
+import numpy as np
 
 
 app = App(width=512, height=420)#, log_level=logging.INFO)
