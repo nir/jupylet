@@ -51,8 +51,8 @@ keyboard_layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
 
 state = State(
     
-    amp = 1.,
-    ms = 50.,
+    amp = 8.,
+    ms = 10.,
     
     up = False,
     down = False,
