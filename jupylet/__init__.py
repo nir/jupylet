@@ -29,7 +29,7 @@ import platform
 import sys
 import os
 
-from .env import is_remote, has_display
+from .env import is_remote, has_display, is_numpy_openblas
 
 
 VERSION = '0.8.3'
@@ -44,6 +44,14 @@ if platform.system() == 'Linux' and not has_display():
 # mutlithreaded app.
 #
 if platform.system() == 'Darwin':
+   if 'numpy' in sys.modules and is_numpy_openblas():
+      sys.stderr.write(
+         'WARNING: numpy was imported before jupylet. ' + 
+         'On Mac OS X you should import jupylet first to let it work around ' +
+         'a bug in the algebra libraries used by numpy, that may cause the ' +
+         'program to exit.' + '\n'
+      )
+
    os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 

@@ -103,6 +103,15 @@ def is_binder_env():
     return 'BINDER_REQUEST' in os.environ
 
 
+def is_numpy_openblas():
+    import numpy
+    ll = numpy.__config__.get_info('blas_opt_info')['libraries']
+    for l in ll:
+        if 'openblas' in l:
+            return True
+    return False
+
+
 def is_osx():
     return platform.system().lower() == 'darwin'
 
