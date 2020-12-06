@@ -55,27 +55,49 @@ def test_rtmidi():
     )
 
 
+def get_input_names():
+    return mido.get_input_names()
+
+
+def get_input_name():
+    
+    if _input_name:
+        return _input_name
+
+    inl = mido.get_input_names()
+    if inl:
+        return inl[0]
+        
+
+def set_input_name(name=None):
+
+    global _input_name
+    _input_name = name
+
+
+_input_name = None
 _port = None
 
 
 def midi_port_handler(*args):
     logger.info('Enter midi_port_handler(*args=%r).', args)
     
+    global _input_name
     global _port
     
     if mido is None or rtmidi is None:
         return
     
+    name = get_input_name()
+
     input_names = mido.get_input_names()
     
-    if not input_names or not _callback:
+    if name not in input_names or not _callback:
         if _port is not None:
             logger.info('Close midi port.')
             _port.close()
             _port = None 
         return
-          
-    name = input_names[0]
     
     if _port is not None:
         if _port.name == name:
