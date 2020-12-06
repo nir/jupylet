@@ -48,7 +48,7 @@ if platform.system() == 'Darwin':
       sys.stderr.write(
          'WARNING: numpy was imported before jupylet. ' + 
          'On Mac OS X you should import jupylet first to let it work around ' +
-         'a bug in the algebra libraries used by numpy, that may cause the ' +
+         'a bug in the algebra libraries used by numpy that may cause the ' +
          'program to exit.' + '\n'
       )
 

@@ -24,12 +24,6 @@ console:
 
     pip install jupylet
 
-To install it with MIDI support type the following command instead:
-
-.. code-block:: bash
-
-    pip install jupylet[midi]
-
 If you are using Python 3.8 on Windows you also need to run following command:
 
 .. code-block:: bash

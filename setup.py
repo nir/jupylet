@@ -38,9 +38,10 @@ setuptools.setup(
     python_requires='>=3.6, <3.9',
     install_requires=[
         'glfw',
+        'mido',
         'wget',
-        'numpy==1.19.3 ; platform_system=="Windows"',
         'numpy ; platform_system!="Windows"', 
+        'numpy==1.19.3 ; platform_system=="Windows"',
         'PyGLM',
         'scipy', 
         'pillow', 
@@ -54,10 +55,11 @@ setuptools.setup(
         'matplotlib', 
         'sounddevice', 
         'scikit-image',
+        'python-rtmidi ; platform_system!="Linux"',
         'moderngl-window',
     ],
     extras_require = {
-        'midi': ['mido', 'python-rtmidi']
+        'midi': ['python-rtmidi']
     },
     classifiers=[
         'Development Status :: 4 - Beta',

@@ -264,11 +264,13 @@ class App(EventLeg, ClockLeg):
             s (jupylet.audio.sound.Sound): The sound object to use as MIDI 
                 instrument.
         """
-        midi.set_midi_sound(s)
-        midi.set_midi_callback(midi.simple_midi_callback)
-        
-        self.scheduler.unschedule(midi.midi_port_handler)
-        self.scheduler.schedule_interval(midi.midi_port_handler, 1)
+        if midi.test_rtmidi():
+            
+            midi.set_midi_sound(s)
+            midi.set_midi_callback(midi.simple_midi_callback)
+            
+            self.scheduler.unschedule(midi.midi_port_handler)
+            self.scheduler.schedule_interval(midi.midi_port_handler, 1)
 
     @property
     def width(self):

@@ -27,23 +27,32 @@
 #
 # python-rtmidi requires the following command on ubuntu:
 # sudo apt-get install libasound2-dev libjack-dev build-essentials
-# And extend setup.py with extras for midi to avoid setup crash on ubuntu.
 #
 
-import functools
-import _thread
 import logging
 
 try:
     import rtmidi
     import mido
-
 except:
     rtmidi = None
     mido = None
 
 
 logger = logging.getLogger(__name__)
+
+
+def test_rtmidi():
+
+    if rtmidi:
+        return True
+
+    logger.warning(
+        'Module python-rtmidi is not installed. To install it on Ubuntu ' + 
+        'Linux run these commands:\n' +
+        '$ sudo apt-get install libasound2-dev libjack-dev build-essentials\n' +
+        '$ pip install python-rtmidi'
+    )
 
 
 _port = None
