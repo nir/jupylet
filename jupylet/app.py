@@ -179,7 +179,7 @@ class App(EventLeg, ClockLeg):
             glfw.window_hint(0x0002200C, True)
 
         self.window = window_cls(size=(width, height), **conf)
-        self.window.print_context_info()
+        self.print_context_info(self.window)
 
         patch_method(self.window, 'clear', _clear)
 
@@ -246,6 +246,22 @@ class App(EventLeg, ClockLeg):
         if self._shm is not None:
             self._shm.close()
             self._shm.unlink()
+
+    def print_context_info(self, window):
+        """Prints moderngl context info."""
+        logger.info("Context Version:")
+        logger.info("ModernGL: %s", moderngl.__version__)
+        logger.info("vendor: %s", window._ctx.info["GL_VENDOR"])
+        logger.info("renderer: %s", window._ctx.info["GL_RENDERER"])
+        logger.info("version: %s", window._ctx.info["GL_VERSION"])
+        logger.info("python: %s", sys.version)
+        logger.info("platform: %s", sys.platform)
+        logger.info("code: %s", window._ctx.version_code)
+
+        # Consume potential glerror from querying info
+        err = window._ctx.error
+        if err != "GL_NO_ERROR":
+            logger.info("glerror consumed after getting context info: %s", err)
 
     def set_event_handler(self, name, func):
 

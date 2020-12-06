@@ -59,7 +59,7 @@ _port = None
 
 
 def midi_port_handler(*args):
-    logger.debug('Enter midi_port_handler(*args=%r).', args)
+    logger.info('Enter midi_port_handler(*args=%r).', args)
     
     global _port
     
@@ -70,16 +70,22 @@ def midi_port_handler(*args):
     
     if not input_names or not _callback:
         if _port is not None:
+            logger.info('Close midi port.')
             _port.close()
             _port = None 
         return
           
     name = input_names[0]
     
-    if _port is not None and _port.name != name:
+    if _port is not None:
+        if _port.name == name:
+            return
+
+        logger.info('Close midi port.')
         _port.close()
     
     try:
+        logger.info('Call mido.open_input(name=%r, callback=%r).', name, _callback)
         _port = mido.open_input(name=name, callback=_callback)
     except rtmidi._rtmidi.SystemError:
         pass
@@ -116,14 +122,17 @@ _keyd = {}
 def simple_midi_callback(msg):
     #logger.debug('Enter simple_midi_callback(msg=%r).', msg)
 
+    if _sound is None:
+        return
+
     if msg.type == 'note_on':
 
-        if msg.velocity != 0 and _sound is not None:
+        if msg.note not in _keyd and msg.velocity != 0:
             _keyd[msg.note] = _sound.play_poly(key=msg.note, velocity=msg.velocity)
 
         elif msg.note in _keyd:
-            _keyd[msg.note].play_release()
+            _keyd.pop(msg.note).play_release()
             
     elif getattr(msg, 'note', None) in _keyd:
-        _keyd[msg.note].play_release()
+        _keyd.pop(msg.note).play_release()
 
