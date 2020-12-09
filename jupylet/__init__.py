@@ -28,11 +28,12 @@
 import platform
 import sys
 import os
+import re
 
 from .env import is_remote, has_display, is_numpy_openblas
 
 
-VERSION = '0.8.3'
+VERSION = '0.8.4'
 
 
 if platform.system() == 'Linux' and not has_display():
@@ -59,8 +60,44 @@ if platform.system() == 'Darwin':
 # Work around problem in pip install jupyter in python 3.8 as described in:
 # https://github.com/jupyter/notebook/issues/4980#issuecomment-600992296
 #
-if platform.system() == 'Windows' and sys.version_info >= (3, 8) and sys.argv:
-   if sys.argv[-1] == 'postinstall':
+if platform.system() == 'Windows' and sys.version_info >= (3, 8):
+   if sys.argv[-2:] == ['-m', 'postinstall']:
       os.system('python %s\Scripts\pywin32_postinstall.py -install' % os.__file__.rsplit('\\', 2)[0])
       sys.exit(0)
+
+
+def extract_master(zf, to='jupylet', noisy=False):
+    
+    for p0 in zf.namelist():
+        p1 = re.sub(r'jupylet-master', to, p0)
+        if p1[-1] == '/':
+            os.makedirs(p1, exist_ok=True)
+        else:
+            noisy and print('%s -> %s' % (p0, p1))
+            open(p1, 'wb').write(zf.read(p0))
+
+
+if sys.argv[-2:] == ['-m', 'download']:
+
+   import urllib.request
+   import zipfile
+   import io
+
+   while os.path.exists('jupylet'):
+      r = input('Target directory ./jupylet/ already exists. Would you like to overwrite it (y/n)? ')
+      if r == 'n':
+         sys.exit(0)
+      if r == 'y':
+         break
+
+   GITHUB_MASTER_URL = 'https://github.com/nir/jupylet/archive/master.zip'
+
+   sys.stderr.write('Downloading jupylet source code ZIP from %s.\n' % GITHUB_MASTER_URL)
+   r = urllib.request.urlopen(GITHUB_MASTER_URL)
+   zf = zipfile.ZipFile(io.BytesIO(r.read()))
+
+   sys.stderr.write('Extracting source code from ZIP file to ./jupylet/.\n')
+   extract_master(zf)
+
+   sys.exit(0)
 
