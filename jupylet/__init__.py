@@ -66,6 +66,32 @@ if platform.system() == 'Windows' and sys.version_info >= (3, 8):
       sys.exit(0)
 
 
+def download_url(url, progress=False):
+
+   if not progress:
+      r = urllib.request.urlopen(GITHUB_MASTER_URL)
+      return zipfile.ZipFile(io.BytesIO(r.read()))
+
+   import tqdm
+
+   pbar = tqdm.tqdm(
+      unit='B', 
+      unit_scale=True,
+      miniters=1, 
+      desc=url.split('/')[-1]
+   )
+
+   def update(b=1, bsize=1, tsize=None):
+      if tsize is not None:
+         pbar.total = tsize
+      pbar.update(b * bsize - pbar.n)
+
+   path, headers = urllib.request.urlretrieve(url, reporthook=update)
+   pbar.close()
+   
+   return zipfile.ZipFile(open(path, 'rb'))
+
+
 def extract_master(zf, to='jupylet', noisy=False):
     
     for p0 in zf.namelist():
@@ -92,12 +118,13 @@ if sys.argv[-2:] == ['-m', 'download']:
 
    GITHUB_MASTER_URL = 'https://github.com/nir/jupylet/archive/master.zip'
 
-   sys.stderr.write('Downloading jupylet source code ZIP from %s.\n' % GITHUB_MASTER_URL)
-   r = urllib.request.urlopen(GITHUB_MASTER_URL)
-   zf = zipfile.ZipFile(io.BytesIO(r.read()))
+   sys.stderr.write('Downloading jupylet source code ZIP from %s...\n' % GITHUB_MASTER_URL)
+   zf = download_url(GITHUB_MASTER_URL, progress=True)
 
    sys.stderr.write('Extracting source code from ZIP file to ./jupylet/.\n')
    extract_master(zf)
+
+   sys.stderr.write('Type "cd ./jupyter/examples" to enter the examples directory.\n')
 
    sys.exit(0)
 

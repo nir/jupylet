@@ -39,6 +39,7 @@ setuptools.setup(
     install_requires=[
         'glfw',
         'mido',
+        'tqdm',
         'numpy ; platform_system!="Windows"', 
         'numpy==1.19.3 ; platform_system=="Windows"',
         'PyGLM',
