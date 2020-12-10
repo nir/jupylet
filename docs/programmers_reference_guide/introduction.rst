@@ -1,7 +1,7 @@
 INTRODUCTION
 ============
 
-*Jupylet* is a Python library that lets you create 2D and 3D games, graphics,
+*Jupylet* is a Python library for programming 2D and 3D games, graphics,
 music and sound synthesizers, interactively in a Jupyter notebook. It is 
 intended for three types of audiences:
 

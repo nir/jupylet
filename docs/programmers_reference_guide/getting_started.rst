@@ -6,16 +6,17 @@ How to Install and Run Jupylet
 
 If you are new to Python, I recommend that you install and use the
 `Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
-distribution. Download and run the 64-bit installer and stick to the default
-install options.
+distribution. 
 
-.. note::
-    On Mac OS X follow carefully the Miniconda `installation instructions <https://conda.io/projects/conda/en/latest/user-guide/install/macos.html>`_.
+On Windows download and run the 64-bit installer for Python 3.8. Once 
+Miniconda is installed press the :guilabel:`⊞ Winkey` and then type 
+*Miniconda* and press the :guilabel:`Enter` key. This should open a small 
+window that programmers call *console* or *shell* in which you can enter 
+commands and run programs.
 
-Once Miniconda is installed start a Miniconda Prompt. To do this on Windows
-click the :guilabel:`⊞ Winkey` then type *Miniconda* and press the
-:guilabel:`Enter` key. This should open a small dark window that programmers
-call *console* or *shell* in which you can enter commands and run programs.
+On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.8.
+Once installed click the Spotlight icon :guilabel:`🔍` and in the search field 
+type *terminal* and press the :guilabel:`Enter` key to open the console.
 
 To run *jupylet* first install it by typing the following command in the
 console:
@@ -30,25 +31,18 @@ If you are using Python 3.8 on Windows you also need to run following command:
 
     python -m jupylet postinstall
 
-Next, if you want to run the example notebooks, download the *jupylet* code 
-base. If you have `Git <https://git-scm.com/>`_ installed type the following
-command:
+Next, to run the example notebooks download the *jupylet* source code. If 
+you have `Git <https://git-scm.com/>`_ installed type the following command:
 
 .. code-block:: bash
 
     git clone https://github.com/nir/jupylet.git
 
-Alternatively, you can download and unzip the *jupylet* code base by 
-copy-pasting the following commands into the console:
+Alternatively, you can download the source code with the following command:
 
 .. code-block:: bash
 
-    python -m wget https://github.com/nir/jupylet/archive/master.zip
-    python -m zipfile -e jupylet-master.zip .
-    move jupylet-master jupylet
-
-.. note::
-    On Mac OS X or Linux type *mv* instead of *move* in the command above.
+    python -m jupylet download
 
 Next, enter the *jupylet/examples/* directory with the change directory
 command:

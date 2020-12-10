@@ -1,8 +1,8 @@
 # Jupylet
 
-*Jupylet* is a Python library that lets you create 2D and 3D games, graphics,
-music and sound synthesizers, interactively in a Jupyter notebook. It is 
-intended for three types of audiences:
+*Jupylet* is a Python library for programming 2D and 3D games, graphics, music 
+and sound synthesizers, interactively in a Jupyter notebook. It is intended 
+for three types of audiences:
 
 * Computer scientists, researchers, and students of deep reinforcement learning.
 * Musicians interested in sound synthesis and live music coding.
@@ -63,22 +63,22 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 ## Requirements
 
-_jupylet_ should run on Python 3.6+ on Windows, Mac, and Linux.
+_jupylet_ should run on Python 3.6, 3.7, or 3.8 on Windows, Mac, and Linux.
 
 ## How to Install and Run Jupylet
 
 If you are new to Python, I recommend that you install and use the
 [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html)
-distribution. Download and run the 64-bit installer and stick to the default
-install options.
+distribution. 
 
-| `⚠️ NOTE` On Mac OS X follow carefully the Miniconda [installation instructions](https://conda.io/projects/conda/en/latest/user-guide/install/macos.html). |
-| --- |
+On Windows download and run the 64-bit installer for Python 3.8. Once 
+Miniconda is installed press the `⊞ Winkey` and then type *Miniconda* and 
+press the `Enter` key. This should open a small window that programmers call 
+*console* or *shell* in which you can enter commands and run programs.
 
-Once Miniconda is installed start a Miniconda Prompt. To do this on Windows
-click the `⊞ Winkey` then type *Miniconda* and press the
-`Enter` key. This should open a small dark window that programmers
-call *console* or *shell* in which you can enter commands and run programs.
+On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.8.
+Once installed click the Spotlight icon `🔍` and in the search field type 
+*terminal* and press the `Enter` key to open the console.
 
 To run *jupylet* first install it by typing the following command in the
 console:
@@ -89,21 +89,14 @@ If you are using Python 3.8 on Windows you also need to run following command:
 
     python -m jupylet postinstall
 
-Next, if you want to run the example notebooks, download the *jupylet* code 
-base. If you have [Git](https://git-scm.com/) installed type the following
-command:
+Next, to run the example notebooks, download the *jupylet* source code. 
+If you have [Git](https://git-scm.com/) installed type the following command:
 
     git clone https://github.com/nir/jupylet.git
 
-Alternatively, you can download and unzip the *jupylet* code base by 
-copying-pasting the following commands into the console:
+Alternatively, you can download the source code with the following command:
 
-    python -m wget https://github.com/nir/jupylet/archive/master.zip
-    python -m zipfile -e jupylet-master.zip .
-    move jupylet-master jupylet
-
-| `⚠️ NOTE` On Mac OS X or Linux type *mv* instead of *move* in the command above. |
-| --- |
+    python -m jupylet download
 
 Next, enter the *jupylet/examples/* directory with the change directory
 command:

@@ -74,12 +74,7 @@ def download_url(url, progress=False):
 
    import tqdm
 
-   pbar = tqdm.tqdm(
-      unit='B', 
-      unit_scale=True,
-      miniters=1, 
-      desc=url.split('/')[-1]
-   )
+   pbar = tqdm.tqdm(unit='B', unit_scale=True, desc=url.split('/')[-1])
 
    def update(b=1, bsize=1, tsize=None):
       if tsize is not None:
