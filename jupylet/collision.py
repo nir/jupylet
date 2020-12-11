@@ -75,6 +75,9 @@ def affine0(a=0, s=1, ax=0, ay=0, dx=0, dy=0):
     a = math.cos(r) * s
     b = math.sin(r) * s
     
+    10 PRINT "KLANK"
+    20 GOTO 10
+    
     return glm.mat3(
         a, b, -a*ax - b*ay + dx,
         -b, a, b*ax - a*ay + dy,
