@@ -32,7 +32,6 @@ import queue
 import copy
 import time
 
-import skimage.draw
 import scipy.signal
 import PIL.Image
 
@@ -340,115 +339,71 @@ def _apply_effects(effects, a):
     return a
 
 
-def get_oscilloscope_as_image(
-    fps,
-    ms=256, 
-    amp=1., 
-    color=255, 
-    size=(512, 256),
-    scale=2.
-):
-    """Get an oscilloscope image of sound data sent to the sound device.
+def get_output_as_array(start=-FPS, length=None, mono=False, resample=None):
 
-    Args:
-        fps (float): frame rate (in frames per second) of the monitor on which 
-            the oscilloscope is to be displayed. The given rate will affect the
-            visual stability of the displayed wave forms.
-        ms (float): Span of the oscilloscope x-axis in milliseconds.
-        amp (float): Scale of the y-axis (amplification of the signal).
-        color (int or tuple): Color of the drawn sound wave.
-        size (tuple): size of oscilloscope in pixels given as (width, height).
-
-    Returns:
-        Image, float, float: a 3-tuple with the oscilloscope image, and the 
-            timestamps of the leftmost and rightmost drawn samples.
-    """
-    w0, h0 = size
-    w1, h1 = int(w0 // scale), int(h0 // scale)
-
-    a0, ts, te = get_oscilloscope_as_array(fps, ms, amp, color, (w1, h1))
-    im = PIL.Image.fromarray(a0).resize(size).transpose(PIL.Image.FLIP_TOP_BOTTOM)
-
-    return im, ts, te
-
-
-def get_oscilloscope_as_array(
-    fps,
-    ms=256, 
-    amp=1., 
-    color=255, 
-    size=(512, 256)
-):
-    """Get an oscilloscope array of sound data sent to the sound device.
-
-    Args:
-        fps (float): frame rate (in frames per second) of the monitor on which 
-            the oscilloscope is to be displayed. The given rate will affect the
-            visual stability of the displayed wave forms.
-        ms (float): Span of the oscilloscope x-axis in milliseconds.
-        amp (float): Scale of the y-axis (amplification of the signal).
-        color (int or tuple): Color of the drawn sound wave.
-        size (tuple): size of oscilloscope in pixels given as (width, height).
-
-    Returns:
-        ndarray, float, float: a 3-tuple with the oscilloscope array, and the 
-            timestamps of the leftmost and rightmost drawn samples.        
-    """
+    _dt0, _al0 = _dt, _al
     
-    ms = min(ms, 256)
-    w0, h0 = size
+    if not _dt0 or not _al0:
+        return None, None, None
 
-    oa = get_output_as_array()
-    if not oa or len(oa[0]) < 1000:
-        return np.zeros((h0, w0, 4), dtype='uint8'), 0, 0
-
-    a0, tstart, tend = oa
-
-    t0 = int((time.time() + 0.01) * fps) / fps
-    te = t0 + min(0.025, ms / 2000)
-    ts = te - ms / 1000
-
-    s1 = int((te - tend) * FPS)
-    s0 = int((ts - tend) * FPS)
-
-    a0 = a0[s0: s1] * amp
-    a0 = a0.clip(-1., 1.)
-
-    if len(a0) < 100:
-        return np.zeros((h0, w0, 4), dtype='uint8'), 0, 0
-
-    a0 = scipy.signal.resample(a0, w0)
-
-    a1 = np.arange(len(a0))
-    a2 = ((a0 + 1) * h0 / 2).clip(0, h0 - 1).astype(a1.dtype)
-    a3 = np.stack((a2, a1), -1)
-
-    a4 = np.concatenate((a3[:-1], a3[1:]), -1)
-    a5 = np.zeros((h0, w0, 4), dtype='uint8')
-    a5[...,:3] = color
-
-    for cc in a4:
-        y, x, c = skimage.draw.line_aa(*cc)
-        a5[y, x, -1] = c * 255
-    
-    return a5, ts, te
-
-
-def get_output_as_array(start=-FPS, end=None, resample=None):
-
-    if not _dt or not _al:
-        return
-
-    t0, st, _, da, ct = _dt[-1]
+    t0, st, _, da, ct = _dt0[-1]
     t1 = t0 + da - ct + st / FPS
 
-    a0 = np.concatenate(_al).mean(-1)[start:end]
+    if start >= 0:
+        start = max(start - t1, -1)
+
+    if start >= 0:
+        return None, None, None
+
+    if type(start) is float:
+        start = max(start, -1)
+        start = int(start * FPS)
+
+    else:
+        start = int(start)
+
+    if length is None:
+        end = None
+
+    elif length <= 0:
+        return None, None, None
+
+    elif type(length) is float:
+        length = min(length, 1)
+        length = int(length * FPS)
+
+    end = start + length
+
+    if end > 0:
+        return None, None, None
+
+    if end == 0:
+        end = None
+
+    ll = 0
+    _al1 = []
+
+    for a0 in _al0[::-1]:
+        _al1.append(a0)
+        ll += len(a0)
+        if ll >= -start:
+            break
+
+    _al2 = _al1[::-1]
+
+    a0 = np.concatenate(_al2)[start:end]
     
     tend = t1 + (end or 0) / FPS
     tstart = tend - len(a0) / FPS
 
-    if resample:
+    if mono:
+        a0 = a0.mean(-1, keepdims=True)
+        
+    if resample and len(a0) != resample:
         a0 = scipy.signal.resample(a0, resample)
     
+    if not mono and a0.shape[-1] == 1:
+        a0 = np.stack((a0, a0), -1)
+        
     return a0, tstart, tend
 

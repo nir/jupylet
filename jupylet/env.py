@@ -58,16 +58,16 @@ def create_parser():
     return parser
 
 
-_mode = None
+_window_size = None
 
 
-def set_app_mode(mode):
-    global _mode
-    _mode = mode
+def set_window_size(size):
+    global _window_size
+    _window_size = size
 
 
-def get_app_mode():
-    return _mode
+def get_window_size():
+    return _window_size
 
 
 _is_rl_worker = False

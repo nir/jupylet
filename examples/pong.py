@@ -43,7 +43,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import jupylet.color
 
-from jupylet.env import get_app_mode
 from jupylet.app import App
 from jupylet.state import State
 from jupylet.label import Label

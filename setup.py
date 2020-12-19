@@ -54,7 +54,6 @@ setuptools.setup(
         'ipywidgets', 
         'matplotlib', 
         'sounddevice', 
-        'scikit-image',
         'python-rtmidi ; platform_system!="Linux"',
         'moderngl-window',
     ],

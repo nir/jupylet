@@ -187,7 +187,7 @@ Besides synthesizers, you can also play music with virtual sampled instruments.
 Jupylet includes basic support for the `SFZ format <https://sfzformat.com/>`_ 
 that will enable you to play a variety of instruments that you can find online.
 
-The piano notebook `examples/21-pong.ipynb <https://github.com/nir/jupylet/blob/master/examples/21-pong.ipynb>`_ 
+The piano notebook `examples/14-piano.ipynb <https://github.com/nir/jupylet/blob/master/examples/14-piano.ipynb>`_ 
 uses a multisampled xylophone from the `VCSL library <https://vis.versilstudios.com/vcsl.html>`_ 
 by Versilian Studios. Let's see how:
 

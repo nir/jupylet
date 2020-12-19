@@ -49,7 +49,7 @@ except:
     shared_memory = None
 
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
-from .env import is_remote, is_osx, set_app_mode, is_python_script, is_rl_worker
+from .env import is_remote, is_osx, set_window_size, is_python_script, is_rl_worker
 from .env import parse_args
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
@@ -146,6 +146,8 @@ class App(EventLeg, ClockLeg):
 
         self.window_size = (width, height)
         
+        set_window_size(self.window_size)
+
         conf = Dict(get_config_dict(self))
 
         # pyglet may crash on osx.
@@ -200,7 +202,6 @@ class App(EventLeg, ClockLeg):
         )
         
         self.mode = mode
-        set_app_mode(mode)
 
         self.buffer = b''
         self.canvas = None

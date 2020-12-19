@@ -84,6 +84,8 @@ class JupyterWindow(Window):
 
         self._event = None
 
+        self._dragstart = False
+
     def _watch_canvas(self, canvas):
         
         self._event = ipyevents.Event(source=canvas)
@@ -360,12 +362,47 @@ class JupyterWindow(Window):
     #def on_mouseleave(self, x, y):
     #    self._dispatcher.dispatch_event('on_mouse_leave', x, y)
     
-    def _dom_on_mousemove(self, x, y, dx, dy):
-        self.dispatch_event('on_mouse_motion', x, y, dx, dy)
-
     def _dom_on_wheel(self, x, y, delta_x, delta_y):
         self.dispatch_event('on_mouse_scroll', x, y, delta_x, delta_y)
 
+    def _dom_on_mousemove(self, x, y, dx, dy, buttons, ctrl_key, alt_key, shift_key):
+        if buttons:
+            self._dom_on_drag(x, y, dx, dy, buttons, ctrl_key, alt_key, shift_key)
+        else:
+            self.dispatch_event('on_mouse_motion', x, y, dx, dy)
+
+    def _dom_on_dragstart(self):
+        self._dragstart = True
+
+    def _dom_on_drag(self, x, y, dx, dy, buttons, ctrl_key, alt_key, shift_key):
+        logger.debug('Enter JupyterWindow._dom_on_drag(%r)', (x, y, dx, dy, buttons, ctrl_key, alt_key, shift_key))
+
+        # Discard first flawed drag event.
+        if self._dragstart:
+            self._dragstart = False
+            return
+
+        # Discard last flawed drag event.
+        if x < -100:
+            return
+
+        # Map from https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/buttons
+        # to https://pyglet.readthedocs.io/en/latest/programming_guide/mouse.html
+
+        bi = bin(8 + (buttons & 7))[3:]
+        buttons = int(bi[1] + bi[0] + bi[2], 2)
+        
+        modifiers = 0
+        modifiers |= (alt_key or 0) and pyglet.window.key.MOD_ALT
+        modifiers |= (ctrl_key or 0) and pyglet.window.key.MOD_CTRL
+        modifiers |= (shift_key or 0) and pyglet.window.key.MOD_SHIFT
+        
+        self.dispatch_event('on_mouse_drag', x, y, dx, dy, buttons, modifiers)
+
+    def _dom_on_dragend(self, x, y, button, ctrl_key, alt_key, shift_key):
+        logger.debug('Enter JupyterWindow._dom_on_dragend(%r)', (x, y, button, ctrl_key, alt_key, shift_key))
+        self._on_mouse('on_mouse_release', x, y, button, ctrl_key, alt_key, shift_key)
+        
     def _dom_on_mousedown(self, x, y, button, ctrl_key, alt_key, shift_key):
         logger.debug('Enter JupyterWindow._dom_on_mousedown(%r)', (x, y, button, ctrl_key, alt_key, shift_key))
         self._on_mouse('on_mouse_press', x, y, button, ctrl_key, alt_key, shift_key)
@@ -433,9 +470,9 @@ class EventLeg(mglw.WindowConfig):
         self.wnd.config = self
 
         self.wnd.mouse_position_event_func = self.mouse_position_event_ul
+        self.wnd.mouse_drag_event_func = self.mouse_drag_event_ul
         self.wnd.mouse_press_event_func = self.mouse_press_event_ul
         self.wnd.mouse_release_event_func = self.mouse_release_event_ul
-        #self.wnd.mouse_drag_event_func = self.mouse_drag_event
         #self.wnd.mouse_scroll_event_func = self.mouse_scroll_event
         
     def mouse_position_event_ul(self, x, y, dx, dy):
@@ -444,6 +481,13 @@ class EventLeg(mglw.WindowConfig):
     def mouse_position_event(self, x, y, dx, dy):
         logger.debug('Enter EventLeg.mouse_position_event(%r, %r, %r, %r).', x, y, dx, dy)
         self.dispatch_event('mouse_position_event', x, y, dx, dy)
+
+    def mouse_drag_event_ul(self, x, y, dx, dy):
+        return self.mouse_drag_event(x, self.wnd.height - y, dx, -dy)
+
+    def mouse_drag_event(self, x, y, dx, dy):
+        logger.debug('Enter EventLeg.mouse_drag_event(%r, %r, %r, %r).', x, y, dx, dy)
+        self.dispatch_event('mouse_drag_event', x, y, dx, dy)
 
     def mouse_press_event_ul(self, x, y, button):
         return self.mouse_press_event(x, self.wnd.height - y, button)

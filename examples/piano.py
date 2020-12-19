@@ -36,34 +36,49 @@ from jupylet.app import App
 from jupylet.state import State
 from jupylet.label import Label
 from jupylet.sprite import Sprite
+from jupylet.shadertoy import Shadertoy, get_shadertoy_audio
 
 from jupylet.audio.bundle import *
 
 import numpy as np
 
 
-app = App(width=512, height=420)#, log_level=logging.INFO)
-
-oscilloscope = Sprite(np.zeros((256, 512, 4), 'uint8'), x=256, y=292)
+app = App(width=512, height=420, quality=100)#, log_level=logging.INFO)
 
 keyboard_layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
+
+shadertoy_code = """
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Time varying pixel color
+    vec3 col = 0.2 + 0.2 * cos(iTime + uv.xyx + vec3(0, 2, 4));
+
+    float amp = texture(iChannel0, vec2(uv.x, 1.)).r; 
+    
+    vec3 sig = vec3(0.00033 / max(pow(amp - uv.y, 2.), 1e-6));
+    
+    sig *= vec3(.5, .5, 4.) / 2.;
+   
+    col += sig;
+    
+    // Output to screen
+    fragColor = vec4(col,1.0);
+}
+"""
+st = Shadertoy(shadertoy_code, 0, 420, 512, 256, 0, 'left', 'top')
+
+label0 = Label('amp: %.2f' % get_master_volume(), x=10, y=174)
+label1 = Label('use ↑ ↓ to control volume', anchor_x='right', x=app.width - 10, y=174)
 
 
 state = State(
     
-    amp = 8.,
-    ms = 10.,
-    
     up = False,
     down = False,
-    left = False,
-    right = False,
 )
-
-label0 = Label('amp: %.1f' % state.amp, x=10, y=194)
-label1 = Label('span: %.1f ms' % state.ms, x=10, y=174)
-label2 = Label('use ← → ↑ ↓ to modify', anchor_x='right', x=app.width - 10, y=174)
-
 
 keys = app.window.keys
 
@@ -109,7 +124,7 @@ _keyd = {}
 def key_event(key, action, modifiers):
             
     keys = app.window.keys
-    value = action != keys.ACTION_RELEASE
+    value = action == keys.ACTION_PRESS
 
     if key == keys.UP:
         state.up = value
@@ -117,12 +132,6 @@ def key_event(key, action, modifiers):
     if key == keys.DOWN:
         state.down = value
 
-    if key == keys.RIGHT:
-        state.right = value
-
-    if key == keys.LEFT:
-        state.left = value
-        
     if action == keys.ACTION_PRESS and key in keyboard:
         assert key not in _keyd
         _keyd[key] = tb303.play_poly(note=keyboard[key])
@@ -131,27 +140,21 @@ def key_event(key, action, modifiers):
         _keyd.pop(key).play_release()
 
 
-@app.run_me_every(1/10)
-def modify_oscilloscope(ct, dt):
+@app.run_me_every(1/24)
+def modify_volume(ct, dt):
     
     s = 2 ** dt
+    amp = get_master_volume()
     
     if state.up:
-        state.amp *= s
-        label0.text = 'amp: %.1f' % state.amp
+        amp *= s
+        set_master_volume(amp)
+        label0.text = 'amp: %.2f' % amp
 
     if state.down:
-        state.amp /= s
-        label0.text = 'amp: %.1f' % state.amp
-
-    if state.right:
-        state.ms *= s
-        state.ms = min(256, state.ms)
-        label1.text = 'span: %.1f ms' % state.ms
-
-    if state.left:
-        state.ms /= s
-        label1.text = 'span: %.1f ms' % state.ms
+        amp /= s
+        set_master_volume(amp)
+        label0.text = 'amp: %.2f' % amp
 
 
 @app.event
@@ -159,22 +162,13 @@ def render(ct, dt):
     
     app.window.clear(color='#555')
     
-    im, ts, te = get_oscilloscope_as_image(
-        1/app.interval,
-        ms=state.ms, 
-        amp=state.amp, 
-        color=255, 
-        size=(512, 256)
-    )
-
-    oscilloscope.image = im    
-    oscilloscope.draw()
-    
     keyboard_layout.draw()
     
+    st.set_channel(get_shadertoy_audio(amp=5), 0)   
+    st.render(ct, dt)
+
     label0.draw()
     label1.draw()
-    label2.draw()
 
 
 app.set_midi_sound(tb303)
