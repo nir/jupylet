@@ -194,8 +194,9 @@ class Shadertoy(Node):
             if ch is None:
                 continue
 
-            self.shader['iChannel%s' % i] = SPRITE_TEXTURE_UNIT + i
-            ch.use(location=SPRITE_TEXTURE_UNIT+i)
+            if 'iChannel%s' % i in self.shader._members:
+                self.shader['iChannel%s' % i] = SPRITE_TEXTURE_UNIT + i
+                ch.use(location=SPRITE_TEXTURE_UNIT+i)
 
             if 'iChannelTime[%s]' % i in self.shader._members:
                 self.shader['iChannelTime[%s]' % i] = self.channeltime[i]
