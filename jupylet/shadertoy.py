@@ -133,7 +133,7 @@ class Shadertoy(Node):
         w0, h0 = get_window_size()
         
         self.shader = load_shadertoy_program(code)
-        self.shader['projection'].write(glm.ortho(
+        self.shader['jpl_projection'].write(glm.ortho(
             0, w0, 0, h0, -1, 1
         ))
 
@@ -171,9 +171,9 @@ class Shadertoy(Node):
         if self._dirty:
             self.update(self.shader)
 
-        self.shader['model'].write(self.matrix)
-        self.shader['components'] = self.components
-        self.shader['color'].write(self.color4)
+        self.shader['jpl_model'].write(self.matrix)
+        self.shader['jpl_components'] = self.components
+        self.shader['jpl_color'].write(self.color4)
 
         if 'iResolution' in self.shader._members:
             self.shader['iResolution'].write(self.scale)

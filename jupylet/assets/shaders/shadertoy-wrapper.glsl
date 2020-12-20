@@ -6,14 +6,14 @@
 in vec3 in_position;
 in vec2 in_texcoord_0;
 
-uniform mat4 model;
-uniform mat4 projection;
+uniform mat4 jpl_model;
+uniform mat4 jpl_projection;
 
-out vec2 frag_uv;
+out vec2 jpl_frag_uv;
 
 void main() {
-    gl_Position = projection * model * vec4(in_position, 1.0);
-    frag_uv = in_texcoord_0;
+    gl_Position = jpl_projection * jpl_model * vec4(in_position, 1.0);
+    jpl_frag_uv = in_texcoord_0;
 }
 
 #elif defined FRAGMENT_SHADER
@@ -36,30 +36,30 @@ uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {}
 
 
-uniform int components;
-uniform vec4 color;
+uniform int jpl_components;
+uniform vec4 jpl_color;
 
-in vec2 frag_uv;
+in vec2 jpl_frag_uv;
 
 out vec4 fragColor;
 
 
 void main() {
 
-    vec2 uv = frag_uv;
+    vec2 uv = jpl_frag_uv;
 
     uv *= iResolution.xy;
 
-    fragColor = color;
+    fragColor = jpl_color;
 
     vec4 color0;
 
     mainImage(color0, uv);
     
-    if (components == 4) {
+    if (jpl_components == 4) {
         fragColor *= color0;
     }
-    else if (components == 1) {
+    else if (jpl_components == 1) {
         fragColor.a *= color0.x;        
     }
     else {
