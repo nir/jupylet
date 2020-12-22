@@ -29,6 +29,7 @@ import webcolors
 import datetime
 import moderngl
 import pathlib
+import weakref
 import math
 import time
 import glm
@@ -46,7 +47,7 @@ from moderngl_window.opengl import program
 from .audio.device import get_output_as_array
 from .audio import FPS
 
-from .resource import load_texture, pil_from_texture, find_path
+from .resource import load_texture, pil_from_texture, find_path, get_context
 from .utils import glm_dumps, glm_loads
 from .color import c2v
 from .state import State
@@ -57,7 +58,7 @@ from .lru import SPRITE_TEXTURE_UNIT
 
 def get_shadertoy_audio(start=-512, length=512, amp=1.):
     
-    a0 = get_output_as_array(start, length, resample=512)[0]
+    a0, ct = get_output_as_array(start, length, resample=512)[:2]
     if a0 is None:
         a0 = np.zeros((512, 2))
     
@@ -67,7 +68,7 @@ def get_shadertoy_audio(start=-512, length=512, amp=1.):
     rs = scipy.signal.resample(ps, len(a0))
     ns = (rs + 50) / 100
     
-    return np.stack((ns * 256, a0 * amp * 128 + 128)).clip(0, 255)
+    return np.stack((ns * 256, a0 * amp * 128 + 128)).clip(0, 255), ct
 
 
 def load_shadertoy_program(source):
@@ -109,13 +110,13 @@ class Shadertoy(Node):
     def __init__(
         self,
         code,
-        x=0, 
-        y=0,
         width=800,
         height=450,
+        x=0, 
+        y=0,
         angle=0.0,
-        anchor_x='center',
-        anchor_y='center',
+        anchor_x='left',
+        anchor_y='bottom',
         color='white',
         name=None,
     ):
@@ -124,16 +125,17 @@ class Shadertoy(Node):
         super().__init__(
             name,
             rotation=aa2q(glm.radians(angle)),
-            scale=None,
             position=glm.vec3(x, y, 0),
         )
 
-        self.nframe = 0
+        self.ct = 0
+        self.dt = 0
+        self.iframe = 0
 
         w0, h0 = get_window_size()
         
         self.shader = load_shadertoy_program(code)
-        self.shader['jpl_projection'].write(glm.ortho(
+        self.shader._members['jpl_projection'].write(glm.ortho(
             0, w0, 0, h0, -1, 1
         ))
 
@@ -149,17 +151,76 @@ class Shadertoy(Node):
         
         self.channeltime = [0., 0., 0., 0.]
 
-        self.components = 3
-        self.color4 = glm.vec4(1., 1., 1., 1.)
-
         self.width = width
         self.height = height
+        self.components = 4
         
+        self.color4 = glm.vec4(1., 1., 1., 1.)
+
         self.set_anchor(anchor_x, anchor_y)
         self.color = color
 
+        self.tx0 = None
+        self.tx1 = None
+        self.fbo = None
+
+    def __del__(self):
+        self.release()
+
+    def release(self):
+
+        if self.tx0 is not None:
+
+            self.tx0.release()
+            self.tx0 = None
+
+            self.tx1.release()
+            self.tx1 = None
+
+        if self.fbo is not None:
+            self.fbo.release()
+            self.fbo = None
+
     def update(self, shader):
         pass
+
+    def use(self, location):
+        self.tx0.use(location=location)
+
+    def render2buffer(self, ct, dt, iframe, width, height):
+
+        if self.iframe == iframe:
+            return
+
+        ctx = get_context()
+        fb0 = ctx.fbo
+
+        if (self.width, self.height) != (width, height):
+
+            self.release()
+
+        if self.tx0 is None:
+
+            self.width = width
+            self.height = height
+
+            self.tx0 = ctx.texture((int(self.width), int(self.height)), self.components, dtype='f4')        
+            self.tx1 = ctx.texture((int(self.width), int(self.height)), self.components, dtype='f4')
+
+        self.fbo is not None and self.fbo.release()
+        self.fbo = ctx.framebuffer(color_attachments=[self.tx1])
+        self.fbo.use()
+        self.fbo.clear()
+
+        self.shader._members['jpl_projection'].write(glm.ortho(
+            0, self.width, 0, self.height, -1, 1
+        ))
+
+        self.render(ct, dt)
+
+        self.tx0, self.tx1 = self.tx1, self.tx0
+
+        fb0.use()
 
     def draw(self, ct, dt):
         """Render shadertoy to canvas - this is an alias to shadertoy.render()."""
@@ -168,25 +229,34 @@ class Shadertoy(Node):
     def render(self, ct, dt):
         """Render shadertoy to canvas."""
         
+        self.ct = ct
+        self.dt = dt
+
+        self.iframe += 1
+
         if self._dirty:
             self.update(self.shader)
 
-        self.shader['jpl_model'].write(self.matrix)
-        self.shader['jpl_components'] = self.components
-        self.shader['jpl_color'].write(self.color4)
+        for i in [0, 1, 2, 3]:
+            ch = getattr(self, 'channel%s' % i, None)
+            if isinstance(ch, Shadertoy):
+                ch.render2buffer(ct, dt, self.iframe, self.width, self.height)
+
+        self.shader._members['jpl_model'].write(self.matrix)
+        self.shader._members['jpl_components'].value = self.components
+        self.shader._members['jpl_color'].write(self.color4)
 
         if 'iResolution' in self.shader._members:
-            self.shader['iResolution'].write(self.scale)
+            self.shader._members['iResolution'].write(self.scale)
         
         if 'iTime' in self.shader._members:
-            self.shader['iTime'] = ct
+            self.shader._members['iTime'].value = ct
         
         if 'iTimeDelta' in self.shader._members:
-            self.shader['iTimeDelta'] = dt
+            self.shader._members['iTimeDelta'].value = dt
 
         if 'iFrame' in self.shader._members:
-            self.shader['iFrame'] = self.nframe
-            self.nframe += 1
+            self.shader._members['iFrame'].value = self.iframe
 
         for i in [0, 1, 2, 3]:
             
@@ -195,23 +265,23 @@ class Shadertoy(Node):
                 continue
 
             if 'iChannel%s' % i in self.shader._members:
-                self.shader['iChannel%s' % i] = SPRITE_TEXTURE_UNIT + i
+                self.shader._members['iChannel%s' % i].value = SPRITE_TEXTURE_UNIT + i
                 ch.use(location=SPRITE_TEXTURE_UNIT+i)
 
             if 'iChannelTime[%s]' % i in self.shader._members:
-                self.shader['iChannelTime[%s]' % i] = self.channeltime[i]
+                self.shader._members['iChannelTime[%s]' % i].value = self.channeltime[i]
 
             if 'iChannelResolution[%s]' % i in self.shader._members:
-                self.shader['iChannelResolution[%s]' % i].write(
+                self.shader._members['iChannelResolution[%s]' % i].write(
                     glm.vec3(ch.width, ch.height, ch.components)
                 )
 
         if 'iDate' in self.shader._members:
             dt = datetime.datetime.now()
-            self.shader['iDate'].write(glm.vec4(dt.year, dt.month, dt.day, time.time()))
+            self.shader._members['iDate'].write(glm.vec4(dt.year, dt.month, dt.day, time.time()))
 
         if 'iSampleRate' in self.shader._members:
-            self.shader['iSampleRate'] = FPS
+            self.shader._members['iSampleRate'].value = FPS
 
         self.geometry.render(self.shader)
 
@@ -301,20 +371,18 @@ class Shadertoy(Node):
 
     def set_channel(
         self, 
-        data,
         channel, 
+        data,
         channeltime=None,
-        mipmap=True, 
-        autocrop=False,
-        anisotropy=8.0, 
         ):
 
         assert channel in [0, 1, 2, 3]
 
-        # Disable mipmaping and anisotropy for audio data.
-        if isinstance(data, np.ndarray) and data.shape[0] < 8:
-            mipmap = False
-            anisotropy = False
+        if isinstance(data, Shadertoy):
+            if data is self:
+                data = weakref.proxy(data)
+            setattr(self, 'channel%s' % channel, data)
+            return
 
         if channeltime:
             self.channeltime[channel] = channeltime
@@ -327,9 +395,9 @@ class Shadertoy(Node):
             
         texture = load_texture(
             data,
-            anisotropy=anisotropy, 
-            autocrop=autocrop,
-            mipmap=mipmap, 
+            anisotropy=1., 
+            autocrop=False,
+            mipmap=False, 
             flip=False, 
         )
         texture.repeat_x = False

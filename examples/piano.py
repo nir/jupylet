@@ -68,7 +68,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fragColor = vec4(col,1.0);
 }
 """
-st = Shadertoy(shadertoy_code, 0, 420, 512, 256, 0, 'left', 'top')
+st = Shadertoy(shadertoy_code, 512, 256, 0, 420, 0, 'left', 'top')
 
 label0 = Label('amp: %.2f' % get_master_volume(), x=10, y=174)
 label1 = Label('use ↑ ↓ to control volume', anchor_x='right', x=app.width - 10, y=174)
@@ -164,7 +164,7 @@ def render(ct, dt):
     
     keyboard_layout.draw()
     
-    st.set_channel(get_shadertoy_audio(amp=5), 0)   
+    st.set_channel(0, *get_shadertoy_audio(amp=5))   
     st.render(ct, dt)
 
     label0.draw()
