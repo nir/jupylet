@@ -403,7 +403,7 @@ take the form of a documented shadertoy like this one
 
 .. raw:: html
     
-    <iframe width="400" height="225" frameborder="0" src="https://www.shadertoy.com/embed/Md23DV?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+    <iframe width="384" height="216" frameborder="0" src="https://www.shadertoy.com/embed/Md23DV?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
     <br>
     <br>
     
