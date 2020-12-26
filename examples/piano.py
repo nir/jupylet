@@ -45,39 +45,128 @@ import numpy as np
 
 app = App(width=512, height=420, quality=100)#, log_level=logging.INFO)
 
+
+#
+# Default oscilloscope shader:
+# The code in the following cell is of a simple shadertoy shader that 
+# displays an audio oscilloscope. Shadertoy (http://shadertoy.com/) are 
+# an easy way to create graphic effects by programming the GPU directly:
+#
+st0 = Shadertoy("""
+
+    void mainImage( out vec4 fragColor, in vec2 fragCoord )
+    {
+        // Normalized pixel coordinates (from 0 to 1)
+        vec2 uv = fragCoord / iResolution.xy;
+
+        // Time varying pixel color
+        vec3 col = 0.2 + 0.2 * cos(iTime + uv.xyx + vec3(0, 2, 4));
+
+        float amp = texture(iChannel0, vec2(uv.x, 1.)).r; 
+
+        vec3 sig = vec3(0.00033 / max(pow(amp - uv.y, 2.), 1e-6));
+
+        sig *= vec3(.5, .5, 4.) / 2.;
+
+        col += sig;
+
+        // Output to screen
+        fragColor = vec4(col,1.0);
+    }
+    
+""", 512, 256, 0, 420, 0, 'left', 'top')
+
+
+#
+# Audio visualization shader by Alban Fichet:
+# The code in the following cell is of a beautiful shadertoy shader by 
+# graphics expert and researcher Alban Fichet (https://afichet.github.io/) 
+# who kindly allowed its inclusion here under CC BY 4.0 license: 
+#
+ba1 = Shadertoy("""
+
+    vec3 hue2rgb(in float h) {
+        vec3 k = mod(vec3(5., 3., 1.) + vec3(h*360./60.), vec3(6.));
+        return vec3(1.) - clamp(min(k, vec3(4.) - k), vec3(0.), vec3(1.));
+    }
+
+    void mainImage( out vec4 fragColor, in vec2 fragCoord )
+    {
+        vec2 uv = fragCoord/iResolution.xy;
+
+        float aspect = iResolution.x / iResolution.y;
+        float blurr = 0.3;
+        float sharpen = 1.7;
+
+        vec2 maxWindow = vec2(3., 3./aspect);
+        uv = mix(-maxWindow, maxWindow, uv);
+
+        float r = dot(uv, uv);
+        float theta = atan(uv.y, uv.x) + 3.14;
+
+        float t = abs(2.*theta / (2.*3.14) - 1.);
+
+        float signal = 2.0*texture(iChannel0,vec2(t,1.)).x;
+        float ampl = 2.0*texture(iChannel0,vec2(0.8,.25)).x;
+
+        float v = 1. - pow(smoothstep(0., blurr, abs(r - signal)), 0.02);
+        float hue = pow(fract(abs(sin(theta/2.) * ampl)), sharpen);
+
+        fragColor = vec4(v * hue2rgb(fract(hue + iTime/10.)), 1.0);
+    }
+    
+""")
+
+bb1 = Shadertoy("""
+
+    void mainImage( out vec4 fragColor, in vec2 fragCoord )
+    {
+        vec2 uv = fragCoord/iResolution.xy;
+
+        vec2 center = vec2(.5 + 0.15*sin(iTime));
+        float zoom = 1.02;
+
+        vec4 prevParams = texture(iChannel0, (uv - center)/zoom + center);
+        vec4 bB = texture(iChannel1, uv);
+
+        fragColor = clamp(mix(prevParams, 4 * bB, 0.1), 0., 1.) ;
+    }
+    
+""")
+
+bb1.set_channel(0, bb1)
+bb1.set_channel(1, ba1)
+
+st1 = Shadertoy("""
+
+    void mainImage( out vec4 fragColor, in vec2 fragCoord )
+    {
+        vec3 bA = texelFetch(iChannel0, ivec2(fragCoord), 0).rgb;
+        vec3 bB = texelFetch(iChannel1, ivec2(fragCoord), 0).rgb;
+
+        vec3 col_rgb = bB;
+
+        col_rgb = col_rgb*exp2(3.5);
+
+        fragColor = vec4(pow(col_rgb, vec3(1./2.2)), 1.);
+    } 
+
+""", 512, 256, 0, 420, 0, 'left', 'top')
+
+
+st1.set_channel(0, ba1)
+st1.set_channel(1, bb1)
+
 keyboard_layout = Sprite('images/keyboard.png', x=256, y=82, scale=0.5)
-
-shadertoy_code = """
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = fragCoord / iResolution.xy;
-
-    // Time varying pixel color
-    vec3 col = 0.2 + 0.2 * cos(iTime + uv.xyx + vec3(0, 2, 4));
-
-    float amp = texture(iChannel0, vec2(uv.x, 1.)).r; 
-    
-    vec3 sig = vec3(0.00033 / max(pow(amp - uv.y, 2.), 1e-6));
-    
-    sig *= vec3(.5, .5, 4.) / 2.;
-   
-    col += sig;
-    
-    // Output to screen
-    fragColor = vec4(col,1.0);
-}
-"""
-st = Shadertoy(shadertoy_code, 512, 256, 0, 420, 0, 'left', 'top')
-
-label0 = Label('amp: %.2f' % get_master_volume(), x=10, y=174)
-label1 = Label('use ↑ ↓ to control volume', anchor_x='right', x=app.width - 10, y=174)
-
+label0 = Label('amp: %.2f' % get_master_volume(), anchor_x='right', x=app.width - 10, y=174)
+label1 = Label('use ↑ ↓ to control volume', x=10, y=194)
+label2 = Label('tap SPACE to change shader', x=10, y=174)
 
 state = State(
     
     up = False,
     down = False,
+    shader = 0,
 )
 
 keys = app.window.keys
@@ -132,6 +221,9 @@ def key_event(key, action, modifiers):
     if key == keys.DOWN:
         state.down = value
 
+    if key == keys.SPACE and action == keys.ACTION_PRESS:
+        state.shader = 1 - state.shader
+
     if action == keys.ACTION_PRESS and key in keyboard:
         assert key not in _keyd
         _keyd[key] = tb303.play_poly(note=keyboard[key])
@@ -164,11 +256,16 @@ def render(ct, dt):
     
     keyboard_layout.draw()
     
-    st.set_channel(0, *get_shadertoy_audio(amp=5))   
-    st.render(ct, dt)
+    if state.shader == 0:
+        st0.set_channel(0, *get_shadertoy_audio(amp=5))   
+        st0.render(ct, dt)
+    else:
+        ba1.set_channel(0, *get_shadertoy_audio(amp=5))   
+        st1.render(ct, dt)
 
     label0.draw()
     label1.draw()
+    label2.draw()
 
 
 app.set_midi_sound(tb303)

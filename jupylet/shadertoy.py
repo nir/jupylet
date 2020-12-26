@@ -56,12 +56,20 @@ from .env import get_window_size
 from .lru import SPRITE_TEXTURE_UNIT
 
 
-def get_shadertoy_audio(start=-512, length=512, amp=1.):
+def get_shadertoy_audio(start=-512, length=512, amp=1., data=None, channel_time=None):
     
-    a0, ct = get_output_as_array(start, length, resample=512)[:2]
-    if a0 is None:
-        a0 = np.zeros((512, 2))
-    
+    if data is not None:
+        a0 = data
+        ct = channel_time
+
+    else:
+        a0, ct = get_output_as_array(start, length, resample=512)[:2]
+        if a0 is None:
+            a0 = np.zeros((512, 2))
+
+    if channel_time is not None:
+        ct = channel_time
+
     ft = np.fft.rfft(a0, axis=0)
     sa = np.square(np.abs(ft)) + 1e-6
     ps = 10 * np.log10(sa)

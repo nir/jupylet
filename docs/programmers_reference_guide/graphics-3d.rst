@@ -383,9 +383,87 @@ However, you are not limited in any way to the default Jupylet renderer.
 Jupylet is built on top of the wonderful `ModernGL <https://github.com/moderngl/moderngl>`_  
 library, which is an efficient wrapper around the `OpenGL API <https://en.wikipedia.org/wiki/OpenGL>`_.
 By using ModernGL and the OpenGL API you are free to program your own GPU 
-shaders to create any visual effect you want, from cartoon like shading to 
-mesmerizing music visualizations, to any effect you are imaginative enough 
-to dream up and skilled enough to program.
+shaders and create any visual effect you want, from cartoon like shading to 
+mesmerizing music visualizations (see Shadertoys below), to any effect you 
+are imaginative enough to dream up and skilled enough to program.
 
-If you would like to dive into OpenGL and shading check out `learnopengl.com  <https://learnopengl.com/>`_.
+If you would like to dive into OpenGL and shading check out 
+`learnopengl.com <https://learnopengl.com/>`_.
 
+
+Shadertoys
+----------
+
+A great way to get started with OpenGL programming is 
+`Shadertoys <https://www.shadertoy.com/>`_ which is an online tool for 
+creating and sharing shaders through WebGL. It seems it was created by hackers 
+for hackers so there is little official documentation and some of its guides 
+take the form of a documented shadertoy like this one 
+`shadertoy.com/view/Md23DV <https://www.shadertoy.com/view/Md23DV>`_:
+
+.. raw:: html
+    
+    <iframe width="400" height="225" frameborder="0" src="https://www.shadertoy.com/embed/Md23DV?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+    <br>
+    <br>
+    
+Two online turorials worth checking out are `The principles of painting with math <https://www.youtube.com/watch?v=0ifChJ0nJfM>`_ 
+and the series `ShaderToy Tutorials <https://www.youtube.com/watch?v=u5HAYVHsasc&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5&index=1>`_.
+
+You can render shadertoys in Jupylet with the :class:`~jupylet.shadertoy.Shadertoy` 
+class. For example here is how to create and render the default 
+`shadertoy.com <https://www.shadertoy.com/>`_ shader:
+
+.. code-block:: python
+
+    from jupylet.shadertoy import Shadertoy
+
+    st = Shadertoy("""
+    
+        void mainImage( out vec4 fragColor, in vec2 fragCoord )
+        {
+            // Normalized pixel coordinates (from 0 to 1)
+            vec2 uv = fragCoord/iResolution.xy;
+
+            // Time varying pixel color
+            vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+
+            // Output to screen
+            fragColor = vec4(col,1.0);
+        }
+
+    """)
+
+    @app.event
+    def render(ct, dt):
+
+        app.window.clear()
+        st.draw()
+
+You can set the input of any of the 4 channels of a shadertoy with the 
+:meth:`Shadertoy.set_channel() <jupylet.shadertoy.Shadertoy.set_channel>` 
+method. For example to set a texture to channel 0:
+
+.. code-block:: python
+
+    st.set_channel(0, 'images/alien.png')
+
+You can also set the input with an audio signal as a Numpy array. Shadertoy 
+expects the signal as an array of 2 rows, 512 samples, and two channels
+(left, right) with values between 0 and 255. The first row should be the 
+power spectrum of the signal and the second row should be amplitude samples 
+of the signal. You can use the convenience function 
+:func:`get_shadertoy_audio() <jupylet.shadertoy.get_shadertoy_audio>` to 
+prepare the required input from the audio system output. For example:
+
+.. code-block:: python
+
+    from jupylet.shadertoy import get_shadertoy_audio
+    
+    st.set_channel(0, *get_shadertoy_audio())
+
+Finally, you can chain shaders by setting one shader as the input of another 
+and even create cycles to produce interesting effects. For an example see the 
+audio visualization shader by Alban Fichet in the 
+`examples/14-piano.ipynb <https://github.com/nir/jupylet/blob/master/examples/14-piano.ipynb>`_
+notebook.
