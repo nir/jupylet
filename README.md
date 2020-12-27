@@ -133,5 +133,20 @@ For questions and feedback send an email to [Nir Aides](mailto:nir@winpdb.org) o
 
 ## Spread the Word
 
-Jupylet is a new library and you can help it grow with a few clicks - let your friends know about it!
+Jupylet is a new library and you can help it grow with a few clicks - 
+if you like it let your friends know about it!
+
+## Acknowledgements
+
+* [Einar Forselv](https://github.com/einarf) - The programmer behind ModernGL 
+for his endless help in the trenches of OpenGL programming.
+* [Alban Fichet](https://afichet.github.io/) - For kindly licensing his 
+sound visualizer Shadertoy as CC BY 4.0 license.
+
+## What's New in Version 0.8.6
+
+* Support for rendering Shadertoy OpenGL shaders. 
+[Shadertoy](https://www.shadertoy.com/) is an awesome online platform for  
+programming and sharing OpenGL shaders online, and now you can 
+[use and render shadertoy shaders in Jupylet!](https://jupylet.readthedocs.io/en/latest/programmers_reference_guide/graphics-3d.html#shadertoys)
 
