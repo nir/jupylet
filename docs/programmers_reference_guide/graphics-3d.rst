@@ -394,20 +394,18 @@ If you would like to dive into OpenGL and shading check out
 Shadertoys
 ----------
 
-A great way to get started with OpenGL programming is 
-`Shadertoys <https://www.shadertoy.com/>`_ which is an online tool for 
-creating and sharing shaders through WebGL. It seems it was created by hackers 
-for hackers so there is little official documentation and some of its guides 
-take the form of a documented shadertoy like this one 
-`shadertoy.com/view/Md23DV <https://www.shadertoy.com/view/Md23DV>`_:
+Once you get a little comfortable with OpenGL and the GLSL shader programming 
+language, `Shadertoys <https://www.shadertoy.com/>`_ are a great way to 
+practice and upgrade your skills by programming and sharing fragment 
+shaders online:
 
 .. raw:: html
     
-    <iframe width="384" height="216" frameborder="0" src="https://www.shadertoy.com/embed/Md23DV?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+    <iframe width="384" height="216" frameborder="0" src="https://www.shadertoy.com/embed/wlVGWd?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
     <br>
     <br>
     
-Two online turorials worth checking out are `The principles of painting with math <https://www.youtube.com/watch?v=0ifChJ0nJfM>`_ 
+Two online turorials worth checking out are `The principles of painting with maths <https://www.youtube.com/watch?v=0ifChJ0nJfM>`_ 
 and the series `ShaderToy Tutorials <https://www.youtube.com/watch?v=u5HAYVHsasc&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5&index=1>`_.
 
 You can render shadertoys in Jupylet with the :class:`~jupylet.shadertoy.Shadertoy` 

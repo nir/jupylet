@@ -25,6 +25,7 @@
 """
 
 
+import functools
 import webcolors
 import datetime
 import moderngl
@@ -56,17 +57,53 @@ from .env import get_window_size
 from .lru import SPRITE_TEXTURE_UNIT
 
 
-def get_shadertoy_audio(start=-512, length=512, amp=1., data=None, channel_time=None):
+@functools.lru_cache()
+def get_indices(size):
+    
+    i0 = np.arange(size)
+    i1 = np.ones((size, size))
+    i2 = (i1 * i0 + i0[:,None]).astype('long')
+    
+    return i2
+
+
+def get_correlation(a0, size=300, step=2, prev=[]):
+    
+    size = min(size, len(a0))
+    
+    if not prev:
+        prev.append(a0)
+        return 0
+
+    p0 = prev[0]
+
+    s0 = size // 2 // step
+    c0 = a0[get_indices(s0) * step] @ p0[::step][:s0]
+    
+    ix = c0.argmax() * step
+    a1 = a0[ix:]
+    
+    prev[0] = a1
+
+    return ix
+
+
+def get_shadertoy_audio(amp=1., length=512, buffer=500, data=None, channel_time=None):
     
     if data is not None:
         a0 = data
         ct = channel_time
 
     else:
-        a0, ct = get_output_as_array(start, length, resample=512)[:2]
+        l0 = length + buffer
+        a0, ct = get_output_as_array(-l0, l0)[:2]
+        
         if a0 is None:
-            a0 = np.zeros((512, 2))
-
+            a0 = np.zeros((length, 2))
+        else:
+            ix = get_correlation(a0.mean(-1), buffer)
+            a0 = a0[ix:][:length]
+            
     if channel_time is not None:
         ct = channel_time
 
@@ -136,8 +173,10 @@ class Shadertoy(Node):
             position=glm.vec3(x, y, 0),
         )
 
+        self.t0 = None
         self.ct = 0
         self.dt = 0
+
         self.iframe = 0
 
         w0, h0 = get_window_size()
@@ -237,7 +276,10 @@ class Shadertoy(Node):
     def render(self, ct, dt):
         """Render shadertoy to canvas."""
         
-        self.ct = ct
+        if self.t0 is None:
+            self.t0 = ct
+
+        self.ct = ct - self.t0
         self.dt = dt
 
         self.iframe += 1
@@ -258,7 +300,7 @@ class Shadertoy(Node):
             self.shader._members['iResolution'].write(self.scale)
         
         if 'iTime' in self.shader._members:
-            self.shader._members['iTime'].value = ct
+            self.shader._members['iTime'].value = self.ct
         
         if 'iTimeDelta' in self.shader._members:
             self.shader._members['iTimeDelta'].value = dt
