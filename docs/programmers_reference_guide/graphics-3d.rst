@@ -405,7 +405,7 @@ shaders online:
     <br>
     <br>
     
-Two online turorials worth checking out are `The principles of painting with maths <https://www.youtube.com/watch?v=0ifChJ0nJfM>`_ 
+Two online tutorials worth checking out are `The principles of painting with maths <https://www.youtube.com/watch?v=0ifChJ0nJfM>`_ 
 and the series `ShaderToy Tutorials <https://www.youtube.com/watch?v=u5HAYVHsasc&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5&index=1>`_.
 
 You can render shadertoys in Jupylet with the :class:`~jupylet.shadertoy.Shadertoy` 
