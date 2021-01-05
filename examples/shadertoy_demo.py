@@ -106,7 +106,7 @@ def render(ct, dt):
     l0.render()
 
 
-sample = Sample('../docs/_static/audio/tb303.5.ogg', loop=True, amp=1.)
+sample = Sample('../docs/_static/audio/tb303.5.ogg', loop=True, amp=8.)
 sample.play()
 
 
