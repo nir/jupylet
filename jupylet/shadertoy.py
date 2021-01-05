@@ -139,6 +139,8 @@ class Shadertoy(Node):
     """A Shadertoy canvas.
     
     Args:
+        width (float): The width of the shadertoy canvas.
+        height (float): The height of the shadertoy canvas.
         x (float): The x position for the shadertoy canvas.
         y (float): The y position for the shadertoy canvas.
         angle (float): clockwise rotation of the shadertoy canvas in degrees.
@@ -364,12 +366,12 @@ class Shadertoy(Node):
         self.rotation = aa2q(glm.radians(angle))
 
     def set_anchor(self, ax=None, ay=None):
-        """Set the anchor point of the sprite.
+        """Set the anchor point of the shadertoy canvas.
 
-        The anchor is a point in the sprite that is used for rotation and 
-        positioning. Imagine a pin going through the sprite and that you use
-        this pin to position the sprite on the canvas and to rotate it. The
-        point at which the pin goes through the texture is the anchor point.
+        The anchor is a point in the shadertoy canvas that is used for 
+        rotation and positioning. Imagine a pin going through the canvas and 
+        that you use this pin to position the canvas and to rotate it. The
+        point at which the pin goes through the canvas is the anchor point.
 
         The anchor point is set separately for the x axis, and for the y axis.
 

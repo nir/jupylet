@@ -461,7 +461,8 @@ prepare the required input from the audio system output. For example:
     st.set_channel(0, *get_shadertoy_audio())
 
 Finally, you can chain shaders by setting one shader as the input of another 
-and even create cycles to produce interesting effects. For an example see the 
-audio visualization shader by Alban Fichet in the 
-`examples/14-piano.ipynb <https://github.com/nir/jupylet/blob/master/examples/14-piano.ipynb>`_
+and even create cycles to produce interesting effects. For a basic example
+of displaying a shadertoy see the `examples/16-shadertoy-demo.ipynb <https://github.com/nir/jupylet/blob/master/examples/16-shadertoy-demo.ipynb>`_ 
+notebook. For a more advanced example see the audio visualization shader by 
+Alban Fichet in the `examples/14-piano.ipynb <https://github.com/nir/jupylet/blob/master/examples/14-piano.ipynb>`_
 notebook.
