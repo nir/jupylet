@@ -13,7 +13,7 @@ setuptools.setup(
     package_data={
        'jupylet': ['assets/*', 'assets/*/*', 'assets/*/*/*'],
     },
-    version = '0.8.6',
+    version = '0.8.7',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
     long_description=long_description,
@@ -21,7 +21,7 @@ setuptools.setup(
     author = 'Nir Aides',
     author_email = 'nir@winpdb.org',
     url = 'https://github.com/nir/jupylet',
-    download_url = 'https://github.com/nir/jupylet/archive/v0.8.6.tar.gz',
+    download_url = 'https://github.com/nir/jupylet/archive/v0.8.7.tar.gz',
     keywords = [
         'reinforcement learning', 
         'deep learning', 
@@ -40,6 +40,7 @@ setuptools.setup(
         'glfw',
         'mido',
         'tqdm',
+        'jedi==0.17.2',
         'numpy ; platform_system!="Windows"', 
         'numpy==1.19.3 ; platform_system=="Windows"',
         'PyGLM',
