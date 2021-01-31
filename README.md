@@ -63,7 +63,8 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 ## Requirements
 
-_jupylet_ should run on Python 3.6, 3.7, or 3.8 on Windows, Mac, and Linux.
+*Jupylet* should run on **Python 3.6, 3.7, or 3.8** on Windows, Mac, and Linux. 
+At the moment *Jupylet* is not compatible with Python 3.9.
 
 ## How to Install and Run Jupylet
 
