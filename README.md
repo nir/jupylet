@@ -144,6 +144,10 @@ for his endless help in the trenches of OpenGL programming.
 * [Alban Fichet](https://afichet.github.io/) - For kindly licensing his 
 sound visualizer Shadertoy as CC BY 4.0 license.
 
+## What's New in Version 0.8.7
+
+* Workaround auto-completion bug in Jupyter notebooks. 
+
 ## What's New in Version 0.8.6
 
 * Support for rendering Shadertoy OpenGL shaders. 
