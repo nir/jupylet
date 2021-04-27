@@ -88,7 +88,14 @@ def get_correlation(a0, size=300, step=2, prev=[]):
     return ix
 
 
-def get_shadertoy_audio(amp=1., length=512, buffer=500, data=None, channel_time=None):
+def get_shadertoy_audio(
+    amp=1., 
+    length=512, 
+    buffer=500, 
+    data=None, 
+    channel_time=None,
+    correlate=True,
+    ):
     
     if data is not None:
         a0 = data
@@ -100,9 +107,10 @@ def get_shadertoy_audio(amp=1., length=512, buffer=500, data=None, channel_time=
         
         if a0 is None:
             a0 = np.zeros((length, 2))
-        else:
-            ix = get_correlation(a0.mean(-1), buffer)
-            a0 = a0[ix:][:length]
+
+    if correlate:
+        ix = get_correlation(a0.mean(-1), buffer)
+        a0 = a0[ix:][:length]
             
     if channel_time is not None:
         ct = channel_time
