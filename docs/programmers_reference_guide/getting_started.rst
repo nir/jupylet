@@ -8,13 +8,13 @@ If you are new to Python, I recommend that you install and use the
 `Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
 distribution. 
 
-On Windows download and run the 64-bit installer for Python 3.8. Once 
+On Windows download and run the 64-bit installer for Python 3.9. Once 
 Miniconda is installed press the :guilabel:`⊞ Winkey` and then type 
 *Miniconda* and press the :guilabel:`Enter` key. This should open a small 
 window that programmers call *console* or *shell* in which you can enter 
 commands and run programs.
 
-On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.8.
+On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.9.
 Once installed click the Spotlight icon :guilabel:`🔍` and in the search field 
 type *terminal* and press the :guilabel:`Enter` key to open the console.
 
@@ -25,7 +25,7 @@ console:
 
     pip install jupylet
 
-If you are using Python 3.8 on Windows you also need to run following command:
+If you are using Python 3.8 or 3.9 on Windows you also need to run following command:
 
 .. code-block:: bash
 

@@ -63,8 +63,7 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 ## Requirements
 
-*Jupylet* should run on **Python 3.6, 3.7, or 3.8** on Windows, Mac, and Linux. 
-At the moment *Jupylet* is not compatible with Python 3.9.
+*Jupylet* should run on Python 3.6 and up on Windows, Mac, and Linux.
 
 ## How to Install and Run Jupylet
 
@@ -72,12 +71,12 @@ If you are new to Python, I recommend that you install and use the
 [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html)
 distribution. 
 
-On Windows download and run the 64-bit installer for Python 3.8. Once 
+On Windows download and run the 64-bit installer for Python 3.9. Once 
 Miniconda is installed press the `⊞ Winkey` and then type *Miniconda* and 
 press the `Enter` key. This should open a small window that programmers call 
 *console* or *shell* in which you can enter commands and run programs.
 
-On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.8.
+On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.9.
 Once installed click the Spotlight icon `🔍` and in the search field type 
 *terminal* and press the `Enter` key to open the console.
 
@@ -86,7 +85,7 @@ console:
 
     pip install jupylet
 
-If you are using Python 3.8 on Windows you also need to run following command:
+If you are using Python 3.8 or 3.9 on Windows you also need to run following command:
 
     python -m jupylet postinstall
 
@@ -143,6 +142,10 @@ if you like it let your friends know about it!
 for his endless help in the trenches of OpenGL programming.
 * [Alban Fichet](https://afichet.github.io/) - For kindly licensing his 
 sound visualizer Shadertoy as CC BY 4.0 license.
+
+## What's New in Version 0.8.8
+
+* Support for Python 3.9. 
 
 ## What's New in Version 0.8.7
 
