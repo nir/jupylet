@@ -92,7 +92,7 @@ def trbl(width, height, anchor_x=0, anchor_y=0, angle=0, scale=1):
         0, height, 1
     )
     
-    bb1 = affine0(angle, scale, anchor_x, anchor_y) @ glm.transpose(bb0)
+    bb1 = glm.transpose(bb0) * affine0(angle, scale, anchor_x, anchor_y) 
     
     x = bb1[0]
     y = bb1[1]
