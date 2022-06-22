@@ -42,7 +42,7 @@ setuptools.setup(
         'tqdm',
         'jedi==0.17.2',
         'numpy ; platform_system!="Windows"', 
-        'numpy==1.19.3 ; platform_system=="Windows"',
+        'numpy==1.22.0 ; platform_system=="Windows"',
         'PyGLM',
         'scipy', 
         'pillow', 
