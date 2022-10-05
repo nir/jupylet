@@ -147,6 +147,8 @@ def use(sound, **kwargs):
 
     if cn in ['<module>', 'async-def-wrapper']:
         hh = '<module>'
+    elif cn.startswith('<cell line'):
+        hh = '<cell line'
     else:
         hh = hash(cf) 
 
@@ -175,6 +177,8 @@ def play(note, duration=None, **kwargs):
     
     if cn in ['<module>', 'async-def-wrapper']:
         hh = '<module>'
+    elif cn.startswith('<cell line'):
+        hh = '<cell line'
     else:
         hh = hash(cf) 
 
@@ -217,6 +221,8 @@ def sleep(duration=0):
 
     if cn in ['<module>', 'async-def-wrapper']:
         hh = '<module>'
+    elif cn.startswith('<cell line'):
+        hh = '<cell line'
     else:
         hh = hash(cf) 
 
