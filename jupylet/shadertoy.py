@@ -88,6 +88,20 @@ def get_correlation(a0, size=300, step=2, prev=[]):
     return ix
 
 
+def resample_logx(data, num=None):
+    
+    assert data.ndim == 1
+    
+    num = num or data.size
+    
+    x1 = np.exp(np.linspace(0, np.log(data.size), num)) - 1
+    x2 = x1.astype('long')
+    
+    xx = 1 - x1 + x2
+
+    return data[x2] * xx + data[(x2 + 1).clip(0, data.size-1)] * (1 - xx)
+
+
 def get_shadertoy_audio(
     amp=1., 
     length=512, 
@@ -95,6 +109,7 @@ def get_shadertoy_audio(
     data=None, 
     channel_time=None,
     correlate=True,
+    resample='linear',
     ):
     
     if data is not None:
@@ -116,9 +131,14 @@ def get_shadertoy_audio(
         ct = channel_time
 
     ft = np.fft.rfft(a0, axis=0)
-    sa = np.square(np.abs(ft)) + 1e-6
-    ps = 10 * np.log10(sa)
-    rs = scipy.signal.resample(ps, len(a0))
+    sa = ft.conj() * ft
+    ps = 10 * np.log10(sa + 1e-6)
+    
+    if resample == 'linear':
+        rs = scipy.signal.resample(ps, len(a0), domain='time')
+    else:
+        rs = resample_logx(ps, len(a0))
+        
     ns = (rs + 50) / 100
     
     return np.stack((ns * 256, a0 * amp * 128 + 128)).clip(0, 255), ct
