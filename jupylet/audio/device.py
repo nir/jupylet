@@ -1,7 +1,7 @@
 """
     jupylet/audio/device.py
     
-    Copyright (c) 2020, Nir Aides - nir@winpdb.org
+    Copyright (c) 2022, Nir Aides - nir.8bit@gmail.com
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
