@@ -295,7 +295,7 @@ def callback(indata, frames, time, status):
         
     a0 = np.fft.rfft(datax)
     a5 = a0.conj() * a0
-    a6 = 10 * np.log(a5.real + 1e-6)
+    a6 = 5 * np.log(a5.real + 1e-6)
 
     if dataz is None or dataz.shape != a6.shape:
         dataz = a6
