@@ -55,7 +55,7 @@ setuptools.setup(
         'ipywidgets', 
         'matplotlib', 
         'sounddevice', 
-        'python-rtmidi ; platform_system!="Linux"',
+        'python-rtmidi ; platform_system=="Windows" or (platform_system=="Darwin" and python_version<"3.11")',
         'moderngl-window',
     ],
     extras_require = {

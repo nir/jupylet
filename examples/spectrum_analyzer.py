@@ -27,6 +27,7 @@
 
 import functools
 import _thread
+import yaml
 import sys
 import io
 import os
@@ -49,6 +50,13 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt
+
+
+dl = sd.query_devices()
+idi = sd.default.device['input']
+sample_rate = dl[idi]['default_samplerate']
+
+print('\n%s\n\n%s' % (dl, yaml.dump(dl[idi])))
 
 
 def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figsize=(10, 5), **kwargs):
@@ -140,11 +148,11 @@ st0 = Shadertoy("""
         vec3 col = vec3(1., 1., 1.);
 
         float dst = 1000.;
-        float dx0 = 0.000033;
+        float dx0 = 0.00005;
         
-        for (int i=0; i < 100; i++) {
+        for (int i=0; i < 50; i++) {
         
-            float dx1 = dx0 * (i - 50);
+            float dx1 = dx0 * (i - 25);
             float dy1 = texture(iChannel0, vec2(uv.x + dx1, 0.)).r - uv.y; 
             float dxy = dx1 * dx1 + dy1 * dy1;
             
@@ -223,11 +231,6 @@ def render(ct, dt):
     label1.draw()
 
 
-dl = sd.query_devices()
-idi = sd.default.device['input']
-sample_rate = dl[idi]['default_samplerate']
-
-
 def resample_logx(data, num=None):
     
     assert data.ndim == 1
@@ -287,7 +290,8 @@ async def input_worker():
             await asyncio.sleep(1.)
 
 
-task = asyncio.get_event_loop().create_task(input_worker())
+loop = asyncio.get_event_loop_policy().get_event_loop()
+task = loop.create_task(input_worker())
 
 
 if __name__ == '__main__':
