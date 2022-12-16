@@ -22,7 +22,7 @@ open the console.
 **On macOS with M1 processor** download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
 for Python 3.9. Once installed click the Spotlight icon :guilabel:`🔍` and 
 in the search field type *terminal* and press the :guilabel:`Enter` key to 
-open the console. Next you need to run the following two commands:
+open the console. Then you need to run the following two commands:
 
 .. code-block:: bash
 
@@ -38,7 +38,8 @@ the console:
 
     pip install jupylet
 
-If you are using Python 3.8 or 3.9 on Windows you also need to run following command:
+If you are using an old installation of Python 3.8 or 3.9 on Windows you may 
+also need to run following command:
 
 .. code-block:: bash
 

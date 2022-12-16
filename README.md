@@ -82,7 +82,7 @@ field type *terminal* and press the `Enter` key to open the console.
 
 **On macOS with M1 processor** download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
 for Python 3.9. Once installed click the Spotlight icon `🔍` and in the search 
-field type *terminal* and press the `Enter` key to open the console. Next
+field type *terminal* and press the `Enter` key to open the console. Then
 you need to run the following two commands:
 
     conda install -c conda-forge numpy "libblas=*=*accelerate"
@@ -95,7 +95,8 @@ the console:
 
     pip install jupylet
 
-If you are using Python 3.8 or 3.9 on Windows you also need to run following command:
+If you are using an old installation of Python 3.8 or 3.9 on Windows you may 
+also need to run following command:
 
     python -m jupylet postinstall
 
@@ -155,7 +156,7 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 
 ## What's New in Version 0.8.9
 
-* Support for Python 3.11.
+* Support for Python 3.10 and Python 3.11.
 * Support for macOS M1.
 * Spectrum analyzer.
 * Bug fixes. 
