@@ -245,6 +245,43 @@ def resample_logx(data, num=None):
     return data[x2] * xx + data[(x2 + 1).clip(0, data.size-1)] * (1 - xx)
 
 
+def resample_logx2(data, num=None):
+    
+    assert data.ndim == 1
+    
+    num = num or data.size
+    
+    x1 = np.exp(np.linspace(0, np.log(data.size), num)) - 1
+    x2 = x1.astype('long')
+    
+    xx = 1 - x1 + x2
+    xx = data[x2] * xx + data[(x2 + 1).clip(0, data.size-1)] * (1 - xx)
+    
+    idx3 = ((x2[1:] - x2[:-1]) < 2).sum()
+    
+    if idx3 >= len(x2) - 16:
+        return xx
+    
+    x3 = x2[idx3:]
+    
+    p0 = np.pad(x3[1:] - x3[:-1], (1, 1)) / 2
+
+    xa = np.ceil(x3 - p0[:-1])[:,None].astype('long')
+    xb = np.ceil(x3 + p0[1: ])[:,None].astype('long')
+
+    md = (xb - xa).max()
+    ar = np.arange(md)[None,:] / (md - 1)
+    
+    xe = (xb - xa) * ar + xa
+    xi = xe.astype('long')
+
+    xz = np.take(data, xi).max(-1)
+    
+    xx[idx3:] = xz
+    
+    return xx
+
+
 def callback(indata, frames, time, status):
 
     global data0, data1, dataz
@@ -268,7 +305,7 @@ def callback(indata, frames, time, status):
     a6 = dataz
     f0 = np.fft.rfftfreq(len(datax), 1 / sample_rate)
 
-    a7 = resample_logx(a6, 1024)
+    a7 = resample_logx2(a6, 1024)
     f1 = resample_logx(f0, 1024)
 
     x0 = (f1 < state.xmin).sum()
