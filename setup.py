@@ -13,7 +13,7 @@ setuptools.setup(
     package_data={
        'jupylet': ['assets/*', 'assets/*/*', 'assets/*/*/*'],
     },
-    version = '0.8.8',
+    version = '0.8.9',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
     long_description=long_description,
@@ -21,7 +21,7 @@ setuptools.setup(
     author = 'Nir Aides',
     author_email = 'nir.8bit@gmail.com',
     url = 'https://github.com/nir/jupylet',
-    download_url = 'https://github.com/nir/jupylet/archive/v0.8.8.tar.gz',
+    download_url = 'https://github.com/nir/jupylet/archive/v0.8.9.tar.gz',
     keywords = [
         'reinforcement learning', 
         'deep learning', 

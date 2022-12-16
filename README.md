@@ -153,6 +153,13 @@ for his endless help in the trenches of OpenGL programming.
 * [Alban Fichet](https://afichet.github.io/) - For kindly licensing his 
 sound visualizer Shadertoy as CC BY 4.0 license.
 
+## What's New in Version 0.8.9
+
+* Support for Python 3.11.
+* Support for macOS M1.
+* Spectrum analyzer.
+* Bug fixes. 
+
 ## What's New in Version 0.8.8
 
 * Support for Python 3.9. 

@@ -33,7 +33,7 @@ import re
 from .env import is_remote, has_display, is_numpy_openblas
 
 
-VERSION = '0.8.8'
+VERSION = '0.8.9'
 
 
 if platform.system() == 'Linux' and not has_display():
