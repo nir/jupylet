@@ -8,18 +8,31 @@ If you are new to Python, I recommend that you install and use the
 `Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
 distribution. 
 
-On Windows download and run the 64-bit installer for Python 3.9. Once 
+**On Windows** download and run the 64-bit installer for Python 3.9. Once 
 Miniconda is installed press the :guilabel:`⊞ Winkey` and then type 
 *Miniconda* and press the :guilabel:`Enter` key. This should open a small 
 window that programmers call *console* or *shell* in which you can enter 
 commands and run programs.
 
-On Mac OS X download and run "Miniconda3 MacOSX 64-bit pkg" for Python 3.9.
-Once installed click the Spotlight icon :guilabel:`🔍` and in the search field 
-type *terminal* and press the :guilabel:`Enter` key to open the console.
+**On macOS with Intel processor** download and run "Miniconda3 macOS Intel x86 64-bit pkg" 
+for Python 3.9. Once installed click the Spotlight icon :guilabel:`🔍` and 
+in the search field type *terminal* and press the :guilabel:`Enter` key to 
+open the console.
 
-To run *jupylet* first install it by typing the following command in the
-console:
+**On macOS with M1 processor** download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
+for Python 3.9. Once installed click the Spotlight icon :guilabel:`🔍` and 
+in the search field type *terminal* and press the :guilabel:`Enter` key to 
+open the console. Next you need to run the following two commands:
+
+.. code-block:: bash
+
+    conda install -c conda-forge numpy "libblas=*=*accelerate"
+    pip install --pre -i https://pypi.anaconda.org/scipy-wheels-nightly/simple scipy
+
+These two commands are only needed if you have a macOS with an M1 processor.
+
+Finally, to run *jupylet* first install it by typing the following command in 
+the console:
 
 .. code-block:: bash
 
