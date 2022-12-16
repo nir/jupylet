@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'Jupylet'
-copyright = '2020, Nir Aides'
+copyright = '2022, Nir Aides'
 author = 'Nir Aides'
 
 # The full version, including alpha/beta/rc tags
