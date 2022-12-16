@@ -19,7 +19,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author = 'Nir Aides',
-    author_email = 'nir@winpdb.org',
+    author_email = 'nir.8bit@gmail.com',
     url = 'https://github.com/nir/jupylet',
     download_url = 'https://github.com/nir/jupylet/archive/v0.8.8.tar.gz',
     keywords = [
@@ -54,7 +54,7 @@ setuptools.setup(
         'ipywidgets', 
         'matplotlib', 
         'sounddevice', 
-        'python-rtmidi ; platform_system=="Windows" or (platform_system=="Darwin" and python_version<"3.11")',
+        'python-rtmidi ; platform_system!="Linux" and python_version<"3.11"',
         'moderngl-window',
     ],
     extras_require = {
@@ -77,6 +77,8 @@ setuptools.setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
 )
 

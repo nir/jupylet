@@ -1,6 +1,6 @@
 BSD 2-Clause License
 
-Copyright (c) 2020, Nir Aides
+Copyright (c) 2022, Nir Aides
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

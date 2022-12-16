@@ -139,7 +139,7 @@ computer as explained above.
 
 ## Contact
 
-For questions and feedback send an email to [Nir Aides](mailto:nir@winpdb.org) or [join the discussion](https://github.com/nir/jupylet/discussions).
+For questions and feedback send an email to [Nir Aides](mailto:nir.8bit@gmail.com) or [join the discussion](https://github.com/nir/jupylet/discussions).
 
 ## Spread the Word
 
