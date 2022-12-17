@@ -421,7 +421,7 @@ class Material(Object):
                     
             shader._members[material + 'emissive_texture'].value = self._emissive
             if self._emissive < 0:
-                shader._members[material + 'emissive'].value = tuple(self.emissive)
+                shader._members[material + 'emissive'].value = tuple(self.emissive or [0, 0, 0])
 
             shader._members[material + 'roughness_texture'].value = self._roughness
             if self._roughness < 0:

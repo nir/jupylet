@@ -51,7 +51,7 @@ def load_blender_gltf(path):
 
     Note that in principle this function should be able to load any gltf 2.0 scene,
     however it was only tested with and tuned to load scenes exported with 
-    Blender 2.83.
+    Blender 2.83 and Blender 3.4.
 
     Args:
         path (str): path to glTF 2.0 file.
@@ -137,28 +137,43 @@ def _load_blender_gltf_image(g0, ti):
 
 
 def _is_blender_gltf_light(g0, n0):
+
+    if getattr(n0, 'extensions') and n0.extensions.get('KHR_lights_punctual') is not None:
+        return True
     
     if not n0.children:
         return False
-    
-    nc = g0.model.nodes[n0.children[0]]
-    if not nc.extensions:
-        return False
-    
-    return nc.extensions.get('KHR_lights_punctual') is not None
+        
+    for c0 in n0.children:
+        
+        nc = g0.model.nodes[c0]
+        if _is_blender_gltf_light(g0, nc):
+            return True
+        
+    return False
 
     
 def _load_blender_gltf_light(g0, n0):
     
-    nc = g0.model.nodes[n0.children[0]]
+    if n0.children:
+        
+        nc = g0.model.nodes[n0.children[0]]
+        
+        l0 = nc.extensions.get('KHR_lights_punctual')['light']
+        l1 = g0.model.extensions['KHR_lights_punctual']['lights'][l0]
+        
+        m0 = glm.mat4_cast(glm.quat(xyzw2wxyz(nc.rotation)))
+        m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation))) if n0.rotation else glm.mat4(1.0) 
+        qq = glm.quat_cast(m1 * m0)
     
-    l0 = nc.extensions.get('KHR_lights_punctual')['light']
-    l1 = g0.model.extensions['KHR_lights_punctual']['lights'][l0]
-    
-    m0 = glm.mat4_cast(glm.quat(xyzw2wxyz(nc.rotation)))
-    m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation))) if n0.rotation else glm.mat4(1.0) 
-    qq = glm.quat_cast(m1 * m0)
-
+    else:
+        
+        l0 = n0.extensions.get('KHR_lights_punctual')['light']
+        l1 = g0.model.extensions['KHR_lights_punctual']['lights'][l0]
+        
+        m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation))) if n0.rotation else glm.mat4(1.0) 
+        qq = glm.quat_cast(m1)
+ 
     attenuation = {
         'spot': 1 / 10,
         'point': 1 / 10,
@@ -166,7 +181,16 @@ def _load_blender_gltf_light(g0, n0):
     }
 
     ambient = 0.001
+    
+    intensity = l1['intensity'] * attenuation.get(l1['type'], 1.)
 
+    if g0.model.asset.generator >= 'Khronos glTF Blender I/O v3':
+
+        if l1['type'] == 'directional':
+            intensity /= 683
+        else:
+            intensity /= 54.35
+        
     light = Light(
         n0.name, 
         qq, 
@@ -174,7 +198,7 @@ def _load_blender_gltf_light(g0, n0):
         n0.translation,
         l1['type'],
         l1['color'],
-        l1['intensity'] * attenuation.get(l1['type'], 1.),
+        intensity,
         ambient,
         l1.get('spot', {}).get('outerConeAngle', math.pi / 4),
         l1.get('spot', {}).get('innerConeAngle', math.pi / 4 * 0.9),
@@ -186,14 +210,21 @@ def _load_blender_gltf_light(g0, n0):
 
 def _is_blender_gltf_camera(g0, n0):
     
+    if getattr(n0, 'camera', None) is not None:
+        return True
+    
     if not n0.children:
         return False
-    
-    nc = g0.model.nodes[n0.children[0]]
-    
-    return nc.camera is not None
 
-    
+    for c0 in n0.children:
+        
+        nc = g0.model.nodes[c0]
+        if _is_blender_gltf_camera(g0, nc):
+            return True
+        
+    return False
+
+
 def xyzw2wxyz(q):
     
     if q:
@@ -203,13 +234,22 @@ def xyzw2wxyz(q):
 
 def _load_blender_gltf_camera(g0, n0):
     
-    nc = g0.model.nodes[n0.children[0]]
-    c0 = g0.model.cameras[nc.camera]
+    if n0.children:
+        
+        nc = g0.model.nodes[n0.children[0]]
+        c0 = g0.model.cameras[nc.camera]
 
-    m0 = glm.mat4_cast(glm.quat(xyzw2wxyz(nc.rotation)))
-    m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation)))  
-    qq = glm.quat_cast(m1 * m0)
+        m0 = glm.mat4_cast(glm.quat(xyzw2wxyz(nc.rotation)))
+        m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation)))  
+        qq = glm.quat_cast(m1 * m0)
     
+    else:
+        
+        c0 = g0.model.cameras[n0.camera]
+
+        m1 = glm.mat4_cast(glm.quat(xyzw2wxyz(n0.rotation)))  
+        qq = glm.quat_cast(m1)
+        
     camera = Camera(
         n0.name, 
         qq, 
