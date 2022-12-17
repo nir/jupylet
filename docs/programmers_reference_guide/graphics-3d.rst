@@ -32,7 +32,7 @@ great news is that one of the best tools around is completely free.
 To get started with Blender I recommend the wonderful youtube videos by 
 `Grant Abbitt <https://www.youtube.com/c/GrantAbbitt/playlists>`_:
 
-* `Complete Beginners Guide to Blender 2.8 <https://www.youtube.com/watch?v=7MRonzqYJgw&list=PLn3ukorJv4vs_eSJUQPxBRaDS8PrVmIri>`_
+* `Learn Blender 3 for Complete Beginners <https://www.youtube.com/playlist?list=PLn3ukorJv4vuU3ILv3g3xnUyEGOQR-D8J>`_
 * `Beginner Exercises <https://www.youtube.com/watch?v=98FkRIbihyQ&list=PLn3ukorJv4vvv3ZpWJYvV5Tmvo7ISO-NN>`_
 * `Sculpting <https://www.youtube.com/watch?v=lKY2FIy60nc&list=PLn3ukorJv4vvJM7tvjet4PP-LVjJx13oB>`_
 * `Unwrapping & Placing 2d Textures <https://www.youtube.com/watch?v=bHLT5Xh_tzQ&list=PLn3ukorJv4vve0s-cq8VWS4jRQCdWSU3N>`_
@@ -401,7 +401,7 @@ shaders online:
 
 .. raw:: html
     
-    <iframe width="384" height="216" frameborder="0" src="https://www.shadertoy.com/embed/wlVGWd?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+    <iframe width="384" height="216" frameborder="0" src="https://www.shadertoy.com/embed/tsXBzS?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
     <br>
     <br>
     
