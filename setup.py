@@ -40,7 +40,7 @@ setuptools.setup(
         'glfw',
         'mido',
         'tqdm',
-        'jedi==0.17.2',
+        'jedi',
         'numpy',
         'PyGLM',
         'scipy', 
@@ -55,6 +55,7 @@ setuptools.setup(
         'matplotlib', 
         'sounddevice', 
         'python-rtmidi ; platform_system!="Linux" and python_version<"3.11"',
+        'python-rtmidi @ git+https://github.com/Czaki/python-rtmidi.git@4f0b4131604ef341254be112f9e65e7ce106efc4 ; platform_system!="Linux" and python_version>="3.11"',
         'moderngl-window',
     ],
     extras_require = {
