@@ -150,7 +150,7 @@ class CubeLoader0(moderngl_window.loaders.texture.cube.Loader):
         #print(repr(self.meta._kwargs))
         image = super(CubeLoader0, self)._load_texture(path)
         if self.meta._kwargs.get('flip_left_right'):
-            image = image.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+            image = image.transpose(PIL.Image.Transpose.FLIP_LEFT_RIGHT)
 
         if switch:
             self.meta._kwargs[flip_key], self.meta._kwargs['flip_left_right'] = self.meta._kwargs['flip_left_right'], self.meta._kwargs[flip_key]
@@ -247,6 +247,7 @@ def load_image(
     o, 
     autocrop=False,
     flip=False, 
+    copy=True,
 ):
     
     if type(o) is str:
@@ -258,13 +259,16 @@ def load_image(
         im = PIL.Image.fromarray(o.astype('uint8'))
 
     if isinstance(o, PIL.Image.Image):
-        im = o
+        if copy and not autocrop and not flip:
+            im = o.copy()
+        else:
+            im = o
     
     if autocrop:
         im = pil_autocrop(im)
 
     if flip:
-        im = im.transpose(PIL.Image.FLIP_TOP_BOTTOM)
+        im = im.transpose(PIL.Image.Transpose.FLIP_TOP_BOTTOM)
 
     return im
 
