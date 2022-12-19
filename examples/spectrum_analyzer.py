@@ -27,11 +27,11 @@
 
 import functools
 import _thread
-import yaml
+import json
+import math
 import sys
 import io
 import os
-
 
 sys.path.insert(0, os.path.abspath('./..'))
 
@@ -52,11 +52,29 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 
+STATE_PATH = 'spectrum_analyzer.state'
+
+state = State(
+    
+    up = False,
+    down = False,
+    left = False,
+    right = False,
+    shift = False,
+    
+    decay = 0.8,
+    samples = 4096, 
+    
+    xmin = 100,
+    xmax = 20000,
+    ymin = -75,
+    ymax = 100,
+)
+
+
 dl = sd.query_devices()
 idi = sd.default.device['input']
 sample_rate = dl[idi]['default_samplerate']
-
-print('\n%s\n\n%s' % (dl, yaml.dump(dl[idi])))
 
 
 def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figsize=(10, 5), **kwargs):
@@ -83,7 +101,7 @@ def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figs
     return PIL.Image.open(buf)
 
 
-@functools.lru_cache(maxsize=16)
+@functools.lru_cache(maxsize=64)
 def get_plot_frame(xmin=0, xmax=1000, ymin=-50, ymax=50, figsize=(12, 6), rgba=False):
     
     xx = np.arange(xmin, xmax)
@@ -102,40 +120,27 @@ def get_plot_frame(xmin=0, xmax=1000, ymin=-50, ymax=50, figsize=(12, 6), rgba=F
     return PIL.Image.fromarray(a1)
 
 
-state = State(
+def get_plot_frame0():
     
-    up = False,
-    down = False,
-    
-    gain = 1.,
-    decay = 0.8,
-    samples = 4096, 
-    
-    xmin = 100,
-    xmax = 20000,
-    ymin = -75,
-    ymax = 150,
-)
+    return get_plot_frame(
+        xmin=state.xmin, xmax=state.xmax, 
+        ymin=state.ymin, ymax=state.ymax, 
+        figsize=(12, 6),
+        rgba=True,
+    )
 
 
-plot_frame_image = get_plot_frame(
-    xmin=state.xmin, xmax=state.xmax, 
-    ymin=state.ymin, ymax=state.ymax, 
-    figsize=(12, 6),
-    rgba=True,
-)
-
-w, h = plot_frame_image.size
-
+w, h = get_plot_frame0().size
 
 app = App(width=w, height=h, quality=100)#, log_level=logging.INFO)
 
+plot_frame = Sprite(get_plot_frame0(), x=w, anchor_x='right', anchor_y='bottom', collisions=False)
+label0 = Label('Use ← ↑ ↓ → SHIFT and SPACE to control the display', x=55, y=45, color='red')
 
-plot_frame = Sprite(plot_frame_image, anchor_x='left', anchor_y='left')
 
-label0 = Label('gain: %.2f' % state.gain, x=70, y=445, color='red')
-label1 = Label('use ↑ ↓ to control gain', x=70, y=470, color='red')
-
+# The code in the following cell is of a simple shadertoy shader that displays an 
+# audio spectrum. [Shadertoy shaders](http://shadertoy.com/) are an easy way to 
+# create graphic effects by programming the GPU directly:
 
 st0 = Shadertoy("""
 
@@ -149,11 +154,12 @@ st0 = Shadertoy("""
 
         float dst = 1000.;
         float dx0 = 0.00005;
+        float uvx = max(0, min(1, (uv.x - 0.05) / (0.99 - 0.05)));
         
         for (int i=0; i < 50; i++) {
         
             float dx1 = dx0 * (i - 25);
-            float dy1 = texture(iChannel0, vec2(uv.x + dx1, 0.)).r - uv.y; 
+            float dy1 = texture(iChannel0, vec2(uvx + dx1, 0.)).r - uv.y; 
             float dxy = dx1 * dx1 + dy1 * dy1;
             
             if (dxy < dst) {
@@ -182,53 +188,135 @@ st0 = Shadertoy("""
 """, w, h, 0, h, 0, 'left', 'top')
 
 
+def clip(a, low=-math.inf, high=math.inf):
+    return min(max(a, low), high)
+
+
+XMIN = 60
+XMAX = 20000
+
+
+def trans_x(tx):
+    
+    m0 = clip(XMIN / state.xmin, 0, 1)
+    m1 = clip(XMAX / state.xmax, 1, 2)
+    
+    state.xmin *= clip(tx, m0, m1) 
+    state.xmax *= clip(tx, m0, m1) 
+    
+    
+def scale_x(sx):
+    
+    mid0 = (state.xmax + state.xmin) / 2 - 500
+    mid1 = (state.xmax + state.xmin) / 2 + 500
+    
+    m0 = clip(XMIN / state.xmin, 0, 1)
+    m1 = clip(mid0 / state.xmin, 1, 2)
+    m2 = clip(mid1 / state.xmax, 0, 1)
+    m3 = clip(XMAX / state.xmax, 1, 2)
+    
+    state.xmin *= clip(sx, m0, m1) 
+    state.xmax *= clip(1/sx, m2, m3) 
+    
+    
+YMIN = -95
+YMAX = 150
+
+
+def trans_y(ty):
+    
+    m0 = clip(YMIN - state.ymin, -99, 0)
+    m1 = clip(YMAX - state.ymax, 0, 100)
+    
+    hh = state.ymax - state.ymin
+    
+    state.ymin += clip(ty, m0, m1) * hh / 16
+    state.ymax += clip(ty, m0, m1) * hh / 16
+    
+    
+def scale_y(sy):
+    
+    mid0 = (state.ymax + state.ymin) / 2 - 10
+    mid1 = (state.ymax + state.ymin) / 2 + 10
+    diff = (state.ymax - state.ymin)
+    
+    m0 = clip(YMIN - state.ymin, -99, 0)
+    m1 = clip(mid0 - state.ymin, 0, 100)
+    m2 = clip(mid1 - state.ymax, -99, 0)
+    m3 = clip(YMAX - state.ymax, 0, 100)
+    
+    state.ymin += clip(-sy, m0, m1) * diff / 16
+    state.ymax += clip(sy, m2, m3) * diff / 16
+    
+    
+def reset_xy():
+    
+    state.xmin = 100
+    state.xmax = 20000
+    
+    state.ymin = -75
+    state.ymax = 100
+
+
 @app.event
 def key_event(key, action, modifiers):
-            
+    logger.info('Enter key_event(key=%r, action=%r, modifiers=%r).', key, action, modifiers)
+    
     keys = app.window.keys
-    value = action == keys.ACTION_PRESS
 
+    value = action == keys.ACTION_PRESS
+    
+    state.shift = modifiers.shift
+        
+    if key == keys.SPACE:
+        reset_xy()
+        
     if key == keys.UP:
         state.up = value
-
+        
     if key == keys.DOWN:
         state.down = value
-
-
-@app.run_me_every(1/24)
-def modify_gain(ct, dt):
-    
-    s = 2 ** dt
-    
-    if state.up:
-        state.gain *= s
-        label0.text = 'gain: %.2f' % state.gain
-
-    if state.down:
-        state.gain /= s
-        label0.text = 'gain: %.2f' % state.gain
-
-
-data0 = []
-data1 = None
-dataz = None
-
-
-@app.event
-def render(ct, dt):
-    
-    app.window.clear()
-    
-    if data1 is not None:
         
-        data2 = (np.pad(data1, (37, 6)) - state.ymin + 0) * 1.15 + 20 
-        st0.set_channel(0, np.stack((data2, data2)), ct)   
-        st0.render(ct, dt)
-     
-    plot_frame.draw()
+    if key == keys.LEFT:
+        state.left = value
+        
+    if key == keys.RIGHT:
+        state.right = value
+
+
+@app.run_me_every(1/10)
+def modify_display(ct, dt):
     
-    label0.draw()
-    label1.draw()
+    d = -1 if state.shift else 1
+    s = 2 ** dt
+        
+    if  state.shift:
+        
+        if state.up:
+            scale_y(-s)
+
+        if state.down:
+            scale_y(s)
+
+        if state.right:
+            scale_x(s)
+
+        if state.left:
+            scale_x(1 / s)
+
+    else:
+        
+        if state.left:
+            trans_x(1 / s)
+
+        if state.right:
+            trans_x(s)
+
+        if state.down:
+            trans_y(s)
+
+        if state.up:
+            trans_y(-s)
 
 
 def resample_logx(data, num=None):
@@ -282,11 +370,16 @@ def resample_logx2(data, num=None):
     return xx
 
 
+data0 = []
+data1 = None
+dataz = None
+
+
 def callback(indata, frames, time, status):
 
     global data0, data1, dataz
 
-    data0.append(indata[:,0] * state.gain)
+    data0.append(indata[:,0].astype('float'))
 
     if len(data0) > 24:
         data0.pop(0)
@@ -326,11 +419,38 @@ async def input_worker():
         while True:
             await asyncio.sleep(1.)
 
+frame_bot = 19
+frame_top = 247
+
+@app.event
+def render(ct, dt):
+    
+    app.window.clear()
+    
+    if data1 is not None:
+        
+        data2 = (data1 - state.ymin) / (state.ymax - state.ymin)
+        data2 = data2 * (frame_top - frame_bot) + frame_bot
+        #data2 = (np.pad(data2, (36, 6))) 
+        
+        st0.set_channel(0, np.stack((data2, data2)), ct)   
+        st0.render(ct, dt)
+     
+    plot_frame.image = get_plot_frame0()
+    plot_frame.draw()
+    
+    label0.draw()
+
 
 loop = asyncio.get_event_loop_policy().get_event_loop()
 task = loop.create_task(input_worker())
 
 
 if __name__ == '__main__':
+
+    os.path.exists(STATE_PATH) and app.load_state(STATE_PATH, state)
+
     app.run(1/30)
+    
+    app.save_state(STATE_PATH, STATE_PATH, state)
 

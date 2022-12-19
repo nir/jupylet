@@ -107,6 +107,7 @@ class Sprite(Node):
             pos=(0.5, 0.5)
         )
 
+        self._image_ = img
         self.texture = load_texture(
             img,
             anisotropy=anisotropy, 
@@ -274,11 +275,20 @@ class Sprite(Node):
         You can set this property with a new image or with a path to an image 
         on disk to change the current sprite image.
         """
+
+        if isinstance(self._image_, PIL.Image.Image):
+            return self._image_
+
         return pil_from_texture(self.texture)
     
     @image.setter
     def image(self, img):
         
+        if self._image_ is img:
+            return
+        
+        self._image_ = img
+
         scale = self.scale
 
         self.texture.release()

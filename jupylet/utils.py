@@ -57,10 +57,10 @@ class LoggingWidget(logging.Handler):
         self.out = ipywidgets.Output()
         self.set_layout(height)
 
-    def set_layout(self, height='256px', overflow_y='scroll', **kwargs):
+    def set_layout(self, height='256px', overflow='scroll', **kwargs):
         self.out.layout=ipywidgets.Layout(
             height=height, 
-            overflow_y=overflow_y, 
+            overflow=overflow, 
             **kwargs
         )
 
