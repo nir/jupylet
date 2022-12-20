@@ -104,7 +104,7 @@ def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figs
     pl0 = ax0.plot(*args, **kwargs)[0] # Returns a tuple of line objects, thus the comma
     
     plt.savefig(buf, format='jpeg', bbox_inches='tight')
-    plt.close(fig)
+    #plt.close(fig) # this hangs on windows.
 
     return PIL.Image.open(buf)
 
@@ -425,6 +425,7 @@ def callback(indata, frames, time, status):
     data1 = a7[x0:x1].clip(state.ymin, state.ymax)   
 
 
+@app.run_me()
 async def input_worker():
     
     with sd.InputStream(
@@ -437,8 +438,10 @@ async def input_worker():
         while True:
             await asyncio.sleep(1.)
 
+
 frame_bot = 26
 frame_top = 247
+
 
 @app.event
 def render(ct, dt):
@@ -458,10 +461,6 @@ def render(ct, dt):
     plot_frame.draw()
     
     label0.draw()
-
-
-loop = asyncio.get_event_loop_policy().get_event_loop()
-task = loop.create_task(input_worker())
 
 
 if __name__ == '__main__':

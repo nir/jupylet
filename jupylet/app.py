@@ -529,7 +529,8 @@ class App(EventLeg, ClockLeg):
             for o, s in zip(args, sl):
                 o.set_state(s)
 
-        self._redraw_windows(0, 0)
+        if self.is_running:
+            self._redraw_windows(0, 0)
 
     def get_logging_widget(self, height='256px', quiet_default_logger=True):
         """Returns an output ipywidget to which log messages will be printed.

@@ -256,7 +256,7 @@ def load_image(
         im.load()
 
     if isinstance(o, np.ndarray):
-        im = PIL.Image.fromarray(o.astype('uint8'))
+        im = PIL.Image.fromarray(o.real.astype('uint8'))
 
     if isinstance(o, PIL.Image.Image):
         if copy and not autocrop and not flip:
