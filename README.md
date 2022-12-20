@@ -161,6 +161,8 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 * Spectrum analyzer.
 * Bug fixes. 
 
+<img src="https://user-images.githubusercontent.com/124126/208634912-6cf956ec-b1e3-43c2-87a1-3c437953b739.png" width=50% height=50%>
+
 ## What's New in Version 0.8.8
 
 * Support for Python 3.9. 
