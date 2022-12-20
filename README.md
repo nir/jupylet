@@ -156,7 +156,7 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 
 ## What's New in Version 0.8.9
 
-* Support for Python 3.10 and Python 3.11.
+* Support for Python 3.10 and Python 3.11 - except for MIDI functionality.
 * Support for macOS M1.
 * Spectrum analyzer.
 * Bug fixes. 
