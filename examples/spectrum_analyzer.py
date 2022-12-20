@@ -49,6 +49,7 @@ import numpy as np
 
 from scipy.interpolate import interp1d
 
+import matplotlib
 import matplotlib.pyplot as plt
 
 
@@ -66,7 +67,7 @@ state = State(
     samples = 4096, 
     
     xmin = 100,
-    xmax = 20000,
+    xmax = 19500,
     ymin = -75,
     ymax = 100,
 )
@@ -86,7 +87,14 @@ def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figs
     ax0 = fig.add_subplot(111)
     ax0.grid(True, which='both')
     ax0.set_xscale(xscale)
+    
+    ax0.set_xlabel('Frequency (Hz)')
+    ax0.set_ylabel('Decibel (dB)')
 
+    if xscale == 'log':
+        ax0.get_xaxis().set_major_formatter(matplotlib.ticker.LogFormatter())
+        ax0.get_xaxis().set_minor_formatter(matplotlib.ticker.LogFormatter(minor_thresholds=(10, 0)))
+    
     if xmin or xmax:
         ax0.set_xlim(xmin=xmin, xmax=xmax)
 
@@ -102,7 +110,13 @@ def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figs
 
 
 @functools.lru_cache(maxsize=64)
-def get_plot_frame(xmin=0, xmax=1000, ymin=-50, ymax=50, figsize=(12, 6), rgba=False):
+def get_plot_frame(    
+    xmin=0, xmax=1000, 
+    ymin=-50, ymax=50, 
+    figsize=(12, 6), 
+    cropx=None,
+    rgba=False
+):
     
     xx = np.arange(xmin, xmax)
     im = implot(
@@ -111,6 +125,9 @@ def get_plot_frame(xmin=0, xmax=1000, ymin=-50, ymax=50, figsize=(12, 6), rgba=F
         figsize=figsize
     )
     
+    if cropx:
+        im = im.crop((0, 0, cropx, im.size[-1]))
+        
     if not rgba:
         return im
     
@@ -120,12 +137,13 @@ def get_plot_frame(xmin=0, xmax=1000, ymin=-50, ymax=50, figsize=(12, 6), rgba=F
     return PIL.Image.fromarray(a1)
 
 
-def get_plot_frame0():
+def get_plot_frame0(cropx=None):
     
     return get_plot_frame(
         xmin=state.xmin, xmax=state.xmax, 
         ymin=state.ymin, ymax=state.ymax, 
         figsize=(12, 6),
+        cropx=cropx,
         rgba=True,
     )
 
@@ -135,7 +153,7 @@ w, h = get_plot_frame0().size
 app = App(width=w, height=h, quality=100)#, log_level=logging.INFO)
 
 plot_frame = Sprite(get_plot_frame0(), x=w, anchor_x='right', anchor_y='bottom', collisions=False)
-label0 = Label('Use ← ↑ ↓ → SHIFT and SPACE to control the display', x=55, y=45, color='red')
+label0 = Label('Use ← ↑ ↓ → SHIFT and SPACE to control the display', x=74, y=60, color='red')
 
 
 # The code in the following cell is of a simple shadertoy shader that displays an 
@@ -154,7 +172,7 @@ st0 = Shadertoy("""
 
         float dst = 1000.;
         float dx0 = 0.00005;
-        float uvx = max(0, min(1, (uv.x - 0.05) / (0.99 - 0.05)));
+        float uvx = max(0, min(1, (uv.x - 0.07) / (0.99 - 0.07)));
         
         for (int i=0; i < 50; i++) {
         
@@ -171,7 +189,7 @@ st0 = Shadertoy("""
 
         sig *= vec3(1., 1., 1.);
 
-        if (uv.x < 0.05) {
+        if (uv.x < 0.07) {
             sig *= 0;
         }
         
@@ -193,7 +211,7 @@ def clip(a, low=-math.inf, high=math.inf):
 
 
 XMIN = 60
-XMAX = 20000
+XMAX = 19500
 
 
 def trans_x(tx):
@@ -219,7 +237,7 @@ def scale_x(sx):
     state.xmax *= clip(1/sx, m2, m3) 
     
     
-YMIN = -95
+YMIN = -90
 YMAX = 150
 
 
@@ -236,8 +254,8 @@ def trans_y(ty):
     
 def scale_y(sy):
     
-    mid0 = (state.ymax + state.ymin) / 2 - 10
-    mid1 = (state.ymax + state.ymin) / 2 + 10
+    mid0 = (state.ymax + state.ymin) / 2 - 15
+    mid1 = (state.ymax + state.ymin) / 2 + 15
     diff = (state.ymax - state.ymin)
     
     m0 = clip(YMIN - state.ymin, -99, 0)
@@ -245,14 +263,14 @@ def scale_y(sy):
     m2 = clip(mid1 - state.ymax, -99, 0)
     m3 = clip(YMAX - state.ymax, 0, 100)
     
-    state.ymin += clip(-sy, m0, m1) * diff / 16
-    state.ymax += clip(sy, m2, m3) * diff / 16
+    state.ymin += clip(-sy * diff / 16, m0, m1)
+    state.ymax += clip(sy * diff / 16, m2, m3) 
     
     
 def reset_xy():
     
     state.xmin = 100
-    state.xmax = 20000
+    state.xmax = 19500
     
     state.ymin = -75
     state.ymax = 100
@@ -419,7 +437,7 @@ async def input_worker():
         while True:
             await asyncio.sleep(1.)
 
-frame_bot = 19
+frame_bot = 26
 frame_top = 247
 
 @app.event
@@ -436,7 +454,7 @@ def render(ct, dt):
         st0.set_channel(0, np.stack((data2, data2)), ct)   
         st0.render(ct, dt)
      
-    plot_frame.image = get_plot_frame0()
+    plot_frame.image = get_plot_frame0(cropx=w)
     plot_frame.draw()
     
     label0.draw()
