@@ -104,7 +104,7 @@ def implot(*args, xscale='log', xmin=None, xmax=None, ymin=None, ymax=None, figs
     pl0 = ax0.plot(*args, **kwargs)[0] # Returns a tuple of line objects, thus the comma
     
     plt.savefig(buf, format='jpeg', bbox_inches='tight')
-    #plt.close(fig) # this hangs on windows.
+    plt.close() # this may hang on Windows and pyglet.
 
     return PIL.Image.open(buf)
 
@@ -150,7 +150,7 @@ def get_plot_frame0(cropx=None):
 
 w, h = get_plot_frame0().size
 
-app = App(width=w, height=h, quality=100)#, log_level=logging.INFO)
+app = App(width=w, height=h, quality=100, window='glfw')#, log_level=logging.INFO)
 
 plot_frame = Sprite(get_plot_frame0(), x=w, anchor_x='right', anchor_y='bottom', collisions=False)
 label0 = Label('Use ← ↑ ↓ → SHIFT and SPACE to control the display', x=74, y=60, color='red')

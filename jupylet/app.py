@@ -149,12 +149,11 @@ class App(EventLeg, ClockLeg):
         set_window_size(self.window_size)
 
         conf = Dict(get_config_dict(self))
+        conf.update(kwargs)
 
         # pyglet may crash on osx.
         if conf.window == 'pyglet' and is_osx():
             conf.window = 'glfw'
-
-        conf.update(kwargs)
 
         if mode == 'window' and is_python_script():
             for k, v in vars(parse_args()).items():
