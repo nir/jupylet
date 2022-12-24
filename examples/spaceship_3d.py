@@ -63,7 +63,7 @@ sun = scene.lights['Light.Sun']
 sun.shadowmaps_depths = [1., 0.12, 0.04, 0.015, 0.0]
 
 moon = scene.meshes['Moon']
-#moon.shadow_bias = 0.2
+moon.shadow_bias = 0.2
 
 camera = scene.cameras['Camera']
 
