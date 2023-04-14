@@ -320,7 +320,7 @@ Next, create a new conda environment, activate it, and install Jupylet:
 
 .. code-block:: bash
     
-    conda create -y -n jpl python=3.9 pip
+    conda create -y -n jpl python=3.10 pip
     conda activate jpl
 
     pip install jupylet
