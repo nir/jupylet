@@ -56,6 +56,7 @@ setuptools.setup(
         'sounddevice', 
         'python-rtmidi ; platform_system!="Linux" and python_version<"3.10"',
         'moderngl-window',
+        'tornado==6.1', # workaround bug https://discourse.jupyter.org/t/jupyter-notebook-zmq-message-arrived-on-closed-channel-error/17869/19
     ],
     extras_require = {
         'midi': ['python-rtmidi']
