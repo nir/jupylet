@@ -8,18 +8,18 @@ If you are new to Python, I recommend that you install and use the
 `Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
 distribution. 
 
-**On Windows** download and run the 64-bit installer for Python 3.10. Once 
+**On Windows** -- download and run the 64-bit installer for Python 3.10. Once 
 Miniconda is installed press the :guilabel:`⊞ Winkey` and then type 
 *Miniconda* and press the :guilabel:`Enter` key. This should open a small 
 window that programmers call *console* or *shell* in which you can enter 
 commands and run programs.
 
-**On macOS with Intel processor** download and run "Miniconda3 macOS Intel x86 64-bit pkg" 
+**On macOS with Intel processor** -- download and run "Miniconda3 macOS Intel x86 64-bit pkg" 
 for Python 3.10. Once installed click the Spotlight icon :guilabel:`🔍` and 
 in the search field type *terminal* and press the :guilabel:`Enter` key to 
 open the console.
 
-**On macOS with M1 processor** download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
+**On macOS with M1 processor** -- download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
 for Python 3.10. Once installed click the Spotlight icon :guilabel:`🔍` and 
 in the search field type *terminal* and press the :guilabel:`Enter` key to 
 open the console. Then you need to run the following two commands:
@@ -29,13 +29,15 @@ open the console. Then you need to run the following two commands:
     conda install -c conda-forge numpy "libblas=*=*accelerate"
     pip install --pre -i https://pypi.anaconda.org/scipy-wheels-nightly/simple scipy
 
-**On Linux** download "Miniconda3 Linux 64-bit". This should download the file
+**On Linux** -- download "Miniconda3 Linux 64-bit". This should download the file
 Miniconda3-latest-Linux-x86_64.sh. Install it by running the following command 
-in a bash shell:
+in a bash shell (once installed start a new bash shell):
+
+.. code-block:: bash
 
     bash Miniconda3-latest-Linux-x86_64.sh
 
-Once installed open a new bash shell / console.
+------------
 
 Once Miniconda is installed it is time to install *jupylet* by typing the 
 following command in the console:
