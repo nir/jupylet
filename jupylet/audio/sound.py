@@ -58,8 +58,8 @@ DEBUG = False
 EPSILON = 1e-6
 
 
-def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, **kwargs):
-    
+def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, xscale=None, **kwargs):
+        
     import matplotlib.pyplot as plt
     import PIL.Image
     import io
@@ -75,11 +75,14 @@ def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, **kwargs):
     if ylim:
         plt.ylim(*ylim)
 
+    if xscale:
+        plt.xscale(xscale)
+    
     plt.plot(*args, **kwargs)    
     plt.savefig(b, format='PNG', bbox_inches='tight')
     plt.close()
     
-    return PIL.Image.open(b)
+    return PIL.Image.open(b).convert('RGB')
 
 
 def compute_running_mean(x, n=1024):
