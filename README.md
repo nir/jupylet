@@ -11,8 +11,8 @@ for three types of audiences:
 &nbsp;
 
 <p float="left">
-    <img src="docs/images/spaceship.gif" width="256" />
-    <img src="docs/images/spaceship_3d.gif" width="384" />
+    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship.gif" width="256" />
+    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship_3d.gif" width="384" />
 </p>
 
 ## Jupylet for Kids
@@ -122,7 +122,7 @@ And start a jupyter notebook with:
 Run the notebook by following the instructions in the notebook and a game
 canvas should appear with the spaceship example:
 
-<img src="docs/images/spaceship.gif" width="256" height="256" />
+<img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship.gif" width="256" height="256" />
 
 Alternatively, you can run the same game as a Python script from the console 
 with:
@@ -154,6 +154,13 @@ if you like it let your friends know about it!
 for his endless help in the trenches of OpenGL programming.
 * [Alban Fichet](https://afichet.github.io/) - For kindly licensing his 
 sound visualizer Shadertoy as CC BY 4.0 license.
+
+## What's New in Version 0.9.1
+
+* Support for Python 3.10 and Python 3.11 with MIDI functionality.
+* Seamlessly track changes to audio devices on macOS.
+* Workaround PIL api change - thanks to [@misolietavec](https://github.com/misolietavec).
+* Bug fixes. 
 
 ## What's New in Version 0.8.9
 

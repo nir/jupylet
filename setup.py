@@ -13,7 +13,7 @@ setuptools.setup(
     package_data={
        'jupylet': ['assets/*', 'assets/*/*', 'assets/*/*/*'],
     },
-    version = '0.9.0',
+    version = '0.9.1',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
     long_description=long_description,
@@ -21,7 +21,7 @@ setuptools.setup(
     author = 'Nir Aides',
     author_email = 'nir.8bit@gmail.com',
     url = 'https://github.com/nir/jupylet',
-    download_url = 'https://github.com/nir/jupylet/archive/v0.9.0.tar.gz',
+    download_url = 'https://github.com/nir/jupylet/archive/v0.9.1.tar.gz',
     keywords = [
         'reinforcement learning', 
         'deep learning', 
@@ -35,7 +35,7 @@ setuptools.setup(
         'kids', 
         'RL',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8,<3.12',
     install_requires=[
         'glfw',
         'mido',
@@ -47,6 +47,7 @@ setuptools.setup(
         'pillow', 
         'gltflib',
         'jupyter',
+        'notebook',
         'moderngl',
         'soundfile',
         'webcolors', 
@@ -54,9 +55,11 @@ setuptools.setup(
         'ipywidgets', 
         'matplotlib', 
         'sounddevice', 
-        'python-rtmidi ; platform_system!="Linux" and python_version<"3.10"',
+        'soundcard; platform_system=="Darwin"',
+        'python-rtmidi',
         'moderngl-window',
-        'tornado==6.1', # workaround bug https://discourse.jupyter.org/t/jupyter-notebook-zmq-message-arrived-on-closed-channel-error/17869
+        'pyzmq<25',
+        'jupyter_client<8',
     ],
     extras_require = {
         'midi': ['python-rtmidi']
@@ -74,8 +77,6 @@ setuptools.setup(
         'Topic :: Multimedia :: Sound/Audio :: Sound Synthesis',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
