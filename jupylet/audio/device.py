@@ -40,6 +40,11 @@ try:
 except:
     sd = None
 
+try:
+    import soundcard as sc
+except:
+    sc = None
+
 import numpy as np
 
 from ..audio import FPS
@@ -94,12 +99,28 @@ def _start_sound_stream():
     #    _sp['latency'] = None
 
     while True:
+
+        if _sp.pop('reset', None):
+            _reset()
+            
         with sd.OutputStream(samplerate=FPS, channels=2, callback=_stream_callback, **_sp):
             _workerq.get()
         
     global _worker_tid
     _worker_tid = None
     
+
+_nresets = 0
+
+def _reset():
+    
+    global _nresets
+
+    sd._exit_handler()
+    sd._initialize()
+
+    _nresets += 1
+
 
 LOWEST_LATENCY = 0.050
 
@@ -157,6 +178,28 @@ def stop_recording():
     return a0
 
 
+def _get_default_sc_device():
+
+    global _oe
+
+    if sc is None:
+        return None
+    
+    if _oe:
+        return None
+    
+    try:
+        return sc.default_speaker().id
+    
+    except:
+        _oe += 1
+    
+
+_oe = 0
+_ot = 0
+_od = _get_default_sc_device()
+
+
 _dt = []
 _safety_event0 = 0
 
@@ -170,10 +213,19 @@ def _stream_callback(outdata, frames, _time, status):
             buffer.
         _time (struct): A bunch of clocks.
     """
-    global _safety_event0
+    global _safety_event0, _ot, _od
 
     t0 = time.time()
     dt = _time.outputBufferDacTime - _time.currentTime
+
+    if t0 - _ot > 1:
+
+        _ot = t0
+        od_ = _get_default_sc_device()
+
+        if _od != od_:
+            _od = od_
+            _set_stream_params(reset=True)
 
     set_schedule(t0 + dt)
     
@@ -280,24 +332,24 @@ def add_sound(sound):
 def _get_sounds():
     """Get currently playing sound objects."""
 
-    sd = set()
-    sl = []
+    sd_ = set()
+    sl_ = []
 
     while _sounds0:
         s = _sounds0.pop(0)
-        if s not in sd and not s.done:
-            sl.append(s)
-            sd.add(s)
+        if s not in sd_ and not s.done:
+            sl_.append(s)
+            sd_.add(s)
 
     while _sounds1:
         s = _sounds1.pop(0)
-        if s not in sd and not s.done:
-            sl.append(s)
-            sd.add(s)
+        if s not in sd_ and not s.done:
+            sl_.append(s)
+            sd_.add(s)
 
-    _sounds1[:] = sl
+    _sounds1[:] = sl_
 
-    return sl
+    return sl_
       
 
 def _mix_sounds(sounds, frames):
