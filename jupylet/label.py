@@ -62,8 +62,12 @@ def load_font(path, size):
 def draw_chr(c, path, size):
     
     font = load_font(path, size)
-    w, h = font.getsize(c)
-    
+
+    if hasattr(font, 'getsize'):
+        w, h = font.getsize(c)
+    else:
+        w, h = font.getbbox(c)[2:]
+        
     im = PIL.Image.new('L', (w, h))
     di = PIL.ImageDraw.Draw(im)
     di.text((0, 0), c, fill='white', font=font)
