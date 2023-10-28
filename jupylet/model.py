@@ -50,6 +50,16 @@ from .resource import find_glob_path, unresolve_path, load_texture_cube
 logger = logging.getLogger(__name__)
 
 
+def moderngl_release(vao):
+
+    # Workaround a bug in moderngl.
+    if moderngl.InvalidObject is None:
+        return
+    
+    if vao is not None:
+        vao.release()
+
+
 class ShadowMap(object):
 
     def __init__(self, size=1024, pad=12):
@@ -70,9 +80,9 @@ class ShadowMap(object):
     def release(self):
 
         if self.tex is not None:
-            self.tex.release()
-            self.smp.release()
-            self.fbo.release()
+            moderngl_release(self.tex)
+            moderngl_release(self.smp)
+            moderngl_release(self.fbo)
 
     def allocate(self, ctx, layers=8):
         
@@ -741,12 +751,12 @@ class Primitive(Object):
     def __del__(self):
 
         if self.vao is not None:
-            self.vao.release()
+            moderngl_release(self.vao)
 
-        self.indices.release()
+        moderngl_release(self.indices)
 
         for b, f, n in self.content:
-            b.release()
+            moderngl_release(b)
 
     def draw(self, shader):
         #logger.debug('Enter Primitive.draw(shader=%r).', shader)
@@ -762,7 +772,7 @@ class Primitive(Object):
         if self.shader is not shader:
             self.shader = shader
             if self.vao:
-                self.vao.release()
+                moderngl_release(self.vao)
 
             ctx = get_context()
             self.vao = ctx.vertex_array(
