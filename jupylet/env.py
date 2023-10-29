@@ -105,11 +105,15 @@ def is_binder_env():
 
 def is_numpy_openblas():
     import numpy
-    ll = numpy.__config__.get_info('blas_opt_info').get('libraries', [])
-    for l in ll:
-        if 'openblas' in l:
-            return True
-    return False
+
+    if hasattr(numpy.__config__, 'get_info'):
+        ll = numpy.__config__.get_info('blas_opt_info').get('libraries', [])
+        for l in ll:
+            if 'openblas' in l:
+                return True
+        return False
+            
+    return 'openblas' in repr(numpy.__config__.show('dicts'))
 
 
 def is_osx():

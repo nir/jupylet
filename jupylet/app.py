@@ -440,7 +440,7 @@ class App(EventLeg, ClockLeg):
 
         if self._use_shm:
             shm = self.get_shared_memory()
-            shm.buf[:] = b
+            shm.buf[:len(b)] = b
             return ('__ndarray__', (w, h, 4), 'uint8', shm.name)
 
         return np.frombuffer(b, dtype='uint8').reshape(h, w, -1)
