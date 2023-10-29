@@ -71,17 +71,17 @@ If you are new to Python, I recommend that you install and use the
 [Miniconda Python](https://docs.conda.io/en/latest/miniconda.html)
 distribution. 
 
-**On Windows** &ndash; download and run the 64-bit installer for Python 3.10. Once 
+**On Windows** &ndash; download and run the 64-bit installer for Python 3.11. Once 
 Miniconda is installed press the `⊞ Winkey` and then type *Miniconda* and 
 press the `Enter` key. This should open a small window that programmers call 
 *console* or *shell* in which you can enter commands and run programs.
 
 **On macOS with Intel processor** &ndash; download and run "Miniconda3 macOS Intel x86 64-bit pkg" 
-for Python 3.10. Once installed click the Spotlight icon `🔍` and in the search 
+for Python 3.11. Once installed click the Spotlight icon `🔍` and in the search 
 field type *terminal* and press the `Enter` key to open the console.
 
 **On macOS with M1 processor** &ndash; download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
-for Python 3.10. Once installed click the Spotlight icon `🔍` and in the search 
+for Python 3.11. Once installed click the Spotlight icon `🔍` and in the search 
 field type *terminal* and press the `Enter` key to open the console. Then
 you need to run the following two commands:
 
