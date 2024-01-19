@@ -73,7 +73,7 @@ if platform.system() == 'Darwin':
 #
 if platform.system() == 'Windows' and sys.version_info >= (3, 8):
    if sys.argv[-2:] == ['-m', 'postinstall']:
-      os.system('python %s\Scripts\pywin32_postinstall.py -install' % os.__file__.rsplit('\\', 2)[0])
+      os.system(r'python %s\Scripts\pywin32_postinstall.py -install' % os.__file__.rsplit('\\', 2)[0])
       sys.exit(0)
 
 
