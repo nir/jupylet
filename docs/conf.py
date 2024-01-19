@@ -23,7 +23,7 @@ copyright = '2022, Nir Aides'
 author = 'Nir Aides'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.9.1'
+release = 'v0.9.2'
 
 
 # -- General configuration ---------------------------------------------------

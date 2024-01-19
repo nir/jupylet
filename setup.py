@@ -13,7 +13,7 @@ setuptools.setup(
     package_data={
        'jupylet': ['assets/*', 'assets/*/*', 'assets/*/*/*'],
     },
-    version = '0.9.1',
+    version = '0.9.2',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
     long_description=long_description,
@@ -21,7 +21,7 @@ setuptools.setup(
     author = 'Nir Aides',
     author_email = 'nir.8bit@gmail.com',
     url = 'https://github.com/nir/jupylet',
-    download_url = 'https://github.com/nir/jupylet/archive/v0.9.1.tar.gz',
+    download_url = 'https://github.com/nir/jupylet/archive/v0.9.2.tar.gz',
     keywords = [
         'reinforcement learning', 
         'deep learning', 
@@ -35,7 +35,7 @@ setuptools.setup(
         'kids', 
         'RL',
     ],
-    python_requires='>=3.8,<3.12',
+    python_requires='>=3.8,<3.13',
     install_requires=[
         'glfw',
         'mido',
@@ -58,8 +58,6 @@ setuptools.setup(
         'soundcard; platform_system=="Darwin"',
         'python-rtmidi',
         'moderngl-window',
-        'pyzmq<25',
-        'jupyter_client<8',
     ],
     extras_require = {
         'midi': ['python-rtmidi']

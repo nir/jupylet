@@ -30,10 +30,10 @@ import sys
 import os
 import re
 
-from .env import is_remote, has_display, is_numpy_openblas
+from .env import is_remote, has_display, is_numpy_openblas, is_jupyter
 
 
-VERSION = '0.9.1'
+VERSION = '0.9.2'
 
 
 if platform.system() == 'Linux' and not has_display():
@@ -54,6 +54,17 @@ if platform.system() == 'Darwin':
       )
 
    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
+
+if platform.system() == 'Darwin':
+   try:
+      import moderngl
+      moderngl.create_standalone_context().release()
+   except NameError:
+      if is_jupyter():
+         raise SystemError('ERROR: Library libcxx is missing. You can install it by running: conda install libcxx')
+      sys.stderr.write('ERROR: Library libcxx is missing. You can install it by running: conda install libcxx\n')
+      sys.exit(0)
 
 
 #

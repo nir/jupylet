@@ -187,6 +187,17 @@ def is_python_script():
     return False
 
 
+@functools.lru_cache()
+def is_jupyter():
+    try:
+        from IPython import get_ipython
+        if 'IPKernelApp' not in get_ipython().config:  # Checks for non-notebook IPython kernels
+            return False
+    except (ImportError, AttributeError):
+        return False
+    return True
+
+
 def is_sphinx_build():
     return 'SPHINXBUILD' in os.environ
 
