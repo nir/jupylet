@@ -78,7 +78,10 @@ press the `Enter` key. This should open a small window that programmers call
 
 **On macOS with M1 processor** &ndash; download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
 for Python 3.11. Once installed click the Spotlight icon `🔍` and in the search 
-field type *terminal* and press the `Enter` key to open the console. 
+field type *terminal* and press the `Enter` key to open the console. Then you need 
+to run the following command:
+
+    pip install --extra-index https://github.com/nir/jupylet/releases/download/v0.9.2/ moderngl glcontext
 
 **On macOS with Intel processor** &ndash; download and run "Miniconda3 macOS Intel x86 64-bit pkg" 
 for Python 3.11. Once installed click the Spotlight icon `🔍` and in the search 
