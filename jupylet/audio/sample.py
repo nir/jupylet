@@ -141,7 +141,7 @@ def read_sfz(path):
     sfz = '\n' + re.sub(r'//.*', '', sfz)
     
     rl0 = re.findall(r'(?s)<region>.*?(?=<|$)', sfz)
-    rl1 = [auto(dict(re.findall('(\w+)=(.*?(?= \w+=|\n|$))', l))) for l in rl0]
+    rl1 = [auto(dict(re.findall(r'(\w+)=(.*?(?= \w+=|\n|$))', l))) for l in rl0]
     
     return rl1
 
