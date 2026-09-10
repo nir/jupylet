@@ -5,36 +5,32 @@ How to Install and Run Jupylet
 ------------------------------
 
 If you are new to Python, I recommend that you install and use the
-`Miniconda Python <https://docs.conda.io/en/latest/miniconda.html>`_
-distribution. 
+`miniforge Python <https://github.com/conda-forge/miniforge>`_ distribution.
 
-**On Windows** -- download and run the 64-bit installer for Python 3.11. Once 
-Miniconda is installed press the :guilabel:`⊞ Winkey` and then type 
-*Miniconda* and press the :guilabel:`Enter` key. This should open a small 
-window that programmers call *console* or *shell* in which you can enter 
+**On Windows** -- download and execute `the Windows installer
+<https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe>`_.
+Once Miniforge is installed press the :guilabel:`⊞ Winkey` and then type
+*Miniforge* and press the :guilabel:`Enter` key. This should open a small
+window that programmers call *console* or *shell* in which you can enter
 commands and run programs.
 
-**On macOS with M1 processor** -- download and run "Miniconda3 macOS Apple M1 64-bit pkg" 
-for Python 3.11. Once installed click the Spotlight icon :guilabel:`🔍` and 
-in the search field type *terminal* and press the :guilabel:`Enter` key to 
-open the console. 
+**On macOS with Apple Silicon** -- download and execute `the PKG installer for Apple Silicon
+<https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg>`_.
+Once installed click the Spotlight icon :guilabel:`🔍` and in the search field
+type *terminal* and press the :guilabel:`Enter` key to open the console.
 
-**On macOS with Intel processor** -- download and run "Miniconda3 macOS Intel x86 64-bit pkg" 
-for Python 3.11. Once installed click the Spotlight icon :guilabel:`🔍` and 
-in the search field type *terminal* and press the :guilabel:`Enter` key to 
-open the console.
-
-**On Linux** -- download "Miniconda3 Linux 64-bit". This should download the file
-Miniconda3-latest-Linux-x86_64.sh. Install it by running the following command 
-in a bash shell (once installed start a new bash shell):
+**On Linux** -- download `"Miniforge3-Linux-x86_64.sh"
+<https://github.com/conda-forge/miniforge/releases/download/26.7.2-0/Miniforge3-Linux-x86_64.sh>`_.
+Install it by running the following command in a bash shell (once installed
+start a new bash shell):
 
 .. code-block:: bash
 
-    bash Miniconda3-latest-Linux-x86_64.sh
+    bash Miniforge3-Linux-x86_64.sh
 
 ------------
 
-Once Miniconda is installed it is time to install *jupylet* by typing the 
+Once Miniforge is installed it is time to install *jupylet* by typing the
 following command in the console:
 
 .. code-block:: bash
@@ -65,7 +61,7 @@ And start a jupyter notebook with:
 
 .. code-block:: bash
 
-    jupyter notebook 11-spaceship.ipynb
+    jupyter lab 11-spaceship.ipynb
 
 Run the notebook by following the instructions in the notebook and a game
 canvas should appear with the spaceship example:

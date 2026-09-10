@@ -329,7 +329,15 @@ class App(EventLeg, ClockLeg):
             self.is_running = True
             self._exit = False        
 
-            loop = asyncio.get_event_loop()
+            # Python 3.14 removed the get_event_loop() fallback that created a
+            # loop when none was running. Get the running loop (Jupyter) or make
+            # one (plain script).
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
             task = loop.create_task(self._run())
 
             if not loop.is_running():

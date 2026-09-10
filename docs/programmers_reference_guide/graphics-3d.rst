@@ -401,7 +401,10 @@ shaders online:
 
 .. raw:: html
     
-    <iframe width="384" height="216" frameborder="0" src="https://www.shadertoy.com/embed/tsXBzS?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe>
+    <a href="https://www.shadertoy.com/view/XlfGRj" target="_blank" rel="noopener">
+        <video width="384" height="216" autoplay loop muted playsinline>
+            <source src="../_static/video/star-nest.mp4" type="video/mp4">
+        </video></a>
     <br>
     <br>
     

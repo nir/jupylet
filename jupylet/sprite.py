@@ -291,16 +291,25 @@ class Sprite(Node):
 
         scale = self.scale
 
-        self.texture.release()
-        self.texture = load_texture(
+        #
+        # Build the new texture before releasing the old one and swap in a
+        # single assignment. If load_texture() raises, self.texture is left
+        # pointing at the still-valid old texture instead of a released
+        # (InvalidObject) handle, and a concurrent render never observes a
+        # half-updated state.
+        #
+        texture = load_texture(
             img,
-            anisotropy=self.anisotropy, 
+            anisotropy=self.anisotropy,
             autocrop=self.autocrop,
-            mipmap=self.mipmap, 
-            flip=False, 
+            mipmap=self.mipmap,
+            flip=False,
         )
-        self.texture.repeat_x = False
-        self.texture.repeat_y = False
+        texture.repeat_x = False
+        texture.repeat_y = False
+
+        self.texture.release()
+        self.texture = texture
 
         self.scale = scale
 

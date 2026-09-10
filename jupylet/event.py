@@ -90,7 +90,14 @@ class JupyterWindow(Window):
         
         self._event = ipyevents.Event(source=canvas)
         self._event.on_dom_event(self._on_dom_event)
-        self._event.watched_events = self._event.supported_key_events + self._event.supported_mouse_events        
+        self._event.watched_events = self._event.supported_key_events + self._event.supported_mouse_events
+
+        #
+        # ipyevents 2.x defaults prevent_default_action to False (older versions
+        # effectively swallowed the events), so arrow keys, space, etc. bubble up
+        # to JupyterLab and move the cell selection instead of reaching the game.
+        #
+        self._event.prevent_default_action = True
 
     @property
     def fbo(self) -> moderngl.Framebuffer:
@@ -313,8 +320,16 @@ class JupyterWindow(Window):
         
         kwargs = {k: e.get(k, None) for k in keys if k != 'self'}
 
+        #
+        # A DOM event handler may run user game code that issues OpenGL calls
+        # (e.g. `sprite.image = ...` releases and recreates a texture). Unlike
+        # the render loop, this callback is not guaranteed to run with the
+        # standalone GL context current, which crashes the process on macOS.
+        # `with self.ctx` makes the context current for the duration.
+        #
         try:
-            foo(**kwargs)
+            with self.ctx:
+                foo(**kwargs)
         except:
             logger.error(trimmed_traceback())
 
@@ -469,6 +484,19 @@ class EventLeg(mglw.WindowConfig):
 
         self.wnd.config = self
 
+        #
+        # moderngl-window 3.x renamed the WindowConfig event hooks
+        # (render -> on_render, key_event -> on_key_event,
+        # mouse_*_event -> on_mouse_*_event, close -> on_close), so its
+        # assign_event_callbacks() no longer picks up the methods jupylet
+        # defines on this class - it would instead bind the base
+        # WindowConfig.on_render which raises NotImplementedError. Wire the
+        # window's *_func hooks explicitly so jupylet works the same on
+        # moderngl-window 2.x and 3.x.
+        #
+        self.wnd.render_func = self.render
+        self.wnd.key_event_func = self.key_event
+        self.wnd.close_func = self.close
         self.wnd.mouse_position_event_func = self.mouse_position_event_ul
         self.wnd.mouse_drag_event_func = self.mouse_drag_event_ul
         self.wnd.mouse_press_event_func = self.mouse_press_event_ul

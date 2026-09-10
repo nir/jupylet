@@ -146,9 +146,17 @@ def get_device_latency_ms(latency='high'):
     if sd is None or is_sphinx_build():
         return 100
 
-    dd = sd.query_devices(sd.default.device[-1])
-
-    return dd['default_%s_output_latency' % latency] * 1000
+    #
+    # Querying the audio device can fail (no output device, headless build
+    # machine, PortAudio quirks across sounddevice versions). A latency probe
+    # must never break `import jupylet.audio.sound`, so fall back to a default.
+    #
+    try:
+        dd = sd.query_devices(sd.default.device[-1])
+        return dd['default_%s_output_latency' % latency] * 1000
+    except Exception:
+        logger.warning('Could not query device latency; using default.', exc_info=True)
+        return 100
 
 
 def _set_stream_params(**kwargs):

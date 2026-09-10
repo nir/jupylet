@@ -199,6 +199,8 @@ def is_jupyter():
 
 
 def is_sphinx_build():
-    return 'SPHINXBUILD' in os.environ
+    # `make html` sets SPHINXBUILD as a make variable, not an env var, so also
+    # detect a running Sphinx (e.g. autodoc importing jupylet) via sys.modules.
+    return 'SPHINXBUILD' in os.environ or 'sphinx' in sys.modules
 
     
