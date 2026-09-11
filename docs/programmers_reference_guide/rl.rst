@@ -38,7 +38,7 @@ That notebook implements a two player version of `Pong`. Run it to see what
 it does and then convert it to a Python module by the name `21-pong.py` and 
 save it in the `examples/` folder.
 
-If you did it correctly you should be able to run the game from a Miniconda 
+If you did it correctly you should be able to run the game from a Miniforge 
 prompt with:
 
 .. code-block:: bash
@@ -341,7 +341,7 @@ instance, open an SSH terminal and type the following:
     screen
     conda activate jpl
     cd jupylet/examples
-    jupyter notebook --no-browser --ip=*
+    jupyter lab --no-browser --ip=*
 
 .. note::
     The `screen` program will prevent the Jupyter server from exiting if the 

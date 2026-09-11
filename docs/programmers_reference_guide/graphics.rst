@@ -14,7 +14,7 @@ the string *"hello, world"*. You can find the notebook at
     you would like to run the notebook and experiment with it, open a command 
     console as explained in :any:`Let's get started!<getting_started>` enter
     the *jupylet/examples/* directory and type:  
-    ``jupyter notebook 02-hello-jupylet.ipynb``
+    ``jupyter lab 02-hello-jupylet.ipynb``
 
 .. note::
     To understand the code in this chapter you need to know about Python 

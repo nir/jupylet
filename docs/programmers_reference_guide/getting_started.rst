@@ -5,7 +5,7 @@ How to Install and Run Jupylet
 ------------------------------
 
 If you are new to Python, I recommend that you install and use the
-`miniforge Python <https://github.com/conda-forge/miniforge>`_ distribution.
+`Miniforge Python <https://github.com/conda-forge/miniforge>`_ distribution.
 
 **On Windows** -- download and execute `the Windows installer
 <https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe>`_.
@@ -106,14 +106,14 @@ can type and run Python code. You may do that, but once you gain a little bit
 of confidence or if you feel adventurous try starting a Jupyter notebook
 instead of a simple python interpreter.
 
-To do that start the Miniconda Prompt
+To do that start the Miniforge Prompt
 `as explained above <#how-to-install-and-run-jupylet>`_, then change
 directory into the *jupylet/examples/* directory and start a new notebook by
 typing:
 
 .. code-block:: bash
 
-    jupyter notebook 01-hello-world.ipynb
+    jupyter lab 01-hello-world.ipynb
 
 Jupyter Notebooks
 -----------------

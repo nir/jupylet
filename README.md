@@ -68,7 +68,7 @@ chapters in the Jupylet Programmer's Reference Guide.
 ## How to Install and Run Jupylet
 
 If you are new to Python, I recommend that you install and use the
-[miniforge Python](https://github.com/conda-forge/miniforge)distribution. 
+[Miniforge Python](https://github.com/conda-forge/miniforge)distribution. 
 
 **On Windows** &ndash; download and execute [the Windows installer](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe). 
 Once Miniforge is installed press the `⊞ Winkey` and then type *Miniforge* and 

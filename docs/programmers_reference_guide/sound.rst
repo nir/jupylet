@@ -457,7 +457,7 @@ If you have an electronic (piano) keyboard, chances are it has a MIDI port
 that you can connect to your computer with a MIDI to USB cable.
 
 If you installed Jupylet with MIDI support you are good to go. If not, open a
-miniconda console and type in:
+Miniforge console and type in:
 
 .. code-block:: bash
 
