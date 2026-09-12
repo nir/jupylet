@@ -290,37 +290,42 @@ can easily reach 4000 `Pong` frames per second.
 Jupylet in the Cloud
 --------------------
 
-To train any non trivial deep learning agent you need a machine that can 
-compute trillions of multiplications and additions per second. Traditionally 
+To train any non trivial deep learning agent you need a machine that can
+compute trillions of multiplications and additions per second. Traditionally
 this simply means a machine with an Nvidia GPU.
 
-If you have such a machine at home you can skip this section. If not, this 
-section explains how to setup and run Jupylet on a remote Amazon EC2 instance
-with a GPU.
+If you have such a machine at home you can skip this section. If not, this
+section explains how to setup and run Jupylet on a remote Amazon EC2 instance.
 
-Jupylet was tested on Amazon EC2 GPU servers running Ubuntu 18.04. If you 
-haven't already setup an EC2 instance I recommend that you instantiate it 
-from the `AWS Deep Learning AMI (Ubuntu 18.04) <https://aws.amazon.com/marketplace/pp/Amazon-Web-Services-AWS-Deep-Learning-AMI-Ubuntu-1/B07Y43P7X5>`_
-since it includes the required Nvidia drivers, CUDA, cuDNN, and conda.
+Jupylet was tested on an Amazon EC2 server running Ubuntu 26.04. A plain
+Ubuntu 26.04 Server instance is enough to follow this guide; if you plan to
+actually train a deep learning agent, choose a GPU instance type and install
+the Nvidia drivers separately, as described in AWS's own documentation.
 
-To connect to your EC2 server you will need an SSH client. On Windows machines
-you won't find anything better than the awesome `PuTTY <https://www.putty.org/>`_.
+To connect to your EC2 server you will need an SSH client. On Windows, the
+OpenSSH client now ships built into Windows 10/11, or you can use
+`PuTTY <https://www.putty.org/>`_.
 
-On a remote EC2 instance Jupylet runs in so called headless mode. This means 
-it uses the Nvidia GPU to render game frames without creating a game window. 
-To make this possible you will need to install a few packages by running 
-the following commands in an SSH terminal on the remote instance:
+On a remote EC2 instance Jupylet runs in so called headless mode. This means
+it renders game frames without creating a game window. To make this possible
+you will need to install a few packages by running the following commands in
+an SSH terminal on the remote instance:
 
 .. code-block:: bash
 
-    sudo apt-get update -y  
-    sudo apt-get install -y mesa-utils libegl1-mesa xvfb freeglut3-dev
+    sudo apt update
+    sudo apt install build-essential libegl1 libgl1-mesa-dri mesa-utils
+
+This works for Python 3.11 through 3.14. No audio packages are needed here -
+``jupylet.rl`` disables audio for worker processes, and in any case there is
+no way to stream audio to a browser-based notebook (only video, via the
+canvas widget), so a headless setup like this is silent by design.
 
 Next, create a new conda environment, activate it, and install Jupylet:
 
 .. code-block:: bash
-    
-    conda create -y -n jpl python=3.10 pip
+
+    conda create -y -n jpl python=3.13 pip
     conda activate jpl
 
     pip install jupylet
@@ -329,38 +334,34 @@ Next, download the jupylet repository so you may run its example notebooks:
 
 .. code-block:: bash
 
-    sudo apt-get install -y git
+    sudo apt install -y git
 
     git clone https://github.com/nir/jupylet.git
 
-Now each time you would like to start a Jupyter notebook server on the remote 
-instance, open an SSH terminal and type the following:
+Now each time you would like to start a Jupyter notebook server on the remote
+instance, don't expose it to the internet - in the EC2 security group only
+port 22 (SSH) needs to be open. From your local machine open an SSH tunnel:
 
 .. code-block:: bash
-    
+
+    ssh -L 8888:localhost:8888 ubuntu@<EC2_PUBLIC_IP>
+
+Then, in that SSH session, start a screen session and Jupyter:
+
+.. code-block:: bash
+
     screen
     conda activate jpl
     cd jupylet/examples
-    jupyter lab --no-browser --ip=*
+    jupyter lab --no-browser
 
 .. note::
-    The `screen` program will prevent the Jupyter server from exiting if the 
-    SSH terminal accidentally disconnects. If it does disconnect you may 
+    The `screen` program will prevent the Jupyter server from exiting if the
+    SSH terminal accidentally disconnects. If it does disconnect you may
     reconnect to the running screen session with the ``screen -dr`` command.
 
-The ``jupyter notebook`` command above should produce some output including a 
-security token in the form of a long string of hex digits. Copy that token 
-since you will soon need it.
-
-Finally, open a new tab in your browser and navigate to port 8888 of the 
-public DNS address of your EC2 instance. It should look something like 
-`http://ec2-BLAH.BLAH.BLAH.compute.amazonaws.com:8888/`
-
-If you did everything correctly you will be prompted to enter the security 
-token that you copied above. Paste it in and you are done.
-
-.. note::
-    Jupyter notebook sessions use regular unsecure HTTP connections. If you 
-    wish you can setup the Jupyter server to use HTTPS or limit the EC2 
-    firewall to only allow connections from your IP address.
+The ``jupyter lab`` command above should produce some output including a URL
+of the form ``http://localhost:8888/lab?token=...``. Open that URL directly
+in your local browser - it is already tunneled through SSH, so there is no
+public address to visit and no unencrypted traffic ever leaves the tunnel.
 

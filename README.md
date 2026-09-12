@@ -79,11 +79,23 @@ press the `Enter` key. This should open a small window that programmers call
 Once installed click the Spotlight icon `🔍` and in the search field type *terminal* 
 and press the `Enter` key to open the console.
 
-**On Linux** &ndash; download ["Miniforge3-Linux-x86_64.sh"](https://github.com/conda-forge/miniforge/releases/download/26.7.2-0/Miniforge3-Linux-x86_64.sh). 
+**On Ubuntu 26.04** &ndash; download ["Miniforge3-Linux-x86_64.sh"](https://github.com/conda-forge/miniforge/releases/download/26.7.2-0/Miniforge3-Linux-x86_64.sh). 
 Install it by running the following command in a bash shell (once installed 
 start a new bash shell):
 
     bash Miniforge3-Linux-x86_64.sh
+
+Jupylet also needs a few system packages: `libportaudio2` for sound, and
+`libgl1-mesa-dev`/`libegl1-mesa-dev` to run scripts directly with `python
+foo.py` (as opposed to from a notebook):
+
+    sudo apt update
+    sudo apt install libportaudio2 libgl1-mesa-dev libegl1-mesa-dev
+
+On Python 3.14 it additionally needs a C++ compiler and the X11 development
+headers to build some of its dependencies:
+
+    sudo apt install build-essential libx11-dev
 
 ---
 

@@ -94,7 +94,11 @@ class JupyterWindow(Window):
         # Capture the loop now, while we're definitely running on it, so DOM
         # events can be safely handed over to it later from that other thread.
         #
-        self._loop = asyncio.get_event_loop()
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
 
     def _watch_canvas(self, canvas):
         

@@ -136,7 +136,15 @@ def has_display():
         _has_display0(v)
 
     else:
-        p = mp.Process(target=_has_display0, args=(v,))
+        # Python 3.14 changed multiprocessing's default start method on
+        # Linux from 'fork' to 'forkserver'. Since this Process is started
+        # at package-import time, a 'forkserver'/'spawn' child re-imports
+        # jupylet, which recurses into has_display() while the interpreter
+        # is still mid-bootstrap, tripping multiprocessing's
+        # not-importing-main guard. 'fork' duplicates memory instead of
+        # re-importing, so it doesn't hit that guard.
+        ctx = mp.get_context('fork') if platform.system() == 'Linux' else mp
+        p = ctx.Process(target=_has_display0, args=(v,))
         p.start()
         p.join()
 
