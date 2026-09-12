@@ -49,7 +49,7 @@ except:
     shared_memory = None
 
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
-from .env import is_remote, is_osx, set_window_size, is_python_script, is_rl_worker
+from .env import is_remote, is_osx, has_display, set_window_size, is_python_script, is_rl_worker
 from .env import parse_args
 from .color import c2v
 from .clock import ClockLeg, Timer, setup_fake_time
@@ -131,7 +131,7 @@ class App(EventLeg, ClockLeg):
                 mode = 'jupyter'
 
         assert mode in ['window', 'jupyter', 'hidden']
-        assert not (is_remote() and mode == 'window')
+        assert has_display() or mode != 'window'
 
         if is_remote() and mode =='jupyter' and quality is None:
             quality = 20
@@ -243,7 +243,10 @@ class App(EventLeg, ClockLeg):
 
     def __del__(self):
 
-        if self._shm is not None:
+        # __init__ may raise before self._shm is set (e.g. failed assertions);
+        # don't let a partially-constructed object's __del__ mask that error
+        # with a second, unrelated AttributeError.
+        if getattr(self, '_shm', None) is not None:
             self._shm.close()
             self._shm.unlink()
 
@@ -416,6 +419,23 @@ class App(EventLeg, ClockLeg):
         t0 = time.time()
         
         self.window.render(ct, dt)
+
+        #
+        # Empirically, calling ctx.error (glGetError()) here reliably avoids
+        # a GL_INVALID_OPERATION that otherwise fires inside swap_buffers()
+        # (pyglet's internal resize handler calling glViewport() during
+        # dispatch_events(), for heavier scenes in mode='window' - e.g.
+        # shadow maps + skybox + several textured meshes). Ruled out: a
+        # plain time.sleep() doesn't fix it (not a timing issue), and
+        # ctx.finish() - a stronger, real synchronization primitive - also
+        # doesn't fix it (not a render-completion issue either). The exact
+        # mechanism by which querying the error state specifically avoids
+        # this isn't confirmed; this is a working, cheap fix, not a fully
+        # understood one.
+        #
+        if not isinstance(self.window, JupyterWindow):
+            self.window.ctx.error
+
         self.window.swap_buffers()
         
         self._time2draw = time.time() - t0

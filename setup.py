@@ -56,7 +56,7 @@ setuptools.setup(
         'matplotlib', 
         'sounddevice', 
         'soundcard; platform_system=="Darwin"',
-        'python-rtmidi',
+        #'python-rtmidi',
         'moderngl-window',
     ],
     extras_require = {

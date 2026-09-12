@@ -149,7 +149,7 @@ def _has_display0(v):
 
     try:
         import pyglet
-        pyglet.canvas.get_display()
+        pyglet.display.get_display()
         v.value = 1
     except:
         pass

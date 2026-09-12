@@ -30,6 +30,7 @@ import platform
 import moderngl
 import inspect
 import logging
+import asyncio
 import sys
 import re
 
@@ -85,6 +86,15 @@ class JupyterWindow(Window):
         self._event = None
 
         self._dragstart = False
+
+        #
+        # ipyevents delivers DOM events (keyboard, mouse) from a kernel
+        # thread other than the one running jupylet's own asyncio loop (and
+        # hence owning the standalone GL context) - see _on_dom_event below.
+        # Capture the loop now, while we're definitely running on it, so DOM
+        # events can be safely handed over to it later from that other thread.
+        #
+        self._loop = asyncio.get_event_loop()
 
     def _watch_canvas(self, canvas):
         
@@ -317,19 +327,33 @@ class JupyterWindow(Window):
             return
 
         keys = foo.__code__.co_varnames[:foo.__code__.co_argcount]
-        
+
         kwargs = {k: e.get(k, None) for k in keys if k != 'self'}
 
         #
-        # A DOM event handler may run user game code that issues OpenGL calls
-        # (e.g. `sprite.image = ...` releases and recreates a texture). Unlike
-        # the render loop, this callback is not guaranteed to run with the
-        # standalone GL context current, which crashes the process on macOS.
-        # `with self.ctx` makes the context current for the duration.
+        # This callback (_on_dom_event) runs on whatever kernel thread
+        # ipyevents/ipykernel happens to deliver the DOM event on - not
+        # necessarily (and on some setups, e.g. ipykernel's "subshell"
+        # threads, never) the thread that owns the standalone GL context.
+        # A user event handler may run game code that issues OpenGL calls
+        # (e.g. `sprite.image = ...` releases and recreates a texture), and
+        # OpenGL contexts can only be current on one thread at a time - the
+        # render loop never releases it, so calling the handler directly
+        # here would either fail outright or crash the process.
         #
+        # call_soon_threadsafe() hands the actual dispatch over to jupylet's
+        # own asyncio loop, which always runs on the thread that owns the
+        # context - the same way every other jupylet callback (rendering,
+        # @app.run_me_every, etc.) already safely touches OpenGL. It also
+        # wakes that loop immediately if it's idling in asyncio.sleep(), so
+        # this adds no meaningful latency - unlike deferring to the next
+        # scheduled render tick would.
+        #
+        self._loop.call_soon_threadsafe(self._dispatch_dom_event, foo, kwargs)
+
+    def _dispatch_dom_event(self, foo, kwargs):
         try:
-            with self.ctx:
-                foo(**kwargs)
+            foo(**kwargs)
         except:
             logger.error(trimmed_traceback())
 
