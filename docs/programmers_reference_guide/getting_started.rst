@@ -14,6 +14,12 @@ Once Miniforge is installed press the :guilabel:`⊞ Winkey` and then type
 window that programmers call *console* or *shell* in which you can enter
 commands and run programs.
 
+Jupylet may also need Microsoft's C++ Build Tools to build some of its
+dependencies. If you're not sure whether you already have them installed,
+download and run `the Build Tools for Visual Studio installer
+<https://visualstudio.microsoft.com/visual-cpp-build-tools/>`_, and in it
+select the "Desktop development with C++" workload.
+
 **On macOS with Apple Silicon** -- download and execute `the PKG installer for Apple Silicon
 <https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg>`_.
 Once installed click the Spotlight icon :guilabel:`🔍` and in the search field

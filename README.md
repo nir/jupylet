@@ -75,6 +75,11 @@ Once Miniforge is installed press the `⊞ Winkey` and then type *Miniforge* and
 press the `Enter` key. This should open a small window that programmers call 
 *console* or *shell* in which you can enter commands and run programs.
 
+Jupylet may also need Microsoft's C++ Build Tools to build some of its
+dependencies. If you're not sure whether you already have them installed,
+download and run [the Build Tools for Visual Studio installer](https://visualstudio.microsoft.com/visual-cpp-build-tools/),
+and in it select the "Desktop development with C++" workload.
+
 **On macOS with Apple Silicon** &ndash; download and execute [the PKG installer for Apple Silicon](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg). 
 Once installed click the Spotlight icon `🔍` and in the search field type *terminal* 
 and press the `Enter` key to open the console.
