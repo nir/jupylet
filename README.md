@@ -79,6 +79,13 @@ press the `Enter` key. This should open a small window that programmers call
 Once installed click the Spotlight icon `🔍` and in the search field type *terminal* 
 and press the `Enter` key to open the console.
 
+Jupylet may also need Apple's Xcode Command Line Tools to build some of its
+dependencies. If you're not sure whether you already have them installed,
+it's safe to just run this command anyway - it won't do anything if they're
+already there:
+
+    xcode-select --install
+
 **On Ubuntu 26.04** &ndash; download ["Miniforge3-Linux-x86_64.sh"](https://github.com/conda-forge/miniforge/releases/download/26.7.2-0/Miniforge3-Linux-x86_64.sh). 
 Install it by running the following command in a bash shell (once installed 
 start a new bash shell):
