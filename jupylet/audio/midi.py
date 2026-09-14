@@ -48,10 +48,9 @@ def test_rtmidi():
         return True
 
     logger.warning(
-        'Module python-rtmidi is not installed. To install it on Ubuntu ' +
-        'Linux run these commands:\n' +
-        '$ sudo apt install build-essential libasound2-dev libjack-dev\n' +
-        '$ pip install jupylet[midi]'
+        'Module python-rtmidi is not installed. For instructions on how ' +
+        'to install it see: https://jupylet.readthedocs.io/en/latest/' +
+        'programmers_reference_guide/sound.html#midi-keyboards'
     )
 
 
