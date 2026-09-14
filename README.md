@@ -68,14 +68,15 @@ chapters in the Jupylet Programmer's Reference Guide.
 ## How to Install and Run Jupylet
 
 Install and use the
-[Miniforge Python](https://github.com/conda-forge/miniforge) distribution.
+[Miniforge Python](https://github.com/conda-forge/miniforge) distribution,
+following the instructions below for your operating system.
 
-**On Windows 11** &ndash; download and execute [the Windows installer](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe). 
+**On Windows 11** &ndash; download and execute [the Miniforge Windows installer](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe). 
 Once Miniforge is installed press the `⊞ Winkey` and then type *Miniforge* and 
 press the `Enter` key. This should open a small window that programmers call 
 *console* or *shell* in which you can enter commands and run programs.
 
-**On macOS with Apple Silicon** &ndash; download and execute [the PKG installer for Apple Silicon](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg). 
+**On macOS with Apple Silicon** &ndash; download and execute [the Miniforge PKG installer for Apple Silicon](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg). 
 Once installed click the Spotlight icon `🔍` and in the search field type *terminal* 
 and press the `Enter` key to open the console.
 
@@ -85,7 +86,7 @@ start a new bash shell):
 
     bash Miniforge3-Linux-x86_64.sh
 
-Jupylet also needs a few system packages: `libportaudio2` for sound, and
+On Ubuntu Linux Jupylet also needs a few system packages: `libportaudio2` for sound, and
 `libgl1-mesa-dev`/`libegl1-mesa-dev` to run scripts directly with `python
 foo.py` (as opposed to from a notebook):
 

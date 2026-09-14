@@ -5,16 +5,17 @@ How to Install and Run Jupylet
 ------------------------------
 
 Install and use the
-`Miniforge Python <https://github.com/conda-forge/miniforge>`_ distribution.
+`Miniforge Python <https://github.com/conda-forge/miniforge>`_ distribution,
+following the instructions below for your operating system.
 
-**On Windows 11** -- download and execute `the Windows installer
+**On Windows 11** -- download and execute `the Miniforge Windows installer
 <https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe>`_.
 Once Miniforge is installed press the :guilabel:`⊞ Winkey` and then type
 *Miniforge* and press the :guilabel:`Enter` key. This should open a small
 window that programmers call *console* or *shell* in which you can enter
 commands and run programs.
 
-**On macOS with Apple Silicon** -- download and execute `the PKG installer for Apple Silicon
+**On macOS with Apple Silicon** -- download and execute `the Miniforge PKG installer for Apple Silicon
 <https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg>`_.
 Once installed click the Spotlight icon :guilabel:`🔍` and in the search field
 type *terminal* and press the :guilabel:`Enter` key to open the console.
@@ -28,7 +29,7 @@ start a new bash shell):
 
     bash Miniforge3-Linux-x86_64.sh
 
-Jupylet also needs a few system packages: ``libportaudio2`` for sound, and
+On Ubuntu Linux Jupylet also needs a few system packages: ``libportaudio2`` for sound, and
 ``libgl1-mesa-dev``/``libegl1-mesa-dev`` to run scripts directly with
 ``python foo.py`` (as opposed to from a notebook):
 
