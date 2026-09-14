@@ -67,29 +67,17 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 ## How to Install and Run Jupylet
 
-If you are new to Python, I recommend that you install and use the
-[Miniforge Python](https://github.com/conda-forge/miniforge)distribution. 
+Install and use the
+[Miniforge Python](https://github.com/conda-forge/miniforge) distribution.
 
-**On Windows** &ndash; download and execute [the Windows installer](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe). 
+**On Windows 11** &ndash; download and execute [the Windows installer](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe). 
 Once Miniforge is installed press the `⊞ Winkey` and then type *Miniforge* and 
 press the `Enter` key. This should open a small window that programmers call 
 *console* or *shell* in which you can enter commands and run programs.
 
-Jupylet may also need Microsoft's C++ Build Tools to build some of its
-dependencies. If you're not sure whether you already have them installed,
-download and run [the Build Tools for Visual Studio installer](https://visualstudio.microsoft.com/visual-cpp-build-tools/),
-and in it select the "Desktop development with C++" workload.
-
 **On macOS with Apple Silicon** &ndash; download and execute [the PKG installer for Apple Silicon](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.pkg). 
 Once installed click the Spotlight icon `🔍` and in the search field type *terminal* 
 and press the `Enter` key to open the console.
-
-Jupylet may also need Apple's Xcode Command Line Tools to build some of its
-dependencies. If you're not sure whether you already have them installed,
-it's safe to just run this command anyway - it won't do anything if they're
-already there:
-
-    xcode-select --install
 
 **On Ubuntu 26.04** &ndash; download ["Miniforge3-Linux-x86_64.sh"](https://github.com/conda-forge/miniforge/releases/download/26.7.2-0/Miniforge3-Linux-x86_64.sh). 
 Install it by running the following command in a bash shell (once installed 
@@ -104,15 +92,16 @@ foo.py` (as opposed to from a notebook):
     sudo apt update
     sudo apt install libportaudio2 libgl1-mesa-dev libegl1-mesa-dev
 
-On Python 3.14 it additionally needs a C++ compiler and the X11 development
-headers to build some of its dependencies:
-
-    sudo apt install build-essential libx11-dev
-
 ---
 
-Once Miniforge is installed it is time to install *jupylet* by typing the 
-following command in the console:
+Once Miniforge is installed, first install precompiled versions of two of
+jupylet's dependencies (this avoids possibly needing a C++ compiler,
+depending on your Python version):
+
+    conda install moderngl glcontext
+
+Now it's time to install *jupylet* itself by typing the following command in
+the console:
 
     pip install jupylet
 

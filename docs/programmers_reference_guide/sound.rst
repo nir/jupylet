@@ -456,14 +456,64 @@ instruments to your computer.
 If you have an electronic (piano) keyboard, chances are it has a MIDI port 
 that you can connect to your computer with a MIDI to USB cable.
 
-If you installed Jupylet with MIDI support you are good to go. If not, open a
-Miniforge console and type in:
+MIDI support requires the ``python-rtmidi`` package. If it's not already
+installed, see the box below for how to install it.
 
-.. code-block:: bash
+.. note::
+    **Installing python-rtmidi**
 
-    pip install jupylet[midi]
-    
-To enable midi in Jupylet you just need to choose a sound instance to use. 
+    ``python-rtmidi`` needs a C++ compiler to build, on every platform, since
+    it has no wheel of its own on PyPI. You have two options: use a
+    precompiled wheel, or install a compiler yourself.
+
+    **Option 1 - use a precompiled wheel (recommended):**
+
+    .. code-block:: bash
+
+        pip install --extra-index-url https://nir.github.io/jupylet-wheels/ --only-binary python-rtmidi python-rtmidi
+
+    **Option 2 - install a compiler and build it yourself:**
+
+    **On Windows 11** -- Jupylet needs Microsoft's C++ Build Tools to build
+    ``python-rtmidi``. If you're not sure whether you already have them
+    installed, download and run `the Build Tools for Visual Studio installer
+    <https://visualstudio.microsoft.com/visual-cpp-build-tools/>`_, and in it
+    select the "Desktop development with C++" workload. Once that's done,
+    install ``python-rtmidi``:
+
+    .. code-block:: bash
+
+        pip install python-rtmidi
+
+    **On macOS** -- Jupylet needs Apple's Xcode Command Line Tools to build
+    ``python-rtmidi``. If you're not sure whether you already have them
+    installed, it's safe to just run this command anyway - it won't do
+    anything if they're already there:
+
+    .. code-block:: bash
+
+        xcode-select --install
+
+    Once that's done, install ``python-rtmidi``:
+
+    .. code-block:: bash
+
+        pip install python-rtmidi
+
+    **On Ubuntu Linux** -- install the required system packages, then
+    ``python-rtmidi``:
+
+    .. code-block:: bash
+
+        sudo apt install build-essential libasound2-dev libjack-dev
+        pip install python-rtmidi
+
+    If you install ``python-rtmidi`` while a Jupyter kernel is already
+    running, restart the kernel afterwards and re-run the steps above (the
+    ``from jupylet.audio.bundle import *`` import in particular) so Jupylet
+    picks it up.
+
+To enable midi in Jupylet you just need to choose a sound instance to use.
 Let's hook it up with the hammond synthesizer:
 
 .. code-block:: python
