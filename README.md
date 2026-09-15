@@ -106,6 +106,16 @@ the console:
 
     pip install jupylet
 
+**Already have jupylet installed and want to update to the latest version?**
+Use this command instead - it makes sure everything jupylet depends on gets
+updated together, rather than ending up with an inconsistent mix of old and
+new:
+
+    pip install --upgrade --upgrade-strategy eager "jupylet>=0.9.4"
+
+(If you're comfortable managing separate Python environments, creating a new
+one and installing jupylet fresh into it works too.)
+
 Next, to run the example notebooks, download the *jupylet* source code. 
 If you have [Git](https://git-scm.com/) installed type the following command:
 
