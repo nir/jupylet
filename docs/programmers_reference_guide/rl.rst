@@ -304,7 +304,7 @@ the Nvidia drivers separately, as described in AWS's own documentation.
 
 To connect to your EC2 server you will need an SSH client. On Windows, the
 OpenSSH client now ships built into Windows 10/11, or you can use
-`PuTTY <https://www.putty.org/>`_.
+`PuTTY <https://www.chiark.greenend.org.uk/~sgtatham/putty/>`_.
 
 On a remote EC2 instance Jupylet runs in so called headless mode. This means
 it renders game frames without creating a game window. To make this possible

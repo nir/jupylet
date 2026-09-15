@@ -188,7 +188,7 @@ Jupylet includes basic support for the `SFZ format <https://sfzformat.com/>`_
 that will enable you to play a variety of instruments that you can find online.
 
 The piano notebook `examples/14-piano.ipynb <https://github.com/nir/jupylet/blob/master/examples/14-piano.ipynb>`_ 
-uses a multisampled xylophone from the `VCSL library <https://vis.versilstudios.com/vcsl.html>`_ 
+uses a multisampled xylophone from the `VCSL library <https://versilian-studios.com/vcsl/>`_
 by Versilian Studios. Let's see how:
 
 .. code-block:: python
@@ -252,10 +252,10 @@ entire audio stream. Impulse responses are recorded by specialists and capture
 the sonic signature of a room or any other kind of physical space.
 
 Jupylet includes `three impulses responses <https://github.com/nir/jupylet/tree/master/jupylet/assets/sounds/impulses>`_ 
-recorded by `Damian Murphy <https://www.openairlib.net/>`_ and you can find 
+recorded by `Damian Murphy <https://audiolab.york.ac.uk/damian-murphy/>`_ and you can find
 many more impulse responses in his website and elsewhere.
 
-I like Damian's `Maes Howe <https://www.openair.hosted.york.ac.uk/?page_id=602>`_ 
+I like Damian's `Maes Howe <https://github.com/nir/jupylet/tree/master/jupylet/assets/sounds/impulses#maes-howe>`_
 impulse response in particular. It adds a nice sense of space and a touch of 
 realism to the generated sound.
 

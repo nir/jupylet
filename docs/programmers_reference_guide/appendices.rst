@@ -18,15 +18,25 @@ computer science and data science they mix the laboratory and the notebook into
 one. That is, a Jupyter notebook is also a computing laboratory since you can
 actually run code in them!
 
-Here is a very special example of a traditional laboratory notebook. A page
-from `Galileo Galilei's <https://en.wikipedia.org/wiki/Galileo_Galilei>`_
-notebook in which he documented his first observations of the moons of Jupiter
-400 years ago:
+Here is perhaps the earliest and most famous example of a scientist's
+laboratory notebook. A page from `Galileo Galilei's
+<https://en.wikipedia.org/wiki/Galileo_Galilei>`_ observation diary in which
+he documented his first observations of the moons of Jupiter over 400 years
+ago:
 
-.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Galileo_manuscript.png/419px-Galileo_manuscript.png
+.. image:: https://upload.wikimedia.org/wikipedia/commons/0/06/Galileo_Galilei_%281564_-_1642%29_-_A_di_7_di_Gennaio_1610_Giove_-_Manuscript_of_observations_of_Jupiter_and_its_satellites%2C_January_1610.jpg
+   :alt: Page from Galileo Galilei's observation diary, January 1610 (Biblioteca Nazionale Centrale, Florence, Ms. Gal. 48, f. 30r)
 
-You can think of it as the first Jupiter notebook 😎 and if you know Italian
-let me know what it says.
+On January 7, 1610, Galileo pointed his telescope at Jupiter and noticed three
+tiny points of light near it. He assumed they were ordinary stars. But he kept
+looking, night after night, sketching their positions with small diagrams —
+and the points kept moving. By January 11 he understood: these were moons
+orbiting Jupiter. He wrote: *"dal che appare intorno a Giove erano 4 altre
+stelle erranti invisibili ad ognuno sino a questo tempo"* — "from which it
+appears that around Jupiter there were 4 other wandering stars, invisible to
+everyone until this time." If Jupiter had its own moons, then not everything
+in the sky revolved around the Earth. You can think of it as the first
+Jupiter notebook 😎
 
 
 The Atari 2600
@@ -55,7 +65,7 @@ algorithms.
 
 When I started learning `Deep Learning` and `Deep Reinforcement
 Learning` I found myself spending too much time trying to customize 
-`the computer code running the Atari games <https://gym.openai.com/envs/Breakout-v0/>`_, 
+`the computer code running the Atari games <https://ale.farama.org/environments/breakout/>`_, 
 and so it made perfect sense to me to spend a whole lot more time, I mean, 
 way more time, programming a completely new environment, and so Jupylet came 
 to be.
@@ -76,7 +86,7 @@ soon tried to program it, and then to program basic games with graphics and
 sound, and soon I got carried away down the rabbit hole of computation into 
 programming wonderland. 
 
-It is a wonder land in which you can turn any idea that pops into your head
+It is a wonderland in which you can turn any idea that pops into your head
 into a `something` that works and sounds and plays just like you dreamed it.
 
 The `Commodore 64` was the perfect conductor for that kind of magic. Soon

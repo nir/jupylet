@@ -79,7 +79,7 @@ visualize them by plotting the first 169 numbers:
 .. image:: ../images/sawtooth.png 
 
 The little waves on the sawtooth are actually a good thing. This is how an 
-anti-aliased sawtooth wave should look like.
+`anti-aliased sawtooth wave <https://en.wikipedia.org/wiki/Sawtooth_wave>`_ should look like.
 
 You can play this array to hear how it sounds with:
 
@@ -392,7 +392,7 @@ waves are more powerful.
 Imagine that we took apart a noise signal back to the separate sine waves 
 it is made of and measured how powerful each of the sine waves is. If we did 
 that we could then plot the power as a function of frequency, or as it is 
-commonly known a `power spectrum <https://mathworld.wolfram.com/PowerSpectrum.html>`_.
+commonly known a `power spectrum <https://en.wikipedia.org/wiki/Spectral_density>`_.
 
 Since the power of all the sine waves that make up white noise is equal, the 
 `power spectrum` of white noise would look like an horizontal line. Similarly 

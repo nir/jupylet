@@ -163,7 +163,10 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 ## What's New in Version 0.9.4
 
 * Support for Python 3.13 and Python 3.14.
-* Fix regressions. 
+* MIDI keyboard support on Windows and macOS no longer needs a compiler.
+* Fixed a security alert (Jinja2 CVE-2025-27516) in the docs build.
+* Improved docs and example notebooks.
+* Bug fixes for newer versions of Python and its dependencies.
 
 ## What's New in Version 0.9.1
 

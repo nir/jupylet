@@ -106,15 +106,14 @@ language. If you don't already have a working knowlege of Python and how to
 use it to program, I would like to suggest a few resources that may help you
 get started:
 
-- `Microsoft's introduction to Python <https://docs.microsoft.com/en-us/learn/modules/intro-to-python/1-introduction>`_
-  \- Microsoft has a long tradition of publishing good guides to programming
-  languages and this tutorial appears to be in line with this tradition. 
-  However, their Azure Cloud Shell is unfortunately a distraction. You would 
-  be better off trying out their exercises in Python's own `online shell <https://www.python.org/shell/>`_.
+- `futurecoder <https://futurecoder.io/>`_ \- a free and open source course
+  that teaches programming and Python from scratch, fully interactively,
+  right in your browser. No installation or account needed - just start
+  typing code and follow along.
 
 - `Python's own tutorial <https://docs.python.org/3/tutorial/index.html>`_
-  \- Perhaps not as didactic as Microsoft's guide, but it is a good idea to
-  get familiar with Python's official documentation.
+  \- Perhaps not as interactive, but it is a good idea to get familiar with
+  Python's official documentation.
 
 - `Mike Dane's Learn Python Yotube tutorial <https://www.youtube.com/watch?v=rfscVS0vtbw>`_
   \- Appears to be a good didactic introduction to Python.
@@ -137,17 +136,19 @@ Jupyter Notebooks
 -----------------
 
 Jupyter notebooks are awesome but they can be a little confusing at
-first. Here are a few resources that explain how to use them:
+first. Here are a couple of resources that explain how to use them:
 
-- `examples/01-hello-world.ipynb <https://github.com/nir/jupylet/blob/master/examples/01-hello-world.ipynb>`_ 
-  notebook contains a basic introduction to Jupyter notebooks. Check it out.
+- The *01-hello-world.ipynb* notebook you already have in the
+  *jupylet/examples/* directory doubles as a hands-on introduction to
+  Jupyter notebooks - open it and give it a try. It walks you through the
+  difference between markdown and code cells, editing and running cells, and
+  points you to Jupyter's own built-in :guilabel:`Help` menu's
+  :guilabel:`User Interface Tour` for a guided tour of the rest of the
+  interface.
 
-- `Running Code <https://mybinder.org/v2/gh/jupyter/notebook/master?filepath=docs%2Fsource%2Fexamples%2FNotebook%2FRunning%20Code.ipynb>`_
-  \- This is a Jupyter notebook explaining how to use Jupyter notebooks 🙂.
-  It is in fact a live notebook running in a web service called mybinder. The
-  first time you click it may take a moment to start, so give it a moment.
-  Since it is "live" you can play around with it. It works!
-
-- `Jupyter's documentation <https://jupyter-notebook.readthedocs.io/en/latest/notebook.html>`_
-  \- There's a whole lot of text in there.
+- `JupyterLab Tutorial: Python as a Calculator <https://www.youtube.com/watch?v=AoqM3TqTB6c&list=PLG7vrjhTP1d7DZJQh9ee8q4B63enMv8DV&index=3>`_
+  \- A friendly, unintimidating walkthrough of the JupyterLab interface
+  itself - cells, the toolbar, the menus, and more - picking up a bit of
+  basic Python syntax along the way. It's part of a short video series, so
+  if you like this style feel free to continue watching from there.
 
