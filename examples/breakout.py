@@ -387,7 +387,20 @@ def update_ball(ct, dt):
 
         if ball.right >= brick.left and ball.left <= brick.right and ball.top >= brick.bottom and ball.bottom <= brick.top:
             brick.opacity = 0
-            state.bvy = -state.bvy
+
+            # whichever axis the ball overlaps the brick by less is the
+            # side it just came through - bounce that axis, not always
+            # vertically, so a hit on a brick's left/right edge bounces
+            # the ball sideways instead of flipping it top-down.
+            overlap_x = min(ball.right, brick.right) - max(ball.left, brick.left)
+            overlap_y = min(ball.top, brick.top) - max(ball.bottom, brick.bottom)
+
+            if overlap_x < overlap_y:
+                ball.x += -overlap_x if ball.x < brick.x else overlap_x
+                state.bvx = -state.bvx
+            else:
+                ball.y += -overlap_y if ball.y < brick.y else overlap_y
+                state.bvy = -state.bvy
 
             state.score += brick.points
             score.image = digits_image(str(state.score).zfill(3))
