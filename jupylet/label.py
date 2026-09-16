@@ -112,11 +112,14 @@ def draw_str(s, path, size, line_height=1.2, align='left'):
     ll.append(ww)
 
     # Compute final baseline, maximum width and height for label.
-    bl = mh - bl  
+    bl = mh - bl
     mh = hh + mh
     mw = max(mw, ww)
 
-    a0 = np.zeros((mh, mw), dtype='uint8')
+    # An empty (or whitespace-only, since rstrip() above can reduce it to
+    # empty) string would otherwise produce a 0x0 image, which downstream
+    # texture loaders choke on (ZeroDivisionError).
+    a0 = np.zeros((max(mh, 1), max(mw, 1)), dtype='uint8')
 
     aw = {'left': 0, 'center': 0.5, 'right': 1}[align]
 
