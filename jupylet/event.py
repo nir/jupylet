@@ -178,6 +178,12 @@ class JupyterWindow(Window):
 
     def destroy(self) -> None:
         """Destroy the context"""
+        # TODO: dead code - nothing in the codebase calls destroy() anywhere,
+        # so this standalone context (and the window's own FBO/textures
+        # built on it) is never explicitly released. Low priority in
+        # practice (one JupyterWindow per App, alive for the process's
+        # whole life), but would matter for multiple App() instances in one
+        # process, or a future create/discard-repeatedly use case.
         self.ctx.release()
 
     @property

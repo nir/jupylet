@@ -111,7 +111,7 @@ Use this command instead - it makes sure everything jupylet depends on gets
 updated together, rather than ending up with an inconsistent mix of old and
 new:
 
-    pip install --upgrade --upgrade-strategy eager "jupylet>=0.9.4"
+    pip install --upgrade --upgrade-strategy eager "jupylet>=0.9.5"
 
 (If you're comfortable managing separate Python environments, creating a new
 one and installing jupylet fresh into it works too.)
@@ -169,6 +169,10 @@ if you like it let your friends know about it!
 for his endless help in the trenches of OpenGL programming.
 * [Alban Fichet](https://afichet.github.io/) - For kindly licensing his 
 sound visualizer Shadertoy as CC BY 4.0 license.
+
+## What's New in Version 0.9.5
+
+* Support for VR in Windows 11! Check out [examples/12-spaceship-3d.ipynb](https://github.com/nir/jupylet/blob/master/examples/12-spaceship-3d.ipynb) for an example.
 
 ## What's New in Version 0.9.4
 

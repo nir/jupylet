@@ -60,6 +60,111 @@ def moderngl_release(vao):
         vao.release()
 
 
+#
+# The headset eye currently being rendered, set by jupylet.vr around each
+# eye's draw - see set_xr_view(). Plain module state: all drawing, VR
+# included, happens on the App's own thread.
+#
+_xr_view = None
+
+# Cameras that have rendered a headset eye - see Camera._xr_view_matrices.
+_xr_cameras = weakref.WeakSet()
+
+
+def set_xr_view(position, orientation, fov, head, world_scale=1.):
+    """Make every Camera render one headset eye, until disable_xr_view().
+
+    position, orientation, fov and head are OpenXR's own per-eye view,
+    taken relative to the camera node and left as OpenXR reports them, in
+    real meters: position (x, y, z); orientation as an (x, y, z, w)
+    quaternion; fov as (left, right, up, down) angles in radians, left and
+    down negative; head as the head's own (position, orientation) in the
+    same space, for the HUD (get_xr_hud_projection), or None if unknown.
+
+    world_scale - real-world meters per scene unit - is applied only by
+    Camera._xr_view_matrices, to place the eye correctly in the scene's own
+    coordinates; position/head are kept in real meters here regardless, so
+    get_xr_hud_projection's math (which relates the eye and head poses to
+    each other, not to the scene) stays correct independent of it.
+    """
+
+    global _xr_view
+    _xr_view = (position, orientation, fov, head, world_scale)
+
+
+def disable_xr_view():
+    """Stop rendering headset eyes - see set_xr_view()."""
+
+    global _xr_view
+    _xr_view = None
+
+
+def get_xr_view():
+    return _xr_view
+
+
+def reset_xr_cameras():
+    """Call when a VR session ends. Cameras keep the rotation the headset
+    last turned them to, and forget the head pose folded into it - see
+    Camera._xr_view_matrices.
+    """
+
+    for camera in _xr_cameras:
+        camera._xr_head = glm.quat()
+
+    _xr_cameras.clear()
+
+
+def get_xr_hud_projection(canvas_size, distance, width, y=0.):
+    """Projection that draws the canvas as a virtual screen fixed in front
+    of the headset, for the eye currently being rendered.
+
+    Drawing sprites at the same pixel positions in both eye images doesn't
+    work: each eye's FOV is asymmetric, shifted outward, so the same pixel
+    is a different direction for each eye and the two images can't be
+    fused. A screen `width` meters wide, `distance` meters ahead of the
+    head, its center `y` meters above eye level (negative: below), seen
+    through each eye's own projection, gets proper parallax and fuses at
+    that distance. Returns None when not rendering a headset eye, or the
+    head pose is unknown.
+    """
+
+    if _xr_view is None or _xr_view[3] is None:
+        return None
+
+    position, orientation, (left, right, up, down), (hp, ho), _ = _xr_view
+
+    n, f = 0.05, 100.
+
+    proj = glm.frustum(
+        math.tan(left) * n, math.tan(right) * n,
+        math.tan(down) * n, math.tan(up) * n,
+        n, f,
+    )
+
+    eye_from_head = glm.inverse(_pose_matrix(position, orientation)) * _pose_matrix(hp, ho)
+
+    cw, ch = canvas_size
+    s = width / cw
+
+    hud = glm.translate(glm.mat4(1.), glm.vec3(0., y, -distance))
+    hud = glm.scale(hud, glm.vec3(s, s, 1.))
+    hud = glm.translate(hud, glm.vec3(-cw / 2, -ch / 2, 0.))
+
+    return proj * eye_from_head * hud
+
+
+def _pose_matrix(position, orientation):
+    """Matrix for one OpenXR pose - position plus facing direction, e.g.
+    "the eye sits here, pointed this way" - that turns a point given
+    relative to that pose into a point in whatever space the pose itself
+    is expressed in.
+    """
+
+    x, y, z, w = orientation
+    return glm.translate(glm.mat4(1.), glm.vec3(*position)) * glm.mat4_cast(glm.quat(w, x, y, z))
+
+
 class ShadowMap(object):
 
     def __init__(self, size=1024, pad=12):
@@ -353,6 +458,9 @@ class Material(Object):
 
         self._mlid, self._mslot = None, None
 
+    def __del__(self):
+        moderngl_release(getattr(self, '_tarr', None))
+
     def load_texture_array(self):
 
         cner0 = dict(
@@ -644,33 +752,90 @@ class Camera(Node):
         )
 
         self._aspect = 0
+        self._xr_head = glm.quat()  # identity until VR folds a head pose in
 
     def prepare(self, shader):
 
-        width, height = get_context().fbo.size
-
-        dirty = self._aspect != width / height
-        self._aspect = width / height
-                    
         _trigger_dirty_flat = self.matrix
 
-        if dirty or self._dirty:
+        if _xr_view is not None:
+            _xr_cameras.add(self)
+            view, proj, position = self._xr_view_matrices(*_xr_view[:3], _xr_view[4])
 
-            self._view0 = glm.lookAt(self.position, self.position - self.front, self.up)
-            self._proj0 = glm.perspective(
-                self.yfov, 
-                self._aspect, 
-                self.znear, 
-                self.zfar
-            )
+        else:
+            width, height = get_context().fbo.size
+            self._aspect = width / height
 
-            shader._members['view'].write(self._view0)
-            shader._members['camera.position'].value = tuple(self.position)
+            position = self.position
+            view = glm.lookAt(self.position, self.position - self.front, self.up)
+            proj = glm.perspective(self.yfov, self._aspect, self.znear, self.zfar)
 
-            shader._members['projection'].write(self._proj0)
-            shader._members['camera.zfar'].value = self.zfar
+        #
+        # Written every draw, not only when dirty: with VR (jupylet.vr) the
+        # same camera draws the canvas and each headset eye in turn, with
+        # different matrices each time. Two mat4 writes per draw - negligible.
+        #
+        shader._members['view'].write(view)
+        shader._members['camera.position'].value = tuple(position)
 
-            self._dirty.clear()
+        shader._members['projection'].write(proj)
+        shader._members['camera.zfar'].value = self.zfar
+
+        self._dirty.clear()
+
+    def _xr_view_matrices(self, position, orientation, fov, world_scale):
+        """View and projection for one headset eye, with this camera as the
+        rig: the eye pose is relative to the camera node, so moving the camera
+        moves the player, and head tracking is added on top of it.
+        """
+
+        # The only place OpenXR's real-meter position ever meets the
+        # scene's own units - see vr.world_scale (meters per scene unit,
+        # so dividing converts a real distance into scene units).
+        position = tuple(p / world_scale for p in position)
+
+        x, y, z, w = orientation
+        head = glm.quat(w, x, y, z)
+
+        #
+        # Head tracking is folded into the camera node's own rotation, so
+        # what scripts steer by - front/up, Node.move_local() - follows the
+        # headset, and after vr.stop() the canvas shows where the player was
+        # last looking. The node is treated as rig * head: whatever it holds
+        # now, minus the head folded in last time, is the rig - which keeps
+        # any rotation the script applied in between (turning with the
+        # keys) - and the new head goes in on top.
+        #
+        rig = self.rotation * glm.inverse(self._xr_head)
+        self.rotation = rig * head
+        self._xr_head = head
+
+        #
+        # The eye pose (position includes the eye's offset from the head)
+        # is relative to the rig, not the head-turned node.
+        #
+        eye = glm.translate(glm.mat4(1.), glm.vec3(*position)) * glm.mat4_cast(head)
+        world_from_eye = glm.translate(glm.mat4(1.), self.position) * glm.mat4_cast(rig) * eye
+
+        view = glm.inverse(world_from_eye)
+
+        #
+        # OpenXR describes the frustum as four signed angles (left and down
+        # negative). Headset lenses aren't centered on the eyes, so it's an
+        # off-center frustum in general - not expressible with
+        # glm.perspective(), but exactly what glm.frustum() takes, as
+        # near-plane extents.
+        #
+        left, right, up, down = fov
+        n, f = self.znear, self.zfar
+
+        proj = glm.frustum(
+            math.tan(left) * n, math.tan(right) * n,
+            math.tan(down) * n, math.tan(up) * n,
+            n, f,
+        )
+
+        return view, proj, glm.vec3(world_from_eye[3])
 
     
 class Mesh(Node):
@@ -805,6 +970,10 @@ class Skybox(Object):
                 flip_left_right=flip_left_right
             ),
         )
+
+    def __del__(self):
+        moderngl_release(getattr(self, 'cube', None))
+        moderngl_release(getattr(self, 'texture', None))
 
     def draw(self, shader=None):
                 

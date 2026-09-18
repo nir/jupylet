@@ -49,6 +49,9 @@ except:
     shared_memory = None
 
 from .resource import register_dir, set_shader_2d, set_shader_3d, set_context
+from .resource import get_context
+from .model import get_xr_view
+from .sprite import Sprite
 from .env import is_remote, is_osx, has_display, set_window_size, is_python_script, is_rl_worker
 from .env import parse_args
 from .color import c2v
@@ -77,19 +80,27 @@ def get_config_dict(config_cls):
 
 
 def _clear(
-    self, 
-    red=0.0, 
-    green=0.0, 
-    blue=0.0, 
-    alpha=1.0, 
-    depth=1.0, 
-    viewport=None, 
-    color=None, 
+    self,
+    red=0.0,
+    green=0.0,
+    blue=0.0,
+    alpha=1.0,
+    depth=1.0,
+    viewport=None,
+    color=None,
     foo=None
 ):
+    """Installed over window.clear() by patch_method() (utils.py, called
+    from App.__init__) - self is the window, foo its real clear(). Adds a
+    color= shorthand, and redirects to the current headset eye's own
+    framebuffer while one is being rendered (jupylet.vr).
+    """
 
     if color:
-        return foo(*c2v(color, alpha).rgba)
+        red, green, blue, alpha = c2v(color, alpha).rgba
+
+    if get_xr_view() is not None:
+        return get_context().fbo.clear(red, green, blue, alpha, depth, viewport)
 
     return foo(red, green, blue, alpha, depth, viewport)
 
@@ -204,6 +215,10 @@ class App(EventLeg, ClockLeg):
 
         self.buffer = b''
         self.canvas = None
+
+        # Texture to draw over the canvas/window instead of rendering
+        # normally - see set_vr_mirror() for more details.
+        self._vr_mirror = None
         
         if mode == 'jupyter':
 
@@ -228,15 +243,24 @@ class App(EventLeg, ClockLeg):
 
         #max_textures = self.ctx.info['GL_MAX_TEXTURE_IMAGE_UNITS']
 
+        #
+        # Only two shader programs in the whole engine, compiled once, here:
+        # one for all 3D drawing, one for all 2D. Every Mesh/Sprite/Label
+        # draw, for every object in every scene, runs through whichever of
+        # these two it is - not a program per object - with per-object
+        # state (matrices, textures, color) fed in as uniforms (constant
+        # arguments, fixed for one draw call) before each draw call.
+        # set_shader_3d()/set_shader_2d() (resource.py) are how
+        # the rest of the codebase reaches the one shared instance.
+        #
         set_shader_3d(self.load_program(
             vertex_shader='shaders/default-vertex-shader.glsl',
             fragment_shader='shaders/default-fragment-shader.glsl',
         ))
-
         shader = set_shader_2d(self.load_program('shaders/sprite.glsl'))
-        shader['projection'].write(glm.ortho(
-            0, width, 0, height, -1, 1
-        ))
+        shader.extra['projection'] = glm.ortho(0, width, 0, height, -1, 1)
+        shader.extra['canvas_size'] = (width, height)
+        shader['projection'].write(shader.extra['projection'])
 
         self._time2draw = 0
         self._time2draw_rm = 0
@@ -414,11 +438,68 @@ class App(EventLeg, ClockLeg):
         if interval > 0:
             self.scheduler.schedule_interval(self._redraw_windows, interval)
 
+    def set_vr_mirror(self, texture):
+        """Show a texture instead of running the render handler.
+
+        While set, each redraw draws the texture over the whole canvas or
+        window, as it currently is - even if stale - and the render handler
+        is not called. jupylet.vr uses it to mirror a headset eye while it
+        drives the render handler itself.
+        """
+
+        self._vr_mirror = texture
+
+    def disable_vr_mirror(self):
+        self._vr_mirror = None
+
+    def _blit_vr_mirror(self):
+        """Draw the VR mirror texture into the canvas/window: scaled to fit
+        without stretching, centered, black bars on the sides. Called by
+        _redraw_windows() instead of running the render handler, while a
+        mirror is set (see set_vr_mirror()).
+        """
+
+        # A Sprite showing the mirror texture directly, not one it loaded
+        # itself - built fresh every call and discarded right after.
+        # texture_owner=False: this texture is borrowed, still owned and
+        # reused by vr.py, so Sprite.__del__ must not release it along
+        # with the geometry it built for itself. collisions=False skips
+        # the per-sprite hit-testing setup, meaningless here.
+        # flip=False: Sprite defaults to flip=True to compensate for PIL's
+        # top-to-bottom row order when loading an image file. This texture
+        # was never loaded from a file - vr.py builds it with
+        # ctx.copy_framebuffer(), a GPU-to-GPU copy of the eye's own
+        # already-correctly-oriented framebuffer - so that compensation
+        # doesn't apply, and would flip an image that's already right way up.
+        sprite = Sprite(
+            texture=self._vr_mirror, 
+            texture_owner=False, 
+            collisions=False, 
+            flip=False
+        )
+
+        # Bind and clear the canvas/window itself: this also blacks out
+        # whatever the scaled image below doesn't cover, since it won't
+        # fill the whole canvas unless the aspect ratios happen to match.
+        self.window.clear()
+
+        # Fit, don't stretch: as large as the canvas allows at the
+        # texture's own aspect ratio, centered.
+        tw, th = self._vr_mirror.size
+
+        sprite.scale = min(self.width / tw, self.height / th)
+        sprite.x = self.width / 2
+        sprite.y = self.height / 2
+        sprite.render()
+
     def _redraw_windows(self, ct, dt):
-        
+
         t0 = time.time()
-        
-        self.window.render(ct, dt)
+
+        if self._vr_mirror is not None:
+            self._blit_vr_mirror()
+        else:
+            self.window.render(ct, dt)
 
         #
         # Empirically, calling ctx.error (glGetError()) here reliably avoids

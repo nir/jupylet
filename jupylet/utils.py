@@ -182,7 +182,21 @@ class Dict(dict):
 
 
 def patch_method(obj, key, method):
-    
+    """Wrap obj's existing obj.key method with `method`, so obj.key(...)
+    calls `method` instead - with the original method passed to it as the
+    `foo` keyword, for it to call through to.
+
+    `method` must therefore take a `foo` keyword, and be written to be
+    bound as a method: its first parameter stands in for `self`, bound to
+    `obj` (not to whatever class defines `method`) when called as
+    obj.key(...). See app.py's `_clear` for an example.
+
+    Idempotent: patching an already-patched obj.key again is a no-op (an
+    already-wrapped method's __func__ is the functools.partial below, not
+    a plain function - that's how it's detected), so it's safe to call
+    this more than once on the same obj.key.
+    """
+
     foo = getattr(obj, key)
     
     if isinstance(foo.__func__, functools.partial):

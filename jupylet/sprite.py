@@ -37,12 +37,25 @@ import moderngl_window as mglw
 import numpy as np
 
 from .collision import trbl, hitmap_and_outline_from_alpha, compute_collisions
-from .resource import load_texture, pil_from_texture, get_shader_2d
+from .resource import load_texture, pil_from_texture, get_shader_2d, get_context
+from .model import get_xr_view, get_xr_hud_projection, moderngl_release
 from .utils import glm_dumps, glm_loads
 from .color import c2v
 from .state import State
 from .node import Node, aa2q, q2aa
 from .lru import SPRITE_TEXTURE_UNIT
+
+
+# In VR, sprites and labels are drawn on a virtual screen fixed in front of
+# the headset: this far ahead, this wide, and with its center this far
+# above eye level (negative: below), all in meters. A screen can't fill the
+# view the way the canvas does - the edges of a headset's view are the lens
+# periphery - so this places it where the canvas's bottom, where HUDs tend
+# to live, ends up comfortably low. See Sprite.render() and
+# model.get_xr_hud_projection().
+VR_HUD_DISTANCE = 2.0
+VR_HUD_WIDTH = 1.8
+VR_HUD_Y = -0.5
 
 
 _empty_array = np.array([])
@@ -72,7 +85,7 @@ class Sprite(Node):
 
     def __init__(
         self,
-        img, 
+        img=None,
         x=0, 
         y=0,
         scale=1.0,
@@ -88,6 +101,8 @@ class Sprite(Node):
         width=None,
         name=None,
         collisions=True,
+        texture=None,
+        texture_owner=True,
     ):
         """"""
 
@@ -108,15 +123,30 @@ class Sprite(Node):
         )
 
         self._image_ = img
-        self.texture = load_texture(
-            img,
-            anisotropy=anisotropy, 
-            autocrop=autocrop,
-            mipmap=mipmap, 
-            flip=False, 
-        )
-        self.texture.repeat_x = False
-        self.texture.repeat_y = False
+
+        # Whether __del__ releases self.texture - set to False for a
+        # texture this Sprite is only borrowing (e.g. one still being
+        # rendered into elsewhere), so it isn't released out from under
+        # its actual owner.
+        self.texture_owner = texture_owner
+
+        if texture is not None:
+            # Show a texture that already exists (e.g. one being rendered
+            # into live, elsewhere) instead of loading one - skips
+            # load_texture() entirely, since there's no image source to
+            # load, crop, or generate mipmaps for.
+            self.texture = texture
+
+        else:
+            self.texture = load_texture(
+                img,
+                anisotropy=anisotropy, 
+                autocrop=autocrop,
+                mipmap=mipmap, 
+                flip=False, 
+            )
+            self.texture.repeat_x = False
+            self.texture.repeat_y = False
 
         self.baseline = 0
         self.components = self.texture.components
@@ -139,6 +169,17 @@ class Sprite(Node):
         self.set_anchor(anchor_x, anchor_y)
         self.color = color
 
+    def __del__(self):
+
+        # __init__ may raise before texture_owner/texture are set (e.g. a
+        # failed load_texture()); getattr() so a partially-constructed
+        # Sprite's __del__ doesn't mask that error with a second,
+        # unrelated AttributeError - same reasoning as App.__del__.
+        moderngl_release(getattr(self, 'geometry', None))
+
+        if getattr(self, 'texture_owner', False):
+            moderngl_release(getattr(self, 'texture', None))
+
     def update(self, shader):
         pass
 
@@ -154,9 +195,38 @@ class Sprite(Node):
                 to use for rendering.
         """
         shader = shader or get_shader_2d()
-        
+
         if self._dirty:
             self.update(shader)
+
+        #
+        # Rewritten on every draw: while a headset eye is being rendered
+        # (jupylet.vr) sprites go on a virtual screen in front of the head,
+        # with a projection per eye, and the canvas projection has to be put
+        # back for ordinary draws afterwards. See get_xr_hud_projection().
+        #
+        if get_xr_view() is None:
+            projection = shader.extra.get('projection')
+
+        else:
+            # App.__init__ always sets canvas_size on the 2D shader, before
+            # any Sprite could possibly render - a missing one is a real
+            # bug, not something to handle gracefully.
+            canvas = shader.extra.get('canvas_size')
+            assert canvas is not None, 'canvas_size missing on the 2D shader'
+
+            projection = get_xr_hud_projection(canvas, VR_HUD_DISTANCE, VR_HUD_WIDTH, VR_HUD_Y)
+
+            if projection is None:
+                # No head pose known yet this frame - shouldn't happen
+                # (render() only runs per eye once OpenXR's should_render
+                # is True, and the head pose is available whenever that's
+                # true), but there's nothing sensible to draw the HUD
+                # relative to if it does. Skip this draw rather than
+                # place it at some arbitrary fallback position.
+                return
+
+        shader['projection'].write(projection)
 
         shader['components'] = self.components
         shader['color'].write(self.color4)
@@ -308,8 +378,14 @@ class Sprite(Node):
         texture.repeat_x = False
         texture.repeat_y = False
 
-        self.texture.release()
+        # Only release the old texture if this Sprite owned it - it might
+        # be a borrowed one (texture_owner=False at construction). Either
+        # way, the newly loaded one here is always this Sprite's own.
+        if self.texture_owner:
+            self.texture.release()
+
         self.texture = texture
+        self.texture_owner = True
 
         self.scale = scale
 

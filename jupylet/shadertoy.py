@@ -49,6 +49,7 @@ from .audio.device import get_output_as_array
 from .audio import FPS
 
 from .resource import load_texture, pil_from_texture, find_path, get_context
+from .model import moderngl_release
 from .utils import glm_dumps, glm_loads
 from .color import c2v
 from .state import State
@@ -242,6 +243,11 @@ class Shadertoy(Node):
         self.fbo = None
 
     def __del__(self):
+
+        # geometry (a full-screen quad, independent of size) is released
+        # only here, not in release() below - that method is also called
+        # on every resize, and nothing there rebuilds geometry afterward.
+        moderngl_release(getattr(self, 'geometry', None))
         self.release()
 
     def release(self):
