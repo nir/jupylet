@@ -11,9 +11,9 @@ for three types of audiences:
 &nbsp;
 
 <p float="left"  align="center">
-    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship.gif" height="160" />
-    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship_3d.gif" height="160" />
-    <img src="./docs/images/spaceship_vr_320px.gif" height="160" />
+    <img alt="spaceship 2d" height="180" src="https://github.com/user-attachments/assets/80b93c9b-3ddf-4476-95df-3ed61a99af56" /> 
+    <img alt="spaceship 3d" height="180" src="https://github.com/user-attachments/assets/120117d0-8c7f-4954-a54f-2ab81dca71af" /> 
+    <img alt="spaceship vr" height="180" src="https://github.com/user-attachments/assets/056d5402-2a01-41a8-8409-b4ba89e62db5" />
     <br>
     <sub>Jupylet can be used to create games in 2d, 3d and VR!</sub>
 </p>
@@ -140,7 +140,7 @@ And start a jupyter notebook with:
 Run the notebook by following the instructions in the notebook and a game
 canvas should appear with the spaceship example:
 
-<img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship.gif" width="256" height="256" />
+<img alt="spaceship 2d" height="256" src="https://github.com/user-attachments/assets/80b93c9b-3ddf-4476-95df-3ed61a99af56" /> 
 
 Alternatively, you can run the same game as a Python script from the console 
 with:
@@ -178,9 +178,9 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 * Support for VR in Windows 11! Check out [examples/12-spaceship-3d.ipynb](https://github.com/nir/jupylet/blob/master/examples/12-spaceship-3d.ipynb) for an example.
 * A replica of the historical Atari 1978 Breakout, created entirely by AI. Check out [examples/31-breakout.ipynb](https://github.com/nir/jupylet/blob/master/examples/31-breakout.ipynb).
 
+<br>
 <p float="left">
-    <img src="./docs/images/spaceship_vr_320px.gif" height="224" />
-    <img src="./docs/images/breakout.png" height="224" />
+    <img alt="spaceship vr" height="200" src="https://github.com/user-attachments/assets/056d5402-2a01-41a8-8409-b4ba89e62db5" />       <img alt="breakout" height="200" src="https://github.com/user-attachments/assets/4fb3bdec-7461-47a4-a530-ff2735006762" />
 </p>
 
 ## What's New in Version 0.9.4
