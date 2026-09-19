@@ -10,9 +10,12 @@ for three types of audiences:
 
 &nbsp;
 
-<p float="left">
-    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship.gif" width="256" />
-    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship_3d.gif" width="384" />
+<p float="left"  align="center">
+    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship.gif" height="160" />
+    <img src="https://github.com/nir/jupylet/raw/master/docs/images/spaceship_3d.gif" height="160" />
+    <img src="./docs/images/spaceship_vr_320px.gif" height="160" />
+    <br>
+    <sub>Jupylet can be used to create games in 2d, 3d and VR!</sub>
 </p>
 
 ## Jupylet for Kids
@@ -63,7 +66,7 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 ## Requirements
 
-*Jupylet* should run on Python 3.9 and up on Windows, Mac, and Linux.
+*Jupylet* should run on Python 3.11 and up on Windows 11, Mac, and Ubuntu Linux.
 
 ## How to Install and Run Jupylet
 
@@ -173,6 +176,12 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 ## What's New in Version 0.9.5
 
 * Support for VR in Windows 11! Check out [examples/12-spaceship-3d.ipynb](https://github.com/nir/jupylet/blob/master/examples/12-spaceship-3d.ipynb) for an example.
+* A replica of the historical Atari 1978 Breakout, created entirely by AI. Check out [examples/31-breakout.ipynb](https://github.com/nir/jupylet/blob/master/examples/31-breakout.ipynb).
+
+<p float="left">
+    <img src="./docs/images/spaceship_vr_320px.gif" height="224" />
+    <img src="./docs/images/breakout.png" height="224" />
+</p>
 
 ## What's New in Version 0.9.4
 
