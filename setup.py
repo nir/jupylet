@@ -46,8 +46,7 @@ setuptools.setup(
         'scipy',
         'pillow~=12.0',
         'gltflib',
-        'jupyter',
-        'notebook',
+        'jupyterlab',
         'moderngl~=5.12',
         'soundfile',
         'webcolors~=25.0',
@@ -58,6 +57,7 @@ setuptools.setup(
         'soundcard; platform_system=="Darwin"',
         'pyopenxr; platform_system=="Windows"',
         'moderngl-window~=3.1',
+        'jupyter-mcp-server[jupyterlab]',
     ],
     extras_require = {
         'midi': ['python-rtmidi']
