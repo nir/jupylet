@@ -25,7 +25,11 @@
 """
 
 """
-Experimental OpenXR (VR headset) support, built on pyopenxr.
+Experimental VR support: shows a jupylet scene on a VR headset through
+OpenXR (the standard programming interface for VR headsets), using its
+Python binding, pyopenxr. It talks to whatever OpenXR "runtime" is active
+- the vendor software that actually drives the headset, such as Virtual
+Desktop or SteamVR.
 
 Windows 11 only. The module imports anywhere, but start() and probe() warn
 and do nothing on other platforms, without pyopenxr installed, without an
@@ -52,40 +56,71 @@ plain module functions, like jupylet.audio.
     ...
     vr.stop()       # render() goes back to the canvas/window
 
-How it works. OpenXR paces rendering with a blocking call, xr.wait_frame(),
-that returns when the compositor wants the next frame; that has to live on
-a thread of its own. Everything else stays on the App's thread, with its
-one GL context, exactly as without VR: for each frame the VR thread
-dispatches one job to the App's asyncio loop - begin the frame, draw both
-eyes, end the frame - with asyncio.run_coroutine_threadsafe(), and waits
-for it. The same trick jupylet uses for DOM events from the notebook
-(event.py). Since that job is a single callback on the loop, no scheduled
-handler or input handler can run between the two eyes, so both see the
-same scene state - no locking. The split is dictated by the OpenXR spec:
-with an OpenGL session, xrBeginFrame, xrEndFrame and the swapchain calls
-may only run on the thread holding the GL context (XR_KHR_opengl_enable);
-called from another thread while the App holds it, they hang. xrWaitFrame
-is the one frame call with no such rule.
+OpenXR add-ons. OpenXR itself doesn't assume any graphics API. Anything
+beyond the basics, OpenGL included, is an optional add-on (OpenXR calls
+them extensions) that an app must ask for when it connects to the
+runtime. XR_KHR_opengl_enable is the OpenGL one - "KHR" marks add-ons
+standardized by Khronos, the group behind both OpenXR and OpenGL.
 
-Per eye, the job binds the eye's swapchain image as the current framebuffer
-(app.window.clear() clears it), makes every Camera render that eye
-(model.set_xr_view - the scene's camera is the rig: move it and the player
-moves, with head tracking added on top), puts sprites and labels on a
-virtual screen in front of the head, and calls the App's own render
-handler. The first eye is then copied into a mirror texture that the App
-shows on the canvas/window instead of running the handler itself
-(App.set_vr_mirror), at its own pace.
+How it works. OpenXR builds each frame in three steps: xr.wait_frame()
+pauses until the headset is ready for the next frame and says when it
+will be shown; xr.begin_frame() tells the runtime we've started drawing
+it; xr.end_frame() hands the runtime the finished images to show.
+
+The drawing itself is one image per eye. Each eye has a few images to
+use, not one, because the headset is still showing the previous frame's
+image while the next one is being drawn. So the app asks OpenXR for an
+image that isn't in use, draws the frame into it, and hands it back so
+the headset can show it. (OpenXR calls this set of images a swapchain.)
+
+The waiting is a blocking call - it would freeze the App - so it runs on
+a thread of its own. All the drawing stays on the App's thread, with its
+one GL context, exactly as without VR. For every frame the VR thread
+hands the App's asyncio loop a single job - start the frame, draw both
+eyes, give the finished frame to the headset - using
+asyncio.run_coroutine_threadsafe(), and waits for it. This is the same
+trick jupylet uses for DOM events from the notebook (event.py). Being one
+callback on the loop, nothing else - no scheduled handler, no input
+handler - can run between the two eyes, so both see the same scene state,
+with no locking.
+
+Why not run begin and end on the VR thread too? Because of a rule in
+OpenXR's OpenGL add-on (XR_KHR_opengl_enable, above): xr.begin_frame(),
+xr.end_frame(), and asking for and handing back the eye images, must run
+on the thread that owns the GL context. From any other thread, while the
+App holds the context, they just hang. xr.wait_frame() is the only frame
+call without this rule, so it alone lives on the VR thread. (pyopenxr's
+xr.foo_bar() functions are the OpenXR spec's xrFooBar.)
+
+For each eye, the job:
+
+  1. Takes that eye's image from the swapchain and makes it the current
+     drawing target. app.window.clear() now clears it, not the canvas.
+  2. Switches every Camera to that eye's point of view
+     (model.set_xr_view). The scene's camera stays the player's place in
+     the world - move it and the player moves - with head tracking added
+     on top. Sprites and labels are drawn on a virtual screen floating in
+     front of the head.
+  3. Runs the App's own render handler, unchanged.
+
+The first eye's image is also copied into a mirror texture (a picture
+kept in GPU memory). While VR runs, the App shows that picture on the
+canvas/window instead of running the render handler itself
+(App.set_vr_mirror), so the canvas keeps updating at the App's own frame
+rate.
 
 start() and stop() must be called from the App's thread: a notebook cell,
 or a scheduled handler in a script. Don't call stop() from the render
 handler itself.
 
 Not implemented yet:
-  - shadow cascades are still fitted to the scene camera's own frustum, not
-    the eye's (Scene.render_shadowmaps) - fine while the two roughly agree;
+  - shadows are still computed for the region the scene camera sees, not
+    each eye's (Scene.render_shadowmaps) - fine while the two roughly
+    agree;
   - controller/input tracking;
-  - other platforms (pyopenxr has GLX/EGL bindings; the WGL shortcut below
-    and the Windows 11 gate are the only Windows-specific parts).
+  - other platforms: pyopenxr already has the Linux equivalents (GLX, EGL);
+    only the WGL shortcut below (WGL is Windows' way of connecting OpenGL
+    to a window) and the Windows 11 check are Windows-specific.
 """
 
 
@@ -155,11 +190,13 @@ def _is_windows_11():
 
 
 def _instance_create_info():
-    """ContextObject defaults to a bare InstanceCreateInfo with no
-    extensions, but its OpenGL binding setup needs the KHR OpenGL extension
-    enabled on the instance, or the xrGetOpenGL*KHR functions don't exist
-    (FunctionUnsupportedError). probe() enables it too, so it reports on
-    the same kind of instance start() will actually use.
+    """Connection settings that ask the OpenXR runtime for the OpenGL
+    add-on (see the module docstring).
+
+    pyopenxr's default settings ask for no add-ons, and without this one it
+    fails with FunctionUnsupportedError when it goes looking for the OpenGL
+    functions. probe() uses the same settings, so it reports on the
+    connection start() will actually get.
     """
     return xr.InstanceCreateInfo(
         enabled_extension_names=[xr.KHR_OPENGL_ENABLE_EXTENSION_NAME],
