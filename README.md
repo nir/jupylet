@@ -70,6 +70,14 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 ## How to Install and Run Jupylet
 
+### Let Claude Code do it
+
+You can let Claude Code install Jupylet for you. Open the [Claude Code Desktop app](https://code.claude.com/docs/en/desktop-quickstart), 
+start a new session and paste the following request: Hi Claude please install 
+Jupylet on my computer by following the instructions in https://github.com/nir/jupylet/blob/claude/CLAUDE_SETUP.md
+
+### No way, I want to do it myself!
+
 Install and use the
 [Miniforge Python](https://github.com/conda-forge/miniforge) distribution,
 following the instructions below for your operating system.
