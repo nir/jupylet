@@ -99,7 +99,8 @@ Build the plan only from these permitted actions:
   `~/jupylet` unless the person chooses another place (step 5). Only if that
   folder is free. If it exists, ask the person what to do and never
   overwrite it.
-- **D. Install Jupylet** into the environment.
+- **D. Install Jupylet** into the environment, and switch off JupyterLab's
+  "news" pop-up in that environment (one small settings file, step 9).
 
 **If another conda is set up** (step 3, check 5): only Miniforge is supported
 for Jupylet, but the person's old work must not be lost. Then the plan needs
@@ -144,7 +145,8 @@ list of instructions for you; adapt it to your actual plan:
 >    else on your computer,
 > 3. download the Jupylet code from GitHub into a folder called `jupylet` in
 >    your home folder, and
-> 4. install Jupylet with the tools it needs.
+> 4. install Jupylet with the tools it needs, and turn off the "Jupyter
+>    news" pop-up in that space (one small settings file).
 >
 > It takes a few minutes and doesn't need your administrator password. It
 > also adds a few lines to your Terminal settings (I keep a backup copy of
@@ -213,6 +215,16 @@ are the ones Jupylet uses. The folder must stay where it is.
 Then check: `$SHELL -ic "conda activate <env> && python -c 'import jupylet; print(jupylet.VERSION)'"`
 
 Expected: a version number such as `0.9.5`. If not: Problem 3.
+
+Then switch off JupyterLab's "Would you like to get notified about official
+Jupyter news?" pop-up, in this environment only. JupyterLab reads a small
+settings file from the environment's own folder:
+
+`mkdir -p "$HOME/miniforge3/envs/<env>/share/jupyter/lab/settings" && cp -n "<code>/jupylet/assets/jupyterlab/overrides.json" "$HOME/miniforge3/envs/<env>/share/jupyter/lab/settings/overrides.json"`
+
+Check: `test -f "$HOME/miniforge3/envs/<env>/share/jupyter/lab/settings/overrides.json" && echo ok`
+prints `ok`. This step is only cosmetic: if it fails, don't retry and go on to
+step 10. The person then sees the pop-up once, and can answer No.
 
 ## Step 10. Hand over
 

@@ -13,6 +13,14 @@ setuptools.setup(
     package_data={
        'jupylet': ['assets/*', 'assets/*/*', 'assets/*/*/*'],
     },
+    #
+    # JupyterLab reads settings overrides from the share/jupyter/lab/settings
+    # folder of the environment it is installed in. This one turns off the
+    # "Would you like to get notified about official Jupyter news?" popup.
+    #
+    data_files=[
+        ('share/jupyter/lab/settings', ['jupylet/assets/jupyterlab/overrides.json']),
+    ],
     version = '0.9.5',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
