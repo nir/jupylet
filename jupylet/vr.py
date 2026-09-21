@@ -166,6 +166,7 @@ _app = None
 _render = None  # the App's own render handler
 _context = None  # pyopenxr's ContextObject: instance, session, swapchains
 _mirror = None  # (texture, framebuffer) the first eye is copied into
+_msaa = None  # multisampled framebuffer the eyes are drawn into, if any
 _t0 = 0.
 _stage = ''  # the last step reached, for status()
 
@@ -264,16 +265,20 @@ def is_running():
     return _thread is not None and _thread.is_alive()
 
 
-def start(app):
+def start(app, samples=0):
     """Take over the App's render handler and run it for the headset. Warns
     and does nothing if VR isn't available here (see probe()), if the App
     has no render handler, or if already running.
 
     Args:
         app (jupylet.app.App): The running App to take over.
+        samples (int, optional): Number of samples per pixel for multisample
+            anti-aliasing (MSAA), which smooths jagged edges, for example 4.
+            It costs frame time. Independent of the App's own `samples`,
+            which only affects its window or canvas. Defaults to 0 (off).
     """
 
-    global _thread, _stop, _loop, _app, _render, _context, _mirror, _t0
+    global _thread, _stop, _loop, _app, _render, _context, _mirror, _msaa, _t0
 
     if is_running():
         return
@@ -340,6 +345,17 @@ def start(app):
     _mirror = texture, ctx.framebuffer(color_attachments=[texture])
     app.set_vr_mirror(texture)
 
+    #
+    # With samples > 1 the eyes are drawn into this multisampled framebuffer
+    # (one for both eyes: they are the same size) and averaged into each
+    # eye's image - see _resolve_msaa().
+    #
+    if samples > 1:
+        _msaa = ctx.framebuffer(
+            color_attachments=ctx.texture(size, 4, samples=samples),
+            depth_attachment=ctx.depth_texture(size, samples=samples),
+        )
+
     _loop, _app, _render, _context = loop, app, render, context
     _t0 = app.timer.time
 
@@ -353,7 +369,7 @@ def stop():
     the App. Does nothing if not running.
     """
 
-    global _thread, _loop, _app, _render, _context, _mirror
+    global _thread, _loop, _app, _render, _context, _mirror, _msaa
 
     if _context is None:
         return
@@ -378,12 +394,17 @@ def stop():
     for o in _mirror[::-1]:
         o.release()
 
+    if _msaa is not None:
+        _msaa.color_attachments[0].release()
+        _msaa.depth_attachment.release()
+        _msaa.release()
+
     try:
         _context.__exit__(None, None, None)  # session, then instance
     except Exception:
         logger.exception('Error while ending the OpenXR session.')
 
-    _loop = _app = _render = _context = _mirror = None
+    _loop = _app = _render = _context = _mirror = _msaa = None
 
 
 class _ContextProvider(xrgl.GraphicsContextProvider if xrgl else object):
@@ -557,11 +578,13 @@ def _draw_eyes(frame_state):
         # GL, so moderngl doesn't know). Wrap and re-bind it as a moderngl
         # framebuffer so ctx.fbo is right - for app.window.clear(), and
         # for anything that restores it later (Scene.render_shadowmaps) -
-        # then clear color and depth.
+        # then clear color and depth. When multisampling, the eye is drawn
+        # into _msaa instead and _resolve_msaa() fills the eye afterwards.
         #
         fbo = ctx.detect_framebuffer()
-        fbo.use()
-        fbo.clear(0., 0., 0., 1.)
+        target = fbo if _msaa is None else _msaa
+        target.use()
+        target.clear(0., 0., 0., 1.)
 
         p, o, f = view.pose.position, view.pose.orientation, view.fov
 
@@ -580,6 +603,10 @@ def _draw_eyes(frame_state):
         finally:
             disable_xr_view()
 
+        if _msaa is not None:
+            _set_stage('app: eye %d resolve' % i)
+            _resolve_msaa(fbo)
+
         if i == 0:
             _set_stage('app: mirror copy')
             ctx.copy_framebuffer(_mirror[1], fbo)
@@ -588,6 +615,29 @@ def _draw_eyes(frame_state):
 
     _app.window.use()
     _set_stage('app: frame done')
+
+
+def _resolve_msaa(eye):
+    """Average the multisampled framebuffer into the eye's image.
+
+    A multisampled framebuffer stores several colour samples per pixel, and
+    the headset needs one colour per pixel: this averages the samples, which
+    is what smooths the edges.
+    """
+
+    #
+    # Straight OpenGL instead of ctx.copy_framebuffer(): that also copies
+    # depth, and the depth formats differ (24 bit in _msaa, 32 bit in
+    # OpenXR's eye images), which OpenGL rejects, and then copies nothing.
+    # The headset needs only the colour.
+    #
+    w, h = _msaa.size
+
+    GL.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, _msaa.glo)
+    GL.glBindFramebuffer(GL.GL_DRAW_FRAMEBUFFER, eye.glo)
+    GL.glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL.GL_COLOR_BUFFER_BIT, GL.GL_NEAREST)
+
+    eye.use()
 
 
 def _locate_head(frame_state):

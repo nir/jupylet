@@ -428,6 +428,8 @@ class Material(Object):
         occlusion=None,
         normals=None,
         normals_scale=1,
+        normals_bias=0,
+        normals_fade=8,
     ):
         
         super(Material, self).__init__()
@@ -443,6 +445,8 @@ class Material(Object):
             occlusion = occlusion,
             normals = normals,
             normals_scale = normals_scale or 1,
+            normals_bias = normals_bias,
+            normals_fade = normals_fade,
             normals_gamma = self.compute_normals_gamma(normals),
         )
 
@@ -535,6 +539,8 @@ class Material(Object):
                                     
             shader._members[material + 'normals_texture'].value = self._normals
             shader._members[material + 'normals_scale'].value = self.normals_scale
+            shader._members[material + 'normals_bias'].value = self.normals_bias
+            shader._members[material + 'normals_fade'].value = self.normals_fade
             shader._members[material + 'normals_gamma'].value = self.normals_gamma
                     
             shader._members[material + 'emissive_texture'].value = self._emissive

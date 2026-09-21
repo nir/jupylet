@@ -76,6 +76,7 @@ class JupyterWindow(Window):
         super(Window, self).__init__(**kwargs)
 
         self._fbo = None
+        self._msaa_resolve_fbo = None
         self._vsync = False  # We don't care about vsync in headless mode
         self._resizable = False  # headless window is not resizable
         self._cursor = False  # Headless don't have a cursor
@@ -118,6 +119,18 @@ class JupyterWindow(Window):
         """moderngl.Framebuffer: The default framebuffer"""
         return self._fbo
 
+    @property
+    def read_fbo(self) -> moderngl.Framebuffer:
+        """moderngl.Framebuffer: The framebuffer to read pixels from.
+
+        The default framebuffer, or its single-sample copy if it is
+        multisampled (see `swap_buffers()`).
+        """
+        if self._msaa_resolve_fbo is not None:
+            return self._msaa_resolve_fbo
+        else:
+            return self._fbo
+
     def init_mgl_context(self) -> None:
         """Create an standalone context and framebuffer"""
 
@@ -145,6 +158,18 @@ class JupyterWindow(Window):
             color_attachments=self.ctx.texture((w, h), 4, samples=self._samples),
             depth_attachment=self.ctx.depth_texture((w, h), samples=self._samples),
         )
+
+        self._release_msaa_resolve_fbo()
+
+        #
+        # The game draws into _fbo, which stores several colour samples per
+        # pixel. The GPU can't read those back directly, so each frame
+        # _resolve_msaa() averages them into this normal framebuffer.
+        #
+        if self._samples > 1:
+            self._msaa_resolve_fbo = self.ctx.framebuffer(
+                color_attachments=self.ctx.texture((w, h), 4),
+            )
 
         self.use()        
 
@@ -174,7 +199,20 @@ class JupyterWindow(Window):
         """
         # NOTE: No double buffering currently
         self._frames += 1
+        self._resolve_msaa()
         self.ctx.finish()
+
+    def _resolve_msaa(self):
+        """Average the multisampled framebuffer into its single-sample copy."""
+        if self._msaa_resolve_fbo is not None:
+            self.ctx.copy_framebuffer(self._msaa_resolve_fbo, self._fbo)
+
+    def _release_msaa_resolve_fbo(self):
+        """Release the single-sample copy and its texture, if there is one."""
+        if self._msaa_resolve_fbo is not None:
+            self._msaa_resolve_fbo.color_attachments[0].release()
+            self._msaa_resolve_fbo.release()
+            self._msaa_resolve_fbo = None
 
     def destroy(self) -> None:
         """Destroy the context"""
@@ -184,6 +222,7 @@ class JupyterWindow(Window):
         # practice (one JupyterWindow per App, alive for the process's
         # whole life), but would matter for multiple App() instances in one
         # process, or a future create/discard-repeatedly use case.
+        self._release_msaa_resolve_fbo()
         self.ctx.release()
 
     @property

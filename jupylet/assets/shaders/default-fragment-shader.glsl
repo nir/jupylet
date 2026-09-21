@@ -34,6 +34,8 @@ struct Material {
     int normals_texture;
     float normals_gamma;
     float normals_scale;
+    float normals_bias;
+    float normals_fade;
 
     float specular;
     float metallic;
@@ -225,6 +227,7 @@ struct Light0 {
 
     float roughness;
     float metallic;
+    float alpha;
 };  
 
 Light0 l0;
@@ -243,11 +246,42 @@ void compute_light0() {
         mat3 TBN = cotangent_frame(l0.normal, -l0.view_direction, frag_uv); 
         int layer = materials[mi].normals_texture;
 
-        l0.normal = texture(tarr, vec3(frag_uv, layer)).rgb;
+        l0.normal = texture(tarr, vec3(frag_uv, layer), materials[mi].normals_bias).rgb;
         l0.normal = pow(l0.normal, vec3(materials[mi].normals_gamma)) * 2 - 1;
-        l0.normal.xy *= materials[mi].normals_scale;
+
+        //
+        // Fade the normal map out where it is minified. A pixel that covers
+        // many of its texels can't show the detail, and the shading flickers
+        // as the view moves. texels is how many texels of the map one screen
+        // pixel covers. The map keeps its full strength up to normals_fade
+        // texels per pixel, and fades out beyond that.
+        //
+        vec2 texel_dx = dFdx(frag_uv) * vec2(textureSize(tarr, 0).xy);
+        vec2 texel_dy = dFdy(frag_uv) * vec2(textureSize(tarr, 0).xy);
+        float texels = sqrt(max(dot(texel_dx, texel_dx), dot(texel_dy, texel_dy)));
+        float fade = clamp(materials[mi].normals_fade / max(texels, 0.0001), 0.0, 1.0);
+
+        l0.normal.xy *= materials[mi].normals_scale * fade;
         l0.normal = normalize(TBN * normalize(l0.normal)); 
     }
+
+    //
+    // Specular anti-aliasing. Where the normal changes quickly from one pixel
+    // to the next (a fine normal map, far away or at a curved edge), the
+    // highlight is sub-pixel detail that flickers as the view moves. Widen
+    // it there instead. spec_aa is added to the highlight's alpha squared,
+    // and capped so that it never blurs it away completely.
+    //
+    // Method: Tokuyoshi and Kaplanyan, "Improved Geometric Specular
+    // Antialiasing", I3D 2019 (doi 10.1145/3306131.3317026), in the
+    // simplified form of Filament's normalFiltering(), with its default
+    // constants: a variance of 0.15 (so 2 * 0.15 = 0.3 below) and a cap of
+    // 0.2. Unlike there, the normal differentiated here includes the normal
+    // map.
+    //
+    vec3 dndx = dFdx(l0.normal);
+    vec3 dndy = dFdy(l0.normal);
+    float spec_aa = min(0.3 * (dot(dndx, dndx) + dot(dndy, dndy)), 0.2);
 
     l0.color = materials[mi].color.xyz;
 
@@ -266,6 +300,14 @@ void compute_light0() {
         l0.roughness = r4.y;
         l0.metallic = 1.0 - r4.w;
     }
+
+    //
+    // The highlight's alpha is the roughness squared. spec_aa is added to
+    // alpha squared, which dggx() works with, so square, add, and take the
+    // square root to get alpha back.
+    //
+    float alpha0 = l0.roughness * l0.roughness;
+    l0.alpha = sqrt(min(alpha0 * alpha0 + spec_aa, 1.0));
 } 
 
 
@@ -312,10 +354,10 @@ vec3 compute_light(int light_index) {
     vec3 f0 = mix(l0.color * materials[mi].specular, l0.color, l0.metallic);
     vec3 f = fschlick(vh, f0);
 
-    float r = materials[mi].roughness;
+    float r = l0.roughness;
     float k = (r + 1.0) * (r + 1.0) / 8.0;
 
-    float d = dggx(nh, r * r);
+    float d = dggx(nh, l0.alpha);
     float g = gsmith(nv, nl, k);
 
     vec3 ks = f;

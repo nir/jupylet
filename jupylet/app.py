@@ -523,7 +523,7 @@ class App(EventLeg, ClockLeg):
         self._time2draw_rm = self._time2draw_rm * 0.95 + self._time2draw * 0.05
 
         if self.mode != 'window':
-            self.buffer = self.window.fbo.read(components=4)
+            self.buffer = self._read_fbo().read(components=4)
         
         if self.mode == 'jupyter':
 
@@ -554,11 +554,16 @@ class App(EventLeg, ClockLeg):
 
         return np.frombuffer(b, dtype='uint8').reshape(h, w, -1)
 
+    def _read_fbo(self):
+        # Only JupyterWindow has read_fbo: the single-sample copy of a
+        # multisampled framebuffer, which can't be read directly.
+        return getattr(self.window, 'read_fbo', self.window.fbo)
+
     def get_buffer(self):
 
         w, h = self.window.fbo.size
         if w * h * 4 != len(self.buffer):
-            self.buffer = self.window.fbo.read(components=4)
+            self.buffer = self._read_fbo().read(components=4)
 
         return self.buffer
 

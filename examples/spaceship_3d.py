@@ -65,6 +65,10 @@ sun.shadowmaps_depths = [1., 0.12, 0.04, 0.015, 0.0]
 moon = scene.meshes['Moon']
 moon.shadow_bias = 0.2
 
+# Soften the normals that were determined in Blender.
+moon_surface = moon.primitives[0].material
+moon_surface.normals_scale = 0.1
+
 camera = scene.cameras['Camera']
 
 
