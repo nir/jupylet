@@ -152,13 +152,16 @@ kernel (Problem 1).
 
 ## Part 3: Stopping
 
-1. `<python> -m jupylet.claude shutdown 8888 <token>` (expected: `stopped`).
-2. Check that your Jupyter process is gone. Yours is the one whose command
-   contains your token (macOS and Linux):
-   `ps -axo pid,command | grep "token=<token>" | grep -v grep`
-   Poll every few seconds for up to 30 seconds. If it is still there after
-   that, stop that one process (Problem 10).
-3. Close the browser page with `tabs_close`.
+1. `<python> -m jupylet.claude shutdown 8888 <token>`
+   It ends every notebook and every kernel first (there can be kernels
+   without a notebook), then shuts the server down, waits for it to exit, and
+   only if the process lingers, stops it. It takes a few seconds. Expected:
+   `stopped`. Also fine: `not running`, and `stopped after ending its
+   process`. Anything else: Problem 10.
+2. Close the browser page with `tabs_close`.
+
+Only ever do this for the Jupyter you started yourself: it ends every kernel
+on that server.
 
 ## Part 4: Starting over
 
@@ -240,16 +243,17 @@ Server Error".
 Do: read the cell outputs (`read_cell`, `read_notebook`) to find the real
 error.
 
-**10. Jupyter does not exit after the shutdown command.**
-Symptom: `shutdown` prints `stopped` (the port is closed), but the process
-is still there. Usually it exits within 1 to 10 seconds (kernels and
-extensions are stopped first). Once, in our tests, it was still alive after
-more than two minutes; its log ended at "Kernel shutdown" and nothing came
-after. Cause: unknown.
-Do: poll for up to 30 seconds (Part 3). Never force it earlier. If it is
-still there, stop only your own process (the one with your token in its
-command): `kill <pid>`, wait 5 seconds, and only then `kill -9 <pid>`. Then
-`ps` again to confirm it is gone.
+**10. Jupyter does not stop cleanly.**
+Symptom: before, the server stopped answering but its process stayed alive
+for minutes, with the log ending at "Kernel shutdown". That happened when the
+server was shut down while kernels were still running (a game in a notebook
+kernel, or a kernel with no notebook). `shutdown` now ends every session and
+kernel first, and then the server exits by itself within a second or two.
+Do: nothing, in the normal case. `shutdown` also stops the process itself if
+it lingers (the one with your token in its command; normal stop first, then
+force) and prints `stopped after ending its process`. If it prints `a kernel
+is still running: not shutting the server down`, or `still running`, tell the
+person plainly and stop; don't kill anything yourself.
 
 **11. Port 8888 is already in use, or a second Jupyter is running.**
 Cause: another Jupyter is open, from an earlier session or the person's own

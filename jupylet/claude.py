@@ -44,9 +44,12 @@ import json
 import os
 import re
 import shutil
+import signal
 import socket
+import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 
@@ -196,13 +199,62 @@ def _answers(port):
         return s.connect_ex(('127.0.0.1', int(port))) == 0
 
 
-def shutdown(port, token, timeout=30):
-    """Ask Jupyter to shut down and wait until its port stops answering.
+def _wait_until(check, timeout):
+    t0 = time.time()
 
-    Shutting down takes a while (about 10 seconds is normal): kernels and
-    extensions are stopped first. The process may still be finishing a moment
-    after the port closes.
+    while not check():
+        if time.time() - t0 > timeout:
+            return False
+
+        time.sleep(1)
+
+    return True
+
+
+def _pids(token):
+    """Ids of the processes started with this Jupyter token (macOS, Linux)."""
+    try:
+        out = subprocess.run(
+            ['ps', '-axo', 'pid=,command='], capture_output=True, text=True
+        ).stdout
+    except OSError:
+        return []
+
+    pids = [int(line.split(None, 1)[0]) for line in out.splitlines()
+            if 'IdentityProvider.token=' + token in line]
+
+    return [p for p in pids if p != os.getpid()]
+
+
+def shutdown(port, token, timeout=30):
+    """Shut down the Jupyter server that was started with this token.
+
+    Only for the server you started yourself: it ends every kernel on it.
+    In this order: every notebook session, every remaining kernel (there can
+    be kernels without a notebook), then the server, then, only if needed, the
+    process itself. Shutting down takes a while (about 10 seconds is normal),
+    and the process can outlive it. Returns 'stopped', 'not running',
+    'stopped after ending its process', or 'still running'.
     """
+    if not _answers(port):
+        return 'not running'
+
+    # A 404 means it is already gone (two sessions can share one kernel).
+    for s in _api(port, token, '/api/sessions'):
+        try:
+            _api(port, token, '/api/sessions/' + s['id'], 'DELETE')
+        except urllib.error.HTTPError:
+            pass
+
+    for k in _api(port, token, '/api/kernels'):
+        try:
+            _api(port, token, '/api/kernels/' + k['id'], 'DELETE')
+        except urllib.error.HTTPError:
+            pass
+
+    if not _wait_until(lambda: not _api(port, token, '/api/kernels'), timeout):
+        return 'a kernel is still running: not shutting the server down'
+
     req = urllib.request.Request(
         'http://localhost:%s/api/shutdown' % port,
         method='POST',
@@ -210,14 +262,22 @@ def shutdown(port, token, timeout=30):
     )
     urllib.request.urlopen(req, timeout=30).read()
 
-    t0 = time.time()
+    _wait_until(lambda: not _answers(port), timeout)
 
-    while _answers(port):
-        if time.time() - t0 > timeout:
-            return False
-        time.sleep(1)
+    if _wait_until(lambda: not _pids(token), timeout):
+        return 'stopped'
 
-    return True
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        for pid in _pids(token):
+            try:
+                os.kill(pid, sig)
+            except OSError:
+                pass
+
+        if _wait_until(lambda: not _pids(token), 5):
+            return 'stopped after ending its process'
+
+    return 'still running'
 
 
 def _runtime_dir():
@@ -290,7 +350,7 @@ def main(argv):
         print(replace_kernel(*args))
 
     elif cmd == 'shutdown' and len(args) == 2:
-        print('stopped' if shutdown(*args) else 'still answering after 30 seconds')
+        print(shutdown(*args))
 
     elif cmd == 'cleanup' and args in ([], ['--yes']):
         cleanup(delete=args == ['--yes'])
