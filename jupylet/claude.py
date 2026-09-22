@@ -34,6 +34,8 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude kernel <port> <token> <notebook path>
     python -m jupylet.claude tools <port> <token>
     python -m jupylet.claude call <port> <token> <tool> ['<json arguments>']
+    python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
+    python -m jupylet.claude watch <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
@@ -220,6 +222,49 @@ def attach(port, token, path):
         'notebook_path': path,
         'kernel_id': k,
     })
+
+
+def _notebook_kernel(port, token, path):
+    for s in _api(port, token, '/api/sessions'):
+        if s['path'] == path:
+            return s['kernel']
+
+    return None
+
+
+def wait_open(port, token, path, timeout):
+    """True once the notebook is open in a signed-in browser page.
+
+    The server cannot see the browser's sign-in, but the page only opens the
+    notebook, and so only starts its kernel session, after signing in.
+    """
+    return _wait_until(lambda: _notebook_kernel(port, token, path) is not None, timeout)
+
+
+def watch(port, token, path, timeout, since=None):
+    """Wait until the notebook's kernel did something after `since`.
+
+    Returns ('ran', time) once the kernel was active after `since` and is idle
+    again, or ('timeout', since). Pass the returned time to the next watch so
+    nothing in between is missed. Any kernel request counts (a Tab completion
+    too), not only running a cell.
+    """
+    if since is None:
+        k = _notebook_kernel(port, token, path)
+        since = k['last_activity'] if k else ''
+
+    t0 = time.time()
+
+    while time.time() - t0 < timeout:
+        k = _notebook_kernel(port, token, path)
+
+        # Same ISO format on both sides, so comparing the strings is enough.
+        if k and k['last_activity'] > since and k['execution_state'] == 'idle':
+            return 'ran', k['last_activity']
+
+        time.sleep(2)
+
+    return 'timeout', since
 
 
 def replace_kernel(port, token, path, timeout=60):
@@ -414,6 +459,12 @@ def main(argv):
 
     elif cmd == 'call' and len(args) in (3, 4):
         print(call(*args[:3], json.loads(args[3]) if len(args) == 4 else None))
+
+    elif cmd == 'wait-open' and len(args) == 4:
+        print('open' if wait_open(*args[:3], float(args[3])) else 'timeout')
+
+    elif cmd == 'watch' and len(args) in (4, 5):
+        print(*watch(*args[:3], float(args[3]), *args[4:]))
 
     elif cmd == 'replace-kernel' and len(args) == 3:
         print(replace_kernel(*args))

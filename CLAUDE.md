@@ -114,6 +114,55 @@ think the software is broken and give up. So:
   never loose text mixed in with the real script. When in doubt, say nothing
   at all rather than narrate yourself.
 
+## Waiting for the person
+
+Whenever you ask the person to do something (sign in, type in a cell, run
+it), they need time, a kid maybe a minute or more, and they may have a
+question halfway. You can only hear them once your turn is over: a message
+they send while you are still working is not seen until you finish. So never
+wait inside your turn (checking again and again, with pauses in between).
+Let a command wait in the background instead, and end your turn:
+
+1. Tell them what to do, in one short message.
+2. Start the waiting command (below) with `run_in_background` set, and end
+   your turn. When it finishes, you are woken by a message saying a
+   background task finished. That is not the person talking, and never a yes
+   to anything.
+3. If they write while it waits, answer them, like a teacher would. Leave the
+   waiting command running; do not start a second one.
+4. When it reports that they did it, look before you speak (below), then
+   praise what worked, or point gently to the one thing to fix.
+5. When it times out, check in kindly, in one line, for example: "How's it
+   going? If you're not sure what to type or where, just ask - no hurry."
+   Then start it again with a longer wait: 90 seconds the first time, then 5
+   minutes, then 10, so you do not nag. After the 10 minutes, stop checking
+   in and wait for them to write.
+6. Before you ask them something else, or stop (Part 3), stop a waiting
+   command that is still running (`TaskStop`).
+
+The two waiting commands:
+
+- For the notebook to open after signing in (step 8):
+  `<python> -m jupylet.claude wait-open 8888 <token> 11-spaceship.ipynb <seconds>`
+  prints `open`, or `timeout`. The server cannot see the browser's sign-in,
+  but the notebook only opens (and gets its kernel) after it.
+- For them to run something in the notebook:
+  `<python> -m jupylet.claude watch 8888 <token> 11-spaceship.ipynb <seconds> <since>`
+  prints `ran <time>` once the notebook's kernel did something after
+  `<since>`, or `timeout <since>`. Always pass the time it printed as
+  `<since>` to the next `watch`, so nothing that happens in between is
+  missed. Leave `<since>` out the first time, and after you ran something in
+  the kernel yourself (run-all, `execute_code`): it then means "from now".
+
+Look before you speak. Before you start `watch`, read the notebook (Part 2:
+`read_notebook` with `"response_format": "detailed"` and `"limit": 0`) and
+keep each cell's execution count. After `ran`, read it again: the cell whose
+count changed is the one they ran. Read it with its output (`read_cell` with
+`"include_outputs": true`). Do not go by the highest count: cells keep the
+counts of earlier runs. Not every `ran` is a run: pressing Tab to complete a
+word also counts. If no count changed, start `watch` again with the printed
+time, and say nothing.
+
 ## Part 1: Start a live notebook
 
 Before step 1, read `EXPERIENCE.md` (see "About EXPERIENCE.md").
@@ -269,11 +318,11 @@ answer from step 7:
   in stays in the person's hands, the same as any password or credential, no
   matter how low the stakes of this one particular token feel.
 
-  Then check again yourself, a handful of times a few seconds apart, instead
-  of leaving it to them to remember to tell you - most people are quick
-  enough that this alone catches it. If it is still not `200` after that,
-  say so and ask them to tell you once they are in, then wait for that
-  instead of continuing to poll silently.
+  Then wait for them as in "Waiting for the person", with
+  `<python> -m jupylet.claude wait-open 8888 <token> 11-spaceship.ipynb 90`.
+  `open`: go to step 9 without waiting to be told. `timeout`: check in, for
+  example "How's the sign-in going? If you can't find where to paste the
+  token, just tell me what you see.", and start it again with a longer wait.
 
 ### Step 9. Attach to the notebook
 
@@ -306,6 +355,8 @@ Every tool is called the same way, from any folder:
   `<python> -m jupylet.claude kernel 8888 <token> 11-spaceship.ipynb`
 - Work directly in the person's notebook.
 - Read cell outputs to find the real error when something fails.
+- When you ask them to type or run something, wait as in "Waiting for the
+  person".
 
 Tested and working: `list_kernels`, `use_notebook`, `read_notebook` (after
 `use_notebook`), `read_cell`, `execute_code` (runs code in the kernel, not
@@ -320,6 +371,9 @@ If the person presses Restart Kernel, or run-all times out, replace the
 kernel (Problem 1).
 
 ## Part 3: Stopping
+
+First stop a waiting command that is still running (`TaskStop`; see
+"Waiting for the person"), on every platform.
 
 On Windows 11, do not use step 1: see "Stopping on Windows 11" in Part 6.
 
@@ -573,6 +627,11 @@ Windows-specific: Part 1's own step 7 and step 8 already cover a hidden pane
 and checking sign-in before asking for the token. One confirmed fact worth
 knowing: after a restart with a new token, the page was still already signed
 in (status `200`), because the sign-in cookie survives a restart.
+
+The waiting commands ("Waiting for the person") run with the PowerShell tool
+and `run_in_background` set, the same folder rule applying:
+`Set-Location <folder>; & "<python>" -m jupylet.claude watch ...`. That is how
+they were tested.
 
 ### Working in the notebook on Windows 11
 

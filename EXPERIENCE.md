@@ -68,6 +68,8 @@ Retired, Unreviewed.
    request, then do the smallest thing.
 8. On Windows use the PowerShell tool, and script files instead of long
    `python -c` lines.
+9. Never wait for the person inside your turn: you cannot hear them until it
+   ends. Wait in the background (`CLAUDE.md`, "Waiting for the person").
 
 ## Working with people in a shared coding environment (any platform)
 
@@ -120,6 +122,34 @@ Children need the same, put more gently (see `CLAUDE.md`).
   session, stop and read the entire person-facing sequence together, in the
   order a person would experience it, rather than trusting that each patch
   was locally enough.
+- **Waiting for the person: watch in the background, never inside your
+  turn.** `[any, verified on Windows 11 with Opus 5.5, 2026-09-22]` Step 8 used
+  to say "check a handful of times a few seconds apart" inside one turn. A
+  message the person sends during that stretch is not seen until the turn
+  ends, so a kid asking "what globe?" would get no answer, and when the
+  checks ran out before the kid was done, the session just sat there. The
+  person who raised it called it "not good". It is the same for anything you
+  ask a person to do, not only signing in: you cannot both watch and listen
+  inside one turn.
+
+  What works (now `CLAUDE.md`, "Waiting for the person"): start a waiting
+  command with `run_in_background`, end the turn, and let its finishing wake
+  you. Tested in a small lesson (`7 * 6`, `print("hello")`, a typo with
+  mismatched quotes, then the fix): each run woke the session within a few
+  seconds, with no message from the person. A question asked mid-wait ("what
+  does print do?") was answered at once while the watcher kept running.
+  The 90-second timeout woke the session for a gentle check-in when nothing
+  was run. The waking comes from Claude Code, not the model, so other models
+  get it too. Whether they follow the pattern as reliably is not tested (the
+  test would be the same lesson with Sonnet 5, picked in the app's model
+  menu). Not tried on macOS. `wait-open` was tested to say `open` for an
+  open notebook and to stay `timeout` for 15 seconds on the login page, but
+  has not been watched end to end through a real sign-in yet.
+
+  Kids take their time: a 5-10 second wait is far too short. The person
+  preferred a teacher-like check-in on a timeout ("How's it going? ...
+  just ask") over silence, and backing off (90 seconds, 5 minutes, 10) so it
+  does not nag.
 
 ## Any platform: how the tools work
 
@@ -185,6 +215,18 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   finding, the exit code only for whether the check itself worked. Worth
   remembering for any future `jupylet` CLI command with a normal outcome
   that is not simply success.
+- **How `watch` and `wait-open` know what happened.** `[any, verified on
+  Windows 11, 2026-09-22, JupyterLab 4.6.3]` `watch` reads the notebook
+  kernel's `last_activity` and `execution_state` from `/api/sessions`. Any
+  kernel request moves `last_activity`, a Tab completion too, so `ran` means
+  "something happened", not "a cell ran". Over a few idle minutes with the
+  page open, nothing moved it by itself. To find which cell they ran, compare
+  execution counts before and after: the highest count is misleading, because
+  cells keep counts from earlier kernels (two cells showed `16` next to a
+  fresh `1`). `wait-open` waits for a session on the notebook to exist: with
+  the browser signed out and on the login page, none appeared. It looks the
+  kernel up through the session on every check, so it keeps working after
+  `replace-kernel`.
 
 ## macOS
 
@@ -336,6 +378,59 @@ Jupyter's own state in the examples folder: `.jupyter_ystore.db` and
 Delete them after stopping, when no Jupyter runs. `%APPDATA%\jupyter\file_id_manager.db`
 and the old runtime files were left alone. `claude.py cleanup` only uses `glob`
 and `shutil` and looks portable, but it was not run on Windows.
+
+### The stop script says "port closed: True" but the process is still alive
+
+`[Windows 11, seen once, 2026-09-22]` The stop script (`CLAUDE.md` Part 6,
+"Stopping on Windows 11") ended sessions and kernels, requested `/api/shutdown`,
+and printed `port closed: True` (`connect_ex` really did stop returning `0`).
+The background task's log ended at `[I ...] YDocExtension] Deleting all rooms.`
+with nothing after it — no further extension-shutdown lines, no process exit.
+15+ seconds later, `Get-CimInstance` still listed all five of the launcher's
+processes (`cmd.exe`, `jupyter.exe`, two `python.exe`, `jupyter-lab.exe`) alive
+under the session's token, and the background task had not reported completion.
+This is the same shape as `CLAUDE.md` Problem 10 (port stops answering, process
+lingers), but that problem's fix (`claude.py shutdown`'s own force-stop) is
+`ps`/`SIGKILL`-based and explicitly not used on Windows, and the Windows
+stopping steps in Part 6 have no force-kill step of their own — they only say
+to tell the person and stop if a process is left. Not tried: waiting longer
+(a minute or more) before concluding it is truly stuck.
+
+First try: told the person a process was left and stopped there, as Part 6
+literally says. The person (an adult, in this case the project's own author)
+pointed out the flaw: `CLAUDE.md`'s "tell the person and stop" line was
+written assuming the person can do something about it, but most people this
+tool is for - kids, beginners - have no way to find or end a stuck process
+themselves, and "check your taskbar" leaves them stuck with a problem and no
+real next step, which is exactly what rule 3 says never to do. So a stuck
+Windows process after the normal stop is a case the session should resolve
+itself, the same way it already resolves a stuck kernel (`replace-kernel`)
+without waiting on the person - not a case to hand back to them. This is a
+disagreement with `CLAUDE.md` as literally written (which this file is
+supposed to record, per its own header); `CLAUDE.md` cannot be edited by a
+session, so until it is updated by hand, treat this entry as the standing
+correction and follow it instead of the literal "tell the person and stop"
+line, for this specific situation only.
+
+Do instead, the next time the Windows stop script reports `port closed: True`
+(or otherwise finishes) but `Get-CimInstance` still lists processes carrying
+the session's token a few seconds later: `[Windows 11, verified, 2026-09-22]`
+list every process whose command line still carries the session's token with
+`Get-CimInstance Win32_Process | Select ProcessId, Name, CommandLine`, check
+each one's command line by eye against the exact launch command actually used
+(confirm it is this session's own launcher and its children, never a process
+found only by name), then `Stop-Process -Id <id> -Force` on each matching PID
+by id (never by name - matching by name risks an unrelated process). All five
+of the launcher's processes (`cmd.exe`, `jupyter.exe`, two `python.exe`,
+`jupyter-lab.exe`) ended at once this way; the port closed (`connect_ex` back
+to `10061`) immediately after. The background task the launcher ran in then
+reported `failed` (exit code 255) instead of a clean exit - expected and fine
+since it was killed rather than asked to exit; do not mistake that `failed`
+status for something having gone wrong. The Claude Code Desktop app's own
+PowerShell process did not appear in the token-matched list, so this targeted
+approach never risked it. Still tell the person afterward, plainly and
+without jargon, that a leftover program had to be closed and that it is done
+- just do not stop and wait on them to act first.
 
 ### Other small facts
 
