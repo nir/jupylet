@@ -28,6 +28,7 @@ USAGE = """
 Helpers for Claude Code sessions that work with a person in a live Jupyter
 notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
 
+    python -m jupylet.claude find-env <version>
     python -m jupylet.claude wait <port> <token>
     python -m jupylet.claude attach <port> <token> <notebook path>
     python -m jupylet.claude kernel <port> <token> <notebook path>
@@ -36,6 +37,11 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
+
+`find-env` is the one command meant to run from a plain Miniforge `base`
+Python (run this file by path: it never imports jupylet itself, on purpose,
+since jupylet is never installed into `base`). Every other command needs an
+environment that actually has jupylet installed.
 """
 
 
@@ -51,6 +57,65 @@ import sys
 import time
 import urllib.error
 import urllib.request
+
+
+def _python_of(env):
+    """The python executable inside a conda environment folder, or None."""
+    for rel in ('python.exe', os.path.join('bin', 'python')):
+        p = os.path.join(env, rel)
+        if os.path.exists(p):
+            return p
+
+    return None
+
+
+def find_env(version, root=None):
+    """Every conda environment with exactly this jupylet version, newest first.
+
+    root is Miniforge's own folder; guessed from sys.executable when not
+    given, which only works when this runs under Miniforge's own base
+    Python (`<miniforge>/python.exe` or `<miniforge>/bin/python`) - the one
+    Python guaranteed to exist without knowing which environment jupylet is
+    actually in. Only the standard library and a subprocess call per
+    candidate, so it works the same on macOS and Windows and needs nothing
+    installed beyond Miniforge itself.
+
+    Returns a list of (env path, python path) tuples.
+    """
+    if root is None:
+        root = os.path.dirname(sys.executable)
+
+        if os.path.basename(root) == 'bin':
+            root = os.path.dirname(root)
+
+    candidates = [root] + sorted(glob.glob(os.path.join(root, 'envs', '*')))
+    matches = []
+
+    for env in candidates:
+        python = _python_of(env)
+
+        if not python:
+            continue
+
+        try:
+            out = subprocess.run(
+                [python, '-c', "import importlib.metadata as m; print(m.version('jupylet'))"],
+                capture_output=True, text=True, timeout=20,
+                # Pinned so a folder named "jupylet" in *our own* cwd (this
+                # file's own repo, for instance) can never shadow the real
+                # package for the subprocess: import and importlib.metadata
+                # both consult the current directory first.
+                cwd=env,
+            )
+        except OSError:
+            continue
+
+        if out.stdout.strip() == version:
+            matches.append((env, python, os.path.getmtime(env)))
+
+    matches.sort(key=lambda m: m[2], reverse=True)
+
+    return [(env, python) for env, python, _mtime in matches]
 
 
 def _rpc(port, token, body):
@@ -329,7 +394,11 @@ def cleanup(root='.', delete=False):
 def main(argv):
     cmd, args = (argv[0], argv[1:]) if argv else ('', [])
 
-    if cmd == 'wait' and len(args) == 2:
+    if cmd == 'find-env' and len(args) == 1:
+        for env, python in find_env(args[0]):
+            print(env)
+
+    elif cmd == 'wait' and len(args) == 2:
         ok = wait(*args)
         print('ready' if ok else 'not ready after 60 seconds')
         return 0 if ok else 1

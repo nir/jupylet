@@ -75,6 +75,14 @@ command:
 
     cd jupylet/examples/
 
+The example notebooks need to be trusted once on your computer, or the game
+canvas might not show up. Make sure to run the following command from
+inside the *examples/* folder:
+
+.. code-block:: bash
+
+    python -m jupylet trust_notebooks
+
 And start a jupyter notebook with:
 
 .. code-block:: bash

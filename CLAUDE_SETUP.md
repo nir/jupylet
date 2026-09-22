@@ -226,6 +226,27 @@ Check: `test -f "$HOME/miniforge3/envs/<env>/share/jupyter/lab/settings/override
 prints `ok`. This step is only cosmetic: if it fails, don't retry and go on to
 step 10. The person then sees the pop-up once, and can answer No.
 
+Then ask the person to trust the example notebooks, so the game shows as a
+picture instead of plain text the first time they open one. This is a normal
+Jupyter safety check, not something specific to Jupylet: a downloaded
+notebook is untrusted until someone says it is safe to run its interactive
+parts. Explain in plain words, for example:
+
+> Jupyter treats every notebook you did not create yourself as untrusted
+> until you say otherwise, as a safety check. The example notebooks need to
+> be trusted once, or the game will show as text instead of a picture. May I
+> trust them?
+
+If they agree:
+`$SHELL -ic "conda activate <env> && cd '<code>/examples' && python -m jupylet trust_notebooks"`
+
+Check: `$SHELL -ic "conda activate <env> && cd '<code>/examples' && python -m jupylet is_trusted"`
+prints `trusted` for every file.
+
+If they decline, tell them plainly that the example notebooks will not show
+their pictures until they trust them (in JupyterLab: File > Trust Notebook),
+and go on to step 10 anyway.
+
 ## Step 10. Hand over
 
 Jupylet is installed. Tell the person, for example: "Jupylet is installed.

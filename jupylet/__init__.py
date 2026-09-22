@@ -135,3 +135,89 @@ if sys.argv[-2:] == ['-m', 'download']:
 
    sys.exit(0)
 
+
+def _resolve_notebook_paths(args):
+   """Turn command-line arguments into a list of .ipynb paths.
+
+   Each argument can be a folder (every *.ipynb directly inside it, not
+   inside its .ipynb_checkpoints), a glob pattern, or a single notebook
+   path. This does the file-matching in Python on purpose, not the shell:
+   cmd.exe and PowerShell do not expand "*" for external commands the way a
+   Mac or Linux shell does, so relying on shell globbing breaks on Windows.
+   """
+
+   import glob as _glob
+   import os as _os
+
+   paths = []
+
+   for arg in args:
+      if _os.path.isdir(arg):
+         paths.extend(sorted(_glob.glob(_os.path.join(arg, '*.ipynb'))))
+      else:
+         paths.extend(sorted(_glob.glob(arg)) or [arg])
+
+   return paths
+
+
+if sys.argv[:2] == ['-m', 'is_trusted']:
+
+   import nbformat
+   from nbformat.sign import NotebookNotary
+
+   paths = _resolve_notebook_paths(sys.argv[2:] or ['.'])
+
+   if not paths:
+      sys.stderr.write('No .ipynb files found.\n')
+      sys.exit(1)
+
+   notary = NotebookNotary()
+   had_error = False
+
+   for path in paths:
+      try:
+         nb = nbformat.read(path, as_version=4)
+         trusted = notary.check_signature(nb)
+      except Exception as e:
+         print('%s: ERROR (%s)' % (path, e))
+         had_error = True
+         continue
+
+      print('%s: %s' % (path, 'trusted' if trusted else 'NOT TRUSTED'))
+
+   # Finding an untrusted notebook is the check succeeding, not failing: the
+   # exit code says whether the check itself could run, never what it found.
+   # A caller reads "NOT TRUSTED" in the output for that, exactly as
+   # CLAUDE.md's Step 2 already does. Exiting non-zero here for a normal,
+   # expected result would show as a red failure to whoever is watching the
+   # command run, for something that isn't a failure at all.
+   sys.exit(1 if had_error else 0)
+
+
+if sys.argv[:2] == ['-m', 'trust_notebooks']:
+
+   import nbformat
+   from nbformat.sign import NotebookNotary
+
+   paths = _resolve_notebook_paths(sys.argv[2:] or ['.'])
+
+   if not paths:
+      sys.stderr.write('No .ipynb files found.\n')
+      sys.exit(1)
+
+   notary = NotebookNotary()
+   had_error = False
+
+   for path in paths:
+      try:
+         nb = nbformat.read(path, as_version=4)
+         notary.sign(nb)
+      except Exception as e:
+         print('%s: ERROR (%s)' % (path, e))
+         had_error = True
+         continue
+
+      print('%s: trusted' % path)
+
+   sys.exit(1 if had_error else 0)
+

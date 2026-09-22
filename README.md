@@ -141,6 +141,12 @@ command:
 
     cd jupylet/examples/
 
+The example notebooks need to be trusted once on your computer, or the game
+canvas might not show up. Make sure to run the following command from
+inside the *examples/* folder:
+
+    python -m jupylet trust_notebooks 
+
 And start a jupyter notebook with:
 
     jupyter lab 11-spaceship.ipynb
