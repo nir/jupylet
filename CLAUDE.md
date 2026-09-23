@@ -91,13 +91,22 @@ think the software is broken and give up. So:
 - Try one fix at a time, and don't loop. If two attempts fail, tell the
   person honestly that this needs a grown-up, and stop.
 - Steps and their numbers are for you, not the person: never say "Step N" to
-  them, and never name a technical detail they have no use for (a port, an
-  environment path, a process id). A step that is purely a technical check
+  them, never repeat an instruction from this file to them ("go to step 9"),
+  and never name a technical detail they have no use for (a port, an
+  environment path, a process id, sessions and kernels). A step that is purely a technical check
   and succeeds needs no comment at all - go straight to the next one. Speak
   up only for something they must decide, something that failed, or, if a
   step is genuinely slow, one short line so silence does not look like a
   hang. They are not technical, but they are not simple either: say the real
   thing in plain words, don't hide that something is happening at all.
+- A relaxed, human tone is good, loose words like "same-ish" included, as
+  long as the meaning is clear: dry and formal is not the goal.
+- A guide who also teaches: you do the work for them, and as you go you tell
+  them what each thing is and why it matters (a notebook, Jupyter, the
+  token), so they know their way around afterwards. Call things by their
+  real names and explain a name once, the first time. At most one teaching
+  sentence per step, best while they wait for something slow; never a
+  lecture.
 - **Exception, for developers only:** if the person asks you for verbose
   boxes, show the underlying command and its raw output in a plain code
   block for every step, before the plain sentence (the block is the
@@ -123,20 +132,23 @@ they send while you are still working is not seen until you finish. So never
 wait inside your turn (checking again and again, with pauses in between).
 Let a command wait in the background instead, and end your turn:
 
-1. Tell them what to do, in one short message.
-2. Start the waiting command (below) with `run_in_background` set, and end
-   your turn. When it finishes, you are woken by a message saying a
-   background task finished. That is not the person talking, and never a yes
-   to anything.
+1. Start the waiting command (below) with `run_in_background` set.
+2. Then tell them what to do, and that they can ask you if they get stuck,
+   in one short message, and end your turn with it: it is the last thing you
+   say. Nothing after it: not "I'll wait for you", not "no response
+   needed". Since the waiting command is already running, it catches them
+   even if they are quick. When the command finishes, you are woken by a
+   message saying a background task finished. That is not the person
+   talking, and never a yes to anything.
 3. If they write while it waits, answer them, like a teacher would. Leave the
    waiting command running; do not start a second one.
 4. When it reports that they did it, look before you speak (below), then
    praise what worked, or point gently to the one thing to fix.
-5. When it times out, check in kindly, in one line, for example: "How's it
+5. When it times out, start it again with a longer wait (90 seconds the
+   first time, then 5 minutes, then 10, so you do not nag), then check in
+   kindly, in one line, as the last thing you say, for example: "How's it
    going? If you're not sure what to type or where, just ask - no hurry."
-   Then start it again with a longer wait: 90 seconds the first time, then 5
-   minutes, then 10, so you do not nag. After the 10 minutes, stop checking
-   in and wait for them to write.
+   After the 10 minutes, stop checking in and wait for them to write.
 6. Before you ask them something else, or stop (Part 3), stop a waiting
    command that is still running (`TaskStop`).
 
@@ -178,7 +190,13 @@ this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 Ask, in a few plain words, for example:
 
 > May I open a Jupyter notebook here so we can work on the game together?
-> It runs only on this computer, and you'll see it right next to our chat.
+> Jupyter is the program where you write and run your code, and a notebook
+> is a page in it where you type code in small boxes, called cells, and run
+> each one to see what it does. It runs only on this computer, and you'll
+> see it right next to our chat.
+
+(If Jupyter and notebooks were already explained in this conversation, for
+example while installing, leave that sentence out.)
 
 Continue only after a clear yes.
 
@@ -204,16 +222,19 @@ One path per line, most recently set up first.
   and stop.
 - **One line:** that is the environment. Call its path `<env>` and its
   python `<python>` (`<env>/bin/python`). Tell the person in one plain line,
-  for example "Found it - using your jupylet setup." Do not ask; there is
-  nothing to choose between.
+  for example "Found Jupylet, in its Miniforge environment `jupylet`." Do
+  not ask; there is nothing to choose between.
 - **More than one line:** the first is the most recently set up. Name the
   environments to the person (the last part of each path is its name, the one
   they picked when they set it up) and propose the first one explicitly, for
   example:
 
-  > I found jupylet in more than one place on your computer: `jupylet`,
-  > `jupylet2`. I'll use `jupylet2`, the most recently set up one - is that
-  > right, or did you mean a different one?
+  > I found Jupylet in more than one Miniforge environment on your
+  > computer: `jupylet`, `jupylet2`. I'll use `jupylet2`, the most recently
+  > set up one - is that right, or did you mean a different one?
+
+  If you came here from `CLAUDE_SETUP.md`, which just installed Jupylet into
+  one of them, use that one without asking.
 
   Continue only after a clear yes; if they name a different one, use that.
 
@@ -229,15 +250,16 @@ Then check that the environment also has jupyterlab:
 Expected: no error. If it fails: Problem 14.
 
 Then check that the example notebooks are trusted (a Jupyter safety check; an
-untrusted notebook shows its game picture as plain text instead):
+untrusted notebook does not show its game canvas):
 
 `<python> -m jupylet is_trusted <folder>/examples`
 
 Expected: every line says `trusted`. If any line says `NOT TRUSTED`, explain
 and ask, for example:
 
-> These notebooks aren't trusted on this computer yet, so the pictures
-> won't show until they are. May I trust them?
+> These notebooks aren't trusted on this computer yet, so the game canvas,
+> the area in the notebook where the game is drawn and played, won't show
+> up until they are. May I trust them?
 
 After a clear yes:
 
@@ -247,7 +269,7 @@ Then run the check again to confirm every line says `trusted`, and tell the
 person in one plain line, for example "The example notebooks are trusted
 now." Never describe the check itself (lines, output, step numbers) to them.
 If the person declines to trust them, tell them plainly that the game
-picture may show as text instead, and go on anyway.
+canvas may not show up, and go on anyway.
 
 ### Step 3. Make a token
 
@@ -278,8 +300,10 @@ Run this with the Bash tool, with `run_in_background` set (leave out
 `$SHELL -ic "conda activate <name> && cd <folder>/examples && jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
 
 Never use the Terminal panel for this (Problem 5). Starting takes a few
-seconds; say so once, for example "Starting Jupyter now, one second...", so
-the wait does not look like nothing is happening. Nothing else in steps 5 or
+seconds; say so once, and use the wait to explain, for example "Starting
+Jupyter now, one second. Jupyter runs as a small program on this computer,
+and the notebook is its page, which you'll see in the browser panel next to
+our chat...", so the wait does not look like nothing is happening. Nothing else in steps 5 or
 6 needs a comment; go straight to step 7 once it is ready.
 
 ### Step 6. Wait until Jupyter is ready
@@ -302,10 +326,12 @@ two. Then call `tabs_context`.
 - Pane hidden, sign-in check says `200`: tell the person: "Please click the
   globe icon in the upper right corner of the app, so you can see the
   notebook."
-- Pane hidden, sign-in check says `403`: tell them both at once, for example:
+- Pane hidden, sign-in check says `403`: first start the waiting command
+  from step 8, then tell them both at once, for example:
   "Please click the globe icon in the upper right corner of the app, so you
   can see the notebook. It will ask for a special token - please paste this
-  in: `<token>`"
+  in: `<token>`. The token shows Jupyter that it's really you, so nobody
+  else can open your notebook. Ask me if you get stuck."
 - Pane already visible: go straight to step 8.
 
 ### Step 8. Sign in
@@ -316,23 +342,30 @@ answer from step 7:
 `(await fetch('/api/status', {credentials: 'same-origin'})).status`
 
 - `200`: already signed in. Go to step 9.
-- `403`: if you have not already told them (see step 7), tell the person, for
+- `403`: unless step 7 already did, start waiting for them first, as in
+  "Waiting for the person", with
+  `<python> -m jupylet.claude wait-open 8888 <token> 11-spaceship.ipynb 90`.
+  Then, if you have not already told them (see step 7), tell the person, for
   example: "This page wants a special token just for this session - please
-  paste this in: `<token>`". Never type the token yourself, and never put it
+  paste this in: `<token>`. The token shows Jupyter that it's really you, so
+  nobody else can open your notebook. Ask me if you get stuck." Never type
+  the token yourself, and never put it
   in a URL, even though you can see the page and technically could: signing
   in stays in the person's hands, the same as any password or credential, no
   matter how low the stakes of this one particular token feel.
 
-  Then wait for them as in "Waiting for the person", with
-  `<python> -m jupylet.claude wait-open 8888 <token> 11-spaceship.ipynb 90`.
-  `open`: go to step 9 without waiting to be told. `timeout`: check in, for
+  When the waiting command finishes, `open`: they are in. Say so and that the rest takes a moment, for example
+  "You're signed in. Almost there, just getting the notebook ready...",
+  and go on with step 9 without waiting to be told. `timeout`: check in, for
   example "How's the sign-in going? If you can't find where to paste the
-  token, just tell me what you see.", and start it again with a longer wait.
+  token, just tell me what you see.", after starting it again with a longer
+  wait.
 
 ### Step 9. Attach to the notebook
 
-This can take up to a minute; say so once first, for example "Almost
-there, just getting the notebook ready...", so the wait does not look stuck:
+This can take up to a minute; say so once first, before running it (unless
+you just said it on signing in), for example "Almost there, just getting the
+notebook ready...", so the wait does not look stuck:
 
 `<python> -m jupylet.claude attach 8888 <token> 11-spaceship.ipynb`
 
@@ -344,7 +377,10 @@ there is no kernel: Problem 6.
 `<python> -m jupylet.claude call 8888 <token> notebook_run-all-cells`
 
 Expected: `True` after a second or two. Tell the person, for example "Your
-game should be showing in the notebook now - take a look!" If it says
+game should be showing at the bottom of the notebook now. I ran every cell,
+top to bottom, and the last one started the game. Click the game canvas,
+the area where the game is drawn, then steer the spaceship with the arrow
+keys." If it says
 "Timeout waiting for result": Problem 1. If it says "Not Found": Problem 2.
 
 ## Part 2: Working in the notebook
@@ -380,15 +416,22 @@ kernel (Problem 1).
 First stop a waiting command that is still running (`TaskStop`; see
 "Waiting for the person"), on every platform.
 
-On Windows 11, do not use step 1: see "Stopping on Windows 11" in Part 6.
+Tell the person in one line before, for example "Closing Jupyter now. Your
+notebook is saved.", and one after, for example "All closed. Just ask when
+you want to open it again." Never tell them about processes, sessions,
+kernels or ports.
 
-1. `<python> -m jupylet.claude shutdown 8888 <token>`
+On Windows 11, use "Stopping on Windows 11" in Part 6 instead of steps 1
+and 2.
+
+1. Close the browser page with `tabs_close`, first: a page left open while
+   Jupyter stops shows an error pop-up that can worry a beginner.
+2. `<python> -m jupylet.claude shutdown 8888 <token>`
    It ends every notebook and every kernel first (there can be kernels
    without a notebook), then shuts the server down, waits for it to exit, and
    only if the process lingers, stops it. It takes a few seconds. Expected:
    `stopped`. Also fine: `not running`, and `stopped after ending its
    process`. Anything else: Problem 10.
-2. Close the browser page with `tabs_close`.
 3. Add to `EXPERIENCE.md` what you learned in this session, if anything
    (see "About EXPERIENCE.md"), quietly.
 
@@ -570,16 +613,19 @@ One path per line, most recently set up first.
   and stop.
 - **One line:** that is the environment. Call its path `<env>` and its
   python `<python>` (`<env>\python.exe`). Tell the person in one plain line,
-  for example "Found it - using your jupylet setup." Do not ask; there is
-  nothing to choose between.
+  for example "Found Jupylet, in its Miniforge environment `jupylet`." Do
+  not ask; there is nothing to choose between.
 - **More than one line:** the first is the most recently set up. Name the
   environments to the person (the last part of each path is its name, the one
   they picked when they set it up) and propose the first one explicitly, for
   example:
 
-  > I found jupylet in more than one place on your computer: `jupylet`,
-  > `jupylet2`. I'll use `jupylet2`, the most recently set up one - is that
-  > right, or did you mean a different one?
+  > I found Jupylet in more than one Miniforge environment on your
+  > computer: `jupylet`, `jupylet2`. I'll use `jupylet2`, the most recently
+  > set up one - is that right, or did you mean a different one?
+
+  If you came here from `CLAUDE_SETUP.md`, which just installed Jupylet into
+  one of them, use that one without asking.
 
   Continue only after a clear yes; if they name a different one, use that.
 
@@ -627,7 +673,8 @@ the environment was activated.
 
 The same as in Part 1, with `& "<python>"` in front and, for
 `python -m jupylet.claude`, the current folder set to `<folder>` first
-(`No module named jupylet.claude` in `EXPERIENCE.md`). Nothing else here is
+(`No module named jupylet.claude` in `EXPERIENCE.md`). Do not add a pause
+(`sleep`) before step 6: `wait` does the waiting itself. Nothing else here is
 Windows-specific: Part 1's own step 7 and step 8 already cover a hidden pane
 and checking sign-in before asking for the token. One confirmed fact worth
 knowing: after a restart with a new token, the page was still already signed
@@ -738,14 +785,15 @@ print(call('read_cell', {
 
 ### Stopping on Windows 11
 
-Do not use step 1 of Part 3: `claude.py shutdown` looks for the process with
-`ps`, which Windows does not have, so it would say `stopped` without checking,
-and its force-stop uses signals Windows lacks. Instead:
+Do not use steps 1 and 2 of Part 3: `claude.py shutdown` looks for the
+process with `ps`, which Windows does not have, so it would say `stopped`
+without checking, and its force-stop uses signals Windows lacks. Instead:
 
-1. Find your processes: the ones whose command line contains your token,
+1. Close the browser page with `tabs_close`, first (see Part 3, step 1).
+2. Find your processes: the ones whose command line contains your token,
    `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' }`.
    Several carry it; all are yours (`EXPERIENCE.md`, old servers).
-2. End every session and kernel and then ask the server to shut down. Save
+3. End every session and kernel and then ask the server to shut down. Save
    this as a `.py` file in the scratchpad, put the folder in the second line,
    and run it with `& "<python>" <file> <token>`. Expected output: `sessions
    and kernels ended`, `shutdown requested`, `port closed: True`:
@@ -792,14 +840,23 @@ print('shutdown requested')
 print('port closed:', c._wait_until(lambda: not c._answers(port), 30))
 ```
 
-3. Check: no process carries your token any more, the port answers nothing
+4. Check: no process carries your token any more, the port answers nothing
    (`connect_ex` is not `0`), and the background task ended with exit code 0.
-   If a process is left, tell the person plainly and stop; do not stop other
-   processes.
-4. Close the browser page with `tabs_close`.
-
-After stopping, and only when no Jupyter is running, delete
-`<folder>\examples\.jupyter_ystore.db` and
-`<folder>\examples\.jupyter\collaboration_sessions.json` (Jupyter's own state,
-never a notebook). Stale collaboration state is the likely cause of cells added over MCP not
-showing in the page (`EXPERIENCE.md`).
+   If processes carrying your token are still there, wait five seconds
+   (`Start-Sleep 5`) and look again: in one run they exited by themselves.
+   If they are still there then (seen in two runs: the port closed, but all
+   five stayed), end them yourself; a kid has no way to. List them with
+   `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' } | Select-Object ProcessId, Name, CommandLine`,
+   check each command line by eye (your own `start_jupyter.cmd` launch and
+   its `jupyter`, `jupyter-lab` and `python` children, with your token),
+   then end each one by its id, never by name:
+   `Stop-Process -Id <id> -Force`. Check again that none is left and the
+   port is closed. The background task then reports `failed` (exit code
+   255): expected, because it was ended rather than asked to exit. Never
+   stop a process without your token. If one with your token will not end,
+   tell the person plainly and stop.
+5. Now that no Jupyter is running, delete Jupyter's own state files (never
+   a notebook), with the PowerShell tool like everything else here:
+   `foreach ($f in "<folder>\examples\.jupyter_ystore.db", "<folder>\examples\.jupyter\collaboration_sessions.json") { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f } }`
+   Stale collaboration state is the likely cause of cells added over MCP not
+   showing in the page (`EXPERIENCE.md`).

@@ -137,13 +137,36 @@ Children need the same, put more gently (see `CLAUDE.md`).
   why. The author called it "a long text to read like a wikipedia article":
   a beginner does not read it, so the yes means little. It now works like
   `CLAUDE.md`: one short question at the moment each change is about to
-  happen, silent checks with no comment, one line before anything slow, and
-  an explanation only where the person has a decision to make. Plain is not
+  happen. (A first version also kept the steps in between silent; the
+  author corrected that too, see the end of this entry.) Plain is not
   dumbed down: "in jp145 and a few other places" and "its own toolbox" were
   too vague. Name the real thing ("a Miniforge environment called `jp145`",
   "Miniforge's main environment, called `base`") and explain it once; the
   person will meet those names again. And news counts: that Miniforge was
   already there went unmentioned, because the page said to skip silently.
+  Last, be a teacher as well as a guide: "activate it in Miniforge Prompt"
+  meant nothing to a beginner who does not know that window or how to open
+  it. Now each step may add one sentence on what a thing is and why it
+  matters, best during a slow wait, and the handover says how to open the
+  Prompt (or Terminal) and what `(base)` means. And an install is several
+  steps and a few long minutes, so it must not be silent: say as you go what
+  you are doing on their computer and why, a bit technical is fine, as long
+  as nothing reads like a foreign language (commands, output, lists of what
+  you checked), and explain Jupyter the first time it comes up. What is
+  never fine is repeating the instructions themselves ("go to step 9").
+  When one name means two things (the environment `jupylet2` and the folder
+  `jupylet2`, which the app then calls a workspace), say which one every
+  time. The author's words: "striking the balance between not speaking
+  chinese and not dumbing down". Short technical status lines ("Attached
+  successfully. Now running all the cells.") were fine with the author, and
+  so was loose, human wording ("the environment of the same-ish name"):
+  clear and warm beats dry and formal. Two
+  more from the same review: "the game shows as text instead of a picture"
+  was a strange way to explain trust; say what does not show up, "the game
+  canvas", and explain the canvas once ("the area in the notebook where the
+  game is drawn and played"). And close the browser page before stopping
+  Jupyter: a page left open while its server stops shows an error pop-up
+  that can worry a beginner.
 - **Waiting for the person: watch in the background, never inside your
   turn.** `[any, verified on Windows 11 with Opus 5.5, 2026-09-22]` Step 8 used
   to say "check a handful of times a few seconds apart" inside one turn. A
@@ -174,6 +197,14 @@ Children need the same, put more gently (see `CLAUDE.md`).
   preferred a teacher-like check-in on a timeout ("How's it going? ...
   just ask") over silence, and backing off (90 seconds, 5 minutes, 10) so it
   does not nag.
+
+  Start the waiting command first, and make the instruction to the person
+  the last thing you say. `[Windows 11, seen twice, 2026-09-23]` With the
+  order the other way round, a session always added a line after starting
+  the waiter: "I'll wait for you to sign in" once, and "No response
+  requested - waiting for the sign-in in the background" the next time, even
+  when told to end the turn silently. The instruction as the last line
+  leaves nothing to add, and the waiter already runs if the person is quick.
 
 ## Any platform: how the tools work
 
@@ -384,8 +415,43 @@ base]` One full run, with the code from a local `git archive` tarball
 - The handover into `CLAUDE.md` Part 1 worked: `find-env` listed the new
   environment first, and the game canvas showed as a 512x512 picture.
 
-Not tried yet: installing Miniforge (the silent installer), updating an old
-one, and a computer with another conda.
+A later run verified the rest, on a computer with no Miniforge but with
+Miniconda (`<home>\miniconda3`) and an old Jupylet in its environment `jp13`,
+the typical returning user: `[Windows 11, verified, 2026-09-23, Miniforge
+26.7.2]`
+- The silent installer (`/S /InstallationType=JustMe /RegisterPython=0
+  /AddToPath=0 /D=...`) installed Miniforge in about 45 seconds, with no
+  administrator password and no window, and created the Start-menu
+  "Miniforge Prompt": the helper's `prompt` check said `ok` (it needs the
+  shortcut, and runs the Prompt's own activation).
+- Step 3 found Miniconda through both the installed-programs entry and the
+  usual folder, listed its environments with Miniconda's own conda, and
+  found the old Jupylet in `jp13`. Nothing of Miniconda's was touched.
+
+Not tried yet: updating an old Miniforge (macOS only), the whole flow on
+macOS, and a user name with spaces or non-English letters.
+
+A second run the same day, by a fresh session (Sonnet), with the code from
+the `claude` branch on GitHub, went from setup through `CLAUDE.md` Part 1 to
+a clean stop. Since both `jupylet` (environment) and `<home>\jupylet`
+(folder) existed, the environment and the folder were both named `jupylet2`,
+each by its own rule. `find-env` listed the new environment first. Stopping
+ended all five processes by themselves this time, the background task
+exiting with code 0 (compare the lingering-process entry below). What it got
+wrong was what it said, and the pages now address each point:
+- It repeated an instruction to the person: "Signed in - go straight to
+  step 9, attach to the notebook." Step 8 had no line to say on `open`.
+- It described internals ("Same list.", "Found the five processes... ending
+  sessions and kernels"), yet said nothing before the minute-long
+  environment setup.
+- It said a separate "I'll wait for you to sign in" after starting the
+  waiter; the token message should carry "ask me if you get stuck" instead.
+- It skipped deleting the two state files after stopping: that was a loose
+  paragraph after the numbered steps, now step 5.
+- `jupylet2` meant three things without being told apart: the environment,
+  the folder, and, when the app asked permission for the folder, a
+  "workspace".
+- It ran `sleep 5` with the Bash tool before `wait`.
 
 ### PowerShell quoting
 
@@ -433,8 +499,10 @@ and `shutil` and looks portable, but it was not run on Windows.
 
 ### The stop script says "port closed: True" but the process is still alive
 
-`[Windows 11, seen once, 2026-09-22]` The stop script (`CLAUDE.md` Part 6,
-"Stopping on Windows 11") ended sessions and kernels, requested `/api/shutdown`,
+`[Windows 11, seen in two of three runs, 2026-09-22 and 2026-09-23]` (In
+the third run all five processes exited by themselves.) The stop script
+(`CLAUDE.md` Part 6, "Stopping on Windows 11") ended sessions and kernels,
+requested `/api/shutdown`,
 and printed `port closed: True` (`connect_ex` really did stop returning `0`).
 The background task's log ended at `[I ...] YDocExtension] Deleting all rooms.`
 with nothing after it — no further extension-shutdown lines, no process exit.
@@ -457,12 +525,10 @@ themselves, and "check your taskbar" leaves them stuck with a problem and no
 real next step, which is exactly what rule 3 says never to do. So a stuck
 Windows process after the normal stop is a case the session should resolve
 itself, the same way it already resolves a stuck kernel (`replace-kernel`)
-without waiting on the person - not a case to hand back to them. This is a
-disagreement with `CLAUDE.md` as literally written (which this file is
-supposed to record, per its own header); `CLAUDE.md` cannot be edited by a
-session, so until it is updated by hand, treat this entry as the standing
-correction and follow it instead of the literal "tell the person and stop"
-line, for this specific situation only.
+without waiting on the person - not a case to hand back to them. This was a
+disagreement with `CLAUDE.md` as then written; since 2026-09-23 the fix
+below is in `CLAUDE.md` itself (Part 6, "Stopping on Windows 11", step 4),
+so follow it there.
 
 Do instead, the next time the Windows stop script reports `port closed: True`
 (or otherwise finishes) but `Get-CimInstance` still lists processes carrying

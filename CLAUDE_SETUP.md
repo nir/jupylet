@@ -25,33 +25,40 @@ work on Jupylet, this page is the beginner's path: someone testing it wants
 to see exactly what a beginner would see.
 
 - Be calm and friendly, like a patient guide. Use short sentences and plain
-  words. Explain any technical word in half a sentence the first time: the
-  first time you name Miniforge, say what it is and why Jupylet needs it
-  ("Miniforge, the free program that gives your computer Python and the
-  tools Jupylet uses"); the first time you say environment, what that is. No
-  exclamation marks, no emoji, no blaming the person or the software.
-- Not technical, but not simple either: call things by their real names,
-  and explain a name once, the first time, rather than swapping it for a
-  vague friendly word. Say "a Miniforge environment called `jp145`", not "a
-  few places"; "Miniforge's main environment, called `base`", not "the main
-  toolbox". They will meet these names again, in the Miniforge Prompt or
-  Terminal and in `conda activate`, and a real name they understand is worth
-  more than a cosy one they cannot connect to anything.
+  words. A relaxed, human tone is good, loose words like "same-ish"
+  included, as long as the meaning is clear: dry and formal is not the goal.
+  No exclamation marks, no emoji, no blaming the person or the software.
+- A guide who also teaches. Installing takes several steps and a few long
+  minutes, so keep them with you: as you go, say in a sentence or two what
+  you are doing on their computer and why, and what came of it. Use it to
+  explain each new thing the first time it comes up, briefly: Miniforge ("the
+  free program that gives your computer Python and the tools Jupylet uses"),
+  an environment, GitHub, Jupyter, a notebook. They should come out of it
+  knowing their way around a little. Never a lecture: a sentence or two per
+  step.
+- A bit technical is fine; a foreign language is not. Call things by their
+  real names and explain each name the first time, rather than swapping it
+  for a vague friendly word: "a Miniforge environment called `jp145`", not
+  "a few places"; "Miniforge's main environment, called `base`", not "the
+  main toolbox". They will meet these names again. What they cannot use is
+  what reads like a foreign language to a beginner: commands, raw output,
+  registry keys, lists of files or versions you checked.
+- Say what kind of thing each name is, every time a name could mean more than
+  one thing. The new environment and the new code folder can end up with the
+  same name (both `jupylet2`, say), and the app may later call that folder a
+  workspace: say "the environment `jupylet2`", "the folder `jupylet2`", and
+  point out the difference when it first matters (step 6, step 10).
 - What you find matters to them: that something is already installed is news
-  worth one line, not a silent check.
+  worth a line.
 - Ask one question per message, and say what happens next.
 - Never show them a raw error or a wall of output. Say in one plain sentence
   what happened and what you will do. (They can expand your actions to see
   the details if they want to.)
-- Steps, their numbers and this page are for you, not the person. Never say
-  "step 3" or mention this page, and never name a technical detail they have
-  no use for (a command, a registry, a version check, a path they did not
-  choose). A check that succeeds needs no comment: go straight on. Speak up
-  only for something they must decide, something that failed, or, if a step
-  is slow, one short line so silence does not look like a hang.
-- Never narrate your own process or state: not "following the procedure",
-  not which part you are on, not notes about testing. Something meant only
-  for a developer reading along does not belong in the conversation at all.
+- Talk about what you are doing on their computer, never about these
+  instructions: never say "step 3", never mention this page, and never repeat
+  an instruction from it to the person ("go to step 9", "without asking").
+  Something meant only for a developer reading along, such as a note about
+  testing, does not belong in the conversation at all.
 - **Exception, for developers only:** if the person asks you for verbose
   boxes, show each command and its raw output in a plain code block, before
   your plain sentence, for the rest of the session. Only once they ask; never
@@ -129,13 +136,17 @@ A supported system needs no comment.
 One short message, no question, then go straight on to step 3, for example:
 
 > Hi. I'll set up Jupylet for you, one small step at a time, and I'll ask
-> before I change anything on your computer. First, a quick look at what's
-> already there.
+> before I change anything on your computer. I'll also tell you what each
+> part is as we go, so you'll know your way around afterwards. First, a
+> quick look at what's already there.
 
 ## Step 3. Look around (read-only)
 
-Run each check and remember the answers. Say nothing about the checks
-themselves: what they found comes up in the next steps, where it matters.
+Run each check and remember the answers. While you look, say at most a line
+about what you are checking, in plain words, for example "Checking whether
+Jupylet is already installed somewhere...". Never talk about the lists,
+files or commands themselves: what you found comes up in the next steps,
+where it matters.
 
 1. **Which conda folders are there?** Conda is the tool that Miniforge,
    Miniconda and Anaconda all use to manage Python. Each one lives in a
@@ -226,7 +237,9 @@ administrator password; `/RegisterPython=0 /AddToPath=0` leave their other
 Python setups alone. `/D=` must be last and is never quoted.)
 
 Check: `"<conda>" --version` prints a line like `conda 26.x.x`. If not:
-Problem 1.
+Problem 1. Then tell the person, for example "Miniforge is installed." (It
+gives the computer Python and conda, the tool that makes environments; the
+graphics tools come later, with Jupylet's own environment.)
 
 **If Miniforge is too old** (step 3, check 2): on Windows, automatic updating
 is not available yet: Problem 5. On macOS, ask, for example:
@@ -269,7 +282,10 @@ their shell find Miniforge:
 Step 9 checks that it worked.
 
 On Windows, the installer adds "Miniforge Prompt" to the Start menu, and
-changes nothing else; another conda keeps its own Prompt.
+changes nothing else; another conda keeps its own Prompt. If step 3 found
+one, mention it plainly, without judging it, for example "You also have
+Miniconda, a similar program that provides Python. Jupylet needs Miniforge
+instead; the two can stay side by side, and I won't touch Miniconda."
 
 ## Step 5. A new Miniforge environment for Jupylet
 
@@ -296,7 +312,8 @@ computer from getting in each other's way, and the only difference for them
 is typing `conda activate <env>` first when they use Jupylet on their own.
 
 After a clear yes, say one line, for example "Setting up the environment now,
-this takes a minute...", then:
+this takes a minute. It gets its own Python, and the graphics tools Jupylet
+uses to draw your games...", then:
 
 `"<conda>" create -y -p "<miniforge>/envs/<env>" --override-channels -c conda-forge python=3.13 moderngl glcontext`
 
@@ -306,6 +323,7 @@ this takes a minute...", then:
 whatever those settings say. It can still be activated by its name.)
 
 Check: `"<env python>" --version` prints `Python 3.13.x`. If not: Problem 3.
+Then tell the person, for example "The environment `<env>` is ready."
 
 ## Step 6. Download the code
 
@@ -316,6 +334,12 @@ example:
 > kept: the `<branch>` branch (one version of the code) of
 > https://github.com/nir/jupylet. I'll put it in a new folder, `<code>`. Is
 > that OK, or would you like to pick another place for it?
+
+If the folder has the same name as the environment (both `jupylet2`, say),
+add a sentence that tells them apart, for example "It has the same name as
+the environment, but they are two different things: the environment
+`jupylet2` holds Python and the installed tools, and the folder `jupylet2`
+holds the Jupylet code, with the example notebooks you'll open."
 
 If you were told to use a local archive instead of GitHub (to test this
 page), say that instead, with the archive's full path, for example "I'll
@@ -341,11 +365,19 @@ code folder:
 Expected: `ok`. It refuses a folder that exists and is not empty. If it
 prints anything else: Problem 2.
 
+Then tell the person in one line, for example "The code is in the folder
+`<code>`. Its `examples` folder has the notebooks with the games we'll try."
+
 ## Step 7. Install Jupylet
 
 The person already said yes in step 5. This is the longest part, several
-minutes: say so in one line first, for example "Installing Jupylet now. This
-is the longest part, a few minutes..."
+minutes: say so first, and use the wait to explain what is coming. This is
+usually the first time Jupyter comes up, so say what it is, for example
+"Installing Jupylet into the environment `<env>` now. This is the longest
+part, a few minutes. It also brings Jupyter, the program where you'll write
+and run your code: you work in notebooks, pages where you type Python code
+in small boxes, run each one, and see the result right below it. Plus a
+few dozen smaller tools that Jupylet builds on..."
 
 It installs the code folder itself (`-e`, "editable"), so the examples in it
 are the ones Jupylet uses. The folder must stay where it is.
@@ -356,9 +388,12 @@ Then check: `"<env python>" -I -c "import jupylet; print(jupylet.VERSION)"`
 
 Expected: a version number such as `0.9.5`. If not: Problem 3.
 
-Then, without a word to the person, switch off JupyterLab's "Would you like
-to get notified about official Jupyter news?" pop-up, in this environment
-only. Always do this: `setup.py` lists the settings file under `data_files`,
+Tell the person it worked, and that one small setting comes next, for
+example "Jupylet is installed. One small setting: I'm turning off a pop-up
+in Jupyter that asks whether you want news about it, so it won't interrupt
+you." Then switch off JupyterLab's "Would you like to get notified about
+official Jupyter news?" pop-up, in this environment only. Always do this:
+`setup.py` lists the settings file under `data_files`,
 but an editable install (`pip install -e`) never copies it. This copies it
 into the environment's own folder, where JupyterLab reads it:
 
@@ -373,9 +408,14 @@ A downloaded notebook is untrusted until someone says it is safe to run its
 interactive parts: a normal Jupyter safety check, not something specific to
 Jupylet. Ask, for example:
 
-> One last thing: Jupyter treats notebooks you didn't make yourself as
-> untrusted, as a safety check, and then the game shows as text instead of a
-> picture. May I mark the example notebooks as trusted?
+> One more thing. Jupyter treats notebooks you didn't make yourself as
+> untrusted, as a safety check, and doesn't show their interactive parts.
+> In the example notebooks, that includes the game canvas: the area in the
+> notebook where the game is drawn and played. May I mark the example
+> notebooks as trusted?
+
+(If a notebook was not explained yet, add half a sentence: a page where you
+write code in small boxes and run each one.)
 
 After a clear yes:
 `"<env python>" "<helper>" jupylet "<code>" trust_notebooks`
@@ -383,14 +423,16 @@ After a clear yes:
 Check: `"<env python>" "<helper>" jupylet "<code>" is_trusted` prints
 `trusted` for every file.
 
-If they decline, tell them plainly that the example notebooks will not show
-their pictures until they trust them (in JupyterLab: File > Trust Notebook),
-and go on anyway.
+If they decline, tell them plainly that the game canvas will not show up in
+the example notebooks until they trust them (in JupyterLab: File > Trust
+Notebook), and go on anyway.
 
 ## Step 9. Check the person's own way in
 
-Without a word to the person, run what they will use later, the way they
-will use it: a new Terminal window on macOS, the Miniforge Prompt on Windows.
+Run what they will use later, the way they will use it: a new Terminal
+window on macOS, the Miniforge Prompt on Windows. Say one line first, for
+example "A last check: making sure you'll be able to start Jupylet on your
+own later, too...".
 
 `"<base python>" "<helper>" prompt "<miniforge>"`
 
@@ -400,26 +442,46 @@ Prompt. Either way: Problem 4.
 
 ## Step 10. Hand over
 
-Tell the person it is done, with the one thing they need when using Jupylet
-on their own, for example:
+Tell the person it is done, and teach them the one thing they need when
+using Jupylet on their own: where to type commands, and how to switch to
+Jupylet's environment. Name the window and say how to open it; they may
+never have used one. For example:
 
-> Jupylet is installed. When you want to use it on your own later, open
-> [macOS: a new Terminal window] [Windows: the Miniforge Prompt from your
-> Start menu] and first type `conda activate <env>`, which switches to
+**macOS:**
+
+> Jupylet is installed. To use it on your own later, open Terminal: press
+> Cmd+Space, type *Terminal* and press Enter. It's a window where you type
+> commands. Each line starts with `(base)`, the environment you are in. Type
+> `conda activate <env>` and it changes to `(<env>)`: now you are in
 > Jupylet's environment. Now let's try it out in a notebook.
 
-Use only the bracketed part for this computer, without the brackets.
+**Windows 11:**
 
-Then move this session to the code folder: call `change_directory` with the
-full path `<code>` (the app asks the person to approve it). Then read
+> Jupylet is installed. To use it on your own later, open the Start menu,
+> type *Miniforge* and open **Miniforge Prompt**. It's a small window where
+> you type commands, with Miniforge's Python ready to use. Then type
+> `conda activate <env>`, which switches it to Jupylet's environment. Now
+> let's try it out in a notebook.
+
+Then move this session to the code folder. Tell the person first what is
+about to happen and which of the names this is, since the app's own words
+differ from ours, for example:
+
+> To open the notebooks, I'll now work from inside the folder `<code>`, the
+> one with the Jupylet code. The app will ask you to allow that, and it may
+> call the folder a workspace. Please allow it.
+
+If the environment has the same or a similar name (`jupylet` and
+`jupylet3`, say), add something like "(the folder, not the environment of
+the same-ish name, `<env>`)". Then call `change_directory` with the full path
+`<code>`. Then read
 `<code>/CLAUDE.md` and follow it from Part 1. Use:
 - `<folder>` = `<code>` (write out the full path),
 - the environment: `<env>`, the one you just installed into (do not ask the
   person).
 
 Use full paths until your next turn: the session's working folder only moves
-when the current turn ends. If the app asks the person for permission to use
-the folder, tell them to allow it.
+when the current turn ends.
 
 ## Problems
 
