@@ -1,4 +1,12 @@
-# EXPERIENCE.md - what sessions have learned running jupylet with people
+# EXPERIENCE.md - Claude's notes from helping people with Jupylet
+
+This file is written only for Claude. In it, Claude records what it learned
+while helping people use Jupylet: problems it met on real computers and how
+it solved them, and what helps when working with beginners. It is technical,
+and a person does not need to read it. It never holds names or other
+personal details.
+
+From here on, "you" means Claude.
 
 ## What this file is
 
@@ -39,16 +47,16 @@ Retired, Unreviewed.
   reads it.
 - Write what you saw, not what you hope. Write "unknown" when you do not know,
   and name the test that would settle it.
-- Never write tokens, the names of people you help, user names or full paths.
-  Use `<user>`, `<folder>`, `<env>`.
-- Private notes about one machine or person go in `CLAUDE.0.md`, not here.
-- **This is where a lesson goes.** If you keep any other memory of your own
-  (a personal note file, anything outside this repo), check here first before
-  writing to it. A lesson about running jupylet sessions or about working with
-  people while doing it belongs in this file, in the section it fits, so every
-  future session gets it too — not in a private place only you will read. It
-  is easy to default to a habit of writing feedback to your own memory instead;
-  when that happens here, it is a bug, not a style choice.
+- Never write tokens, the names of people you help, user names, or paths
+  that contain a user name. Use `<user>`, `<home>`, `<folder>`, `<env>`.
+- Notes that only fit this one computer go in `CLAUDE.0.md` (see
+  `CLAUDE.md`), not here.
+- **This is where a lesson goes.** Claude Code also has its own memory,
+  outside this folder. A lesson about running Jupylet or helping people with
+  it belongs here instead, in the section it fits, so that every future
+  session gets it. It is easy to default to a habit of writing feedback to
+  Claude Code's own memory instead; when that happens here, it is a bug, not
+  a style choice.
 
 ## Read this first
 
@@ -131,6 +139,23 @@ Children need the same, put more gently (see `CLAUDE.md`).
   run starts or after it ends, never in between. And after fixing something
   the author found in a test run, do not start the next run on your own:
   say it is fixed and that you are ready, and wait for them to start it.
+  `[macOS, seen once, Sonnet 5, 2026-09-23]` A session broke character on
+  its own: it saw a Jupylet checkout with `CLAUDE_SETUP.md` in it, told the
+  person it looked like "your own repo you're dry-running the onboarding
+  doc for", and asked whether to use a technical tone. The same session
+  opened with a summary of the page (Miniforge → environment → `pip install
+  -e`) instead of the hello, invented a multiple-choice answer the page never
+  offered ("install Miniforge but leave Terminal alone", which would have
+  made `conda activate` fail in the person's own Terminal later), dropped the
+  page's explanations of GitHub, a branch, Jupyter and `(base)`, and ended
+  with a summary of paths and settings files. `CLAUDE_SETUP.md` now says
+  each of these outright. One thing it did better than the page: it asked
+  about installing Miniforge and setting up Terminal to use Miniforge
+  instead of Miniconda in one question. The page used to ask them one after
+  the other, so a no to
+  Terminal came after Miniforge was already installed, leaving it unused.
+  The author agreed, and the page now asks one question: a no leaves the
+  computer untouched, and there is no "Miniforge, but not Terminal".
 - **Roll step by step; never present a whole plan to approve.** `[any, seen
   once, 2026-09-23]` `CLAUDE_SETUP.md` used to gather everything first and
   then ask once, in a long message listing every action, what it changes and
@@ -156,8 +181,8 @@ Children need the same, put more gently (see `CLAUDE.md`).
   never fine is repeating the instructions themselves ("go to step 9").
   When one name means two things (the environment `jupylet2` and the folder
   `jupylet2`, which the app then calls a workspace), say which one every
-  time. The author's words: "striking the balance between not speaking
-  chinese and not dumbing down". Short technical status lines ("Attached
+  time. The author put it as striking the balance between not speaking a
+  foreign language and not dumbing down. Short technical status lines ("Attached
   successfully. Now running all the cells.") were fine with the author, and
   so was loose, human wording ("the environment of the same-ish name"):
   clear and warm beats dry and formal. Two
@@ -282,8 +307,7 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   the browser signed out and on the login page, none appeared. It looks the
   kernel up through the session on every check, so it keeps working after
   `replace-kernel`.
-- **Why the token is only 8 characters.** `[any, reasoning, not tested as
-  an attack, 2026-09-23]` `CLAUDE.md` step 3 makes a 32-bit token
+- **Why the token is only 8 characters.** `[any, reasoning, 2026-09-23]` `CLAUDE.md` step 3 makes a 32-bit token
   (`token_hex(4)`), because the person has to paste or type it. That is
   enough for a server that listens on this computer alone. Other computers
   cannot reach it. A web page in the browser cannot read Jupyter's answers,
@@ -291,17 +315,50 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   try tokens. A program on the same computer does not need to guess: the
   token is in Jupyter's command line. A short token would only matter if
   Jupyter listened on the network (`--ip`), which the steps never do.
+- **`read_notebook` needs `notebook_name`.** `[any, verified on macOS,
+  2026-09-23, jupyter-mcp-server 2.2.2]` Even after `attach` (`use_notebook`),
+  calling it with only `response_format` and `limit` failed with "Field
+  required ... notebook_name". `CLAUDE.md` now gives the full arguments.
 
 ## macOS
 
-Nothing new here yet: what was learned on the Mac is in `CLAUDE.md`, Part 5.
-Things a Mac session could check, because the Windows 11 session found them but
-could not test them there:
+What was learned on the Mac before 2026-09-23 is in `CLAUDE.md`, Part 5.
+
+- **`CLAUDE_SETUP.md` on a Mac with Miniconda.** `[macOS, verified, Sonnet
+  5, 2026-09-23, Apple chip, Miniforge 26.7.2-0]` A full run from the
+  `claude` branch on GitHub, with Miniconda in `/opt/miniconda3` set up in
+  `.zshrc` and a Jupylet folder already in `~/jupylet`. Miniforge installed
+  into `~/miniforge3` in about 20 seconds, `conda init zsh` switched
+  Terminal from Miniconda to Miniforge (backup kept), the environment `jupylet` took 10
+  seconds, the code went into `~/jupylet2`, `pip install -e` took 40
+  seconds, and the Terminal check (`prompt`) said `ok`. Then the handover:
+  sign-in noticed by `wait-open` 25 seconds after the token was given,
+  attach, run-all, the game, and a clean `shutdown` (`stopped`) after the
+  page was closed first. About 12 minutes from the first message to the
+  game, answers included.
+
+  One thing failed: the Miniforge installer refused to run, with `Please run
+  using "bash"/"dash"/"sh"/"zsh", but not "." or "source".`, although it was
+  run with `bash`. The installer (built by constructor 3.16.1) first checks
+  `echo "$0" | grep '\.sh$'`, so its file name must end in `.sh`, and the
+  page downloaded it to a plain `mktemp` name. The session improvised a
+  `.sh` name and it worked. Fixed in `CLAUDE_SETUP.md` step 4 (install and
+  `-u` update): the file is now `Miniforge3.sh` in a `mktemp -d` folder.
+  That exact command is not yet run on a Mac; the `.sh` name is what
+  mattered.
+- **`overwrite_cell_source` works on macOS.** `[macOS, verified, 2026-09-23,
+  jupyter-mcp-server 2.2.2, JupyterLab 4.6.4]` The diff it reports matched
+  a `read_cell` afterwards, and the person saw the new text in the page.
+
+Things a Mac session could still check, because the Windows 11 session found
+them but could not test them there:
 
 - Does the canvas show when cells are run by hand, with `jupyter-mcp-server`
   installed? (On Windows 11 it did not, without the config in the entry below.)
-- Does the "run one cell" recipe work with the allowlist flag?
-- Do `insert_cell` and `overwrite_cell_source` show up in the page at once?
+- Does the "run one cell" recipe work with the allowlist flag? (Without the
+  flag, the Mac server offered only `notebook_run-all-cells` and
+  `notebook_get-selected-cell`, as expected.)
+- Does `insert_cell` show up in the page at once?
 
 ## Windows 11
 
@@ -419,8 +476,9 @@ A later run verified the rest, on a computer with no Miniforge but with
 Miniconda (`<home>\miniconda3`) and an old Jupylet in its environment `jp13`,
 the typical returning user: `[Windows 11, verified, 2026-09-23, Miniforge
 26.7.2]`
-- The silent installer (`/S /InstallationType=JustMe /RegisterPython=0
-  /AddToPath=0 /D=...`) installed Miniforge in about 45 seconds, with no
+- The installer, run with its answers given up front (`/S
+  /InstallationType=JustMe /RegisterPython=0 /AddToPath=0 /D=...`), installed
+  Miniforge in about 45 seconds, with no
   administrator password and no window, and created the Start-menu
   "Miniforge Prompt": the helper's `prompt` check said `ok` (it needs the
   shortcut, and runs the Prompt's own activation).

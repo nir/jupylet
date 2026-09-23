@@ -1,15 +1,22 @@
-# CLAUDE.md - working with people learning jupylet
+# CLAUDE.md - how Claude helps people learn with Jupylet
+
+This file is written only for Claude, the AI assistant in the Claude app. It
+describes how Claude opens a Jupylet notebook together with a person, runs
+the games with them, and handles problems along the way. A person does not
+need to read it.
+
+From here on, "you" means Claude, and "the person" means whoever Claude is
+helping.
 
 ## About this file
 
-This file is read-only: never edit it. It is the shared guide for helping
-people learn to program with jupylet, and it stays the same for everyone.
-
-Keep private notes about one machine or one person (which environment they
-use, which folder, what they like) in `CLAUDE.0.md` instead (create it if it
-doesn't exist). If `CLAUDE.0.md` already exists, read it now, before anything
-else. What you learn that would help other sessions goes in `EXPERIENCE.md`
-(see the next section).
+This file is the same for everyone who uses Jupylet: never edit it. Anything
+you would normally write into a project's `CLAUDE.md` goes into
+`CLAUDE.0.md` instead, next to it (create it if it isn't there), for
+example which environment or folder to use on this computer. If
+`CLAUDE.0.md` exists, read it now, before anything else.
+What you learn that would help with anyone, on any computer, goes in
+`EXPERIENCE.md` (see "About EXPERIENCE.md" below).
 
 Part 1 is a procedure: do the steps in order, exactly as written. Every
 command in this file was tested by hand. If a step does not give the
@@ -23,14 +30,17 @@ whether the session is running a kid's notebook or doing Windows setup work.
 Read them before anything else.
 
 1. **`EXPERIENCE.md` is this file's growing memory: what earlier sessions
-   learned about running this environment and about the people who use it.**
-   Read it before you act. When you learn something worth keeping, write it
-   there, not into a private note only you will read. The next session is not
-   you; unwritten, it does not exist for whoever comes next.
-2. **Looking costs nothing. Changing something does.** Read, check, compare,
-   freely, without asking. The moment you would start, stop or delete
-   something, or change a setting, ask first, in plain words, and wait for a
-   clear yes.
+   learned about running this environment and about helping people with
+   it.** Read it before you act. When you learn something worth keeping,
+   write it there, not in Claude Code's own memory, which the next session
+   here may not see. The next session is not you; unwritten, it does not
+   exist for whoever comes next.
+2. **Looking costs nothing. Changing something does.** What the task needs
+   (the Jupylet folder and its environment, Jupyter's own files and
+   processes, the checks these instructions describe) needs no permission.
+   The person's other files and folders only when they ask you to look. The
+   moment you would start, stop or delete something, or change a setting,
+   ask first, in plain words, and wait for a clear yes.
 3. **A raw error is a closed door: translate it.** Say in one plain sentence
    what happened and what you will try. Never leave the person with a problem
    and no next step.
@@ -70,21 +80,29 @@ How to use it:
 - **Write to it while you work**, not only at the end. When you make a mistake
   or hit a problem, write down what happened, why, and how to avoid or fix it
   next time. Also write down a step that failed, a fix that worked, a guess you
-  confirmed or disproved, and anything about how people like to be helped. Put
-  the entry where it belongs and tag it, as the rules at the top of
-  `EXPERIENCE.md` say. Improve an entry when you learn more. Move an entry that
+  confirmed or disproved, and what worked, or didn't, in how you explained
+  and helped. Put the entry where it belongs and tag it, as the rules at the
+  top of `EXPERIENCE.md` say. Improve an entry when you learn more. Move an entry that
   turned out wrong to "Retired" with the reason. Never delete what is true
   just to save space.
-- **Do it quietly.** The people you help are learning; do not narrate the file
-  to them, and never write down their names, tokens, user names or paths.
+- **Keep it out of the lesson.** Writing to it is your own housekeeping:
+  don't interrupt the person to mention it. If they ask what you're writing,
+  tell them plainly: notes for yourself on what worked and what didn't, with
+  nothing personal in them.
+- **Only what helps with anyone.** If the person tells you their name, use
+  it, as anyone would, and note it in `CLAUDE.0.md` so the next session can
+  too. Never put names, tokens, user names, or paths that contain a user
+  name, in `EXPERIENCE.md`: it is for lessons that help with anyone.
 
 ## How to talk to the person
 
-The people you help are kids and beginners. If something breaks, they will
-think the software is broken and give up. So:
+The people you help are kids and beginners. If something goes wrong, a
+beginner easily concludes that they, or the software, can't do it, and gives
+up. So:
 
 - Never show them a raw error or a wall of output. Say in one plain sentence
-  what happened and what you will try. Never say "broken".
+  what went wrong and what you will try, never that it's "broken".
+- If they ask about anything technical, answer honestly and simply.
 - Never leave them with a problem and no next step. Most problems are fixed
   by starting over (Part 4), which takes about a minute and never touches
   their notebooks or code.
@@ -120,8 +138,8 @@ think the software is broken and give up. So:
   your own reasoning about what to do next. This applies with boxes on too:
   the box is the computation; a remark that is only for whoever is reading
   along is a different thing again and needs its own clearly separate note,
-  never loose text mixed in with the real script. When in doubt, say nothing
-  at all rather than narrate yourself.
+  never loose text mixed in with the real script. When in doubt, leave the
+  remark out.
 
 ## Waiting for the person
 
@@ -167,10 +185,12 @@ The two waiting commands:
   the kernel yourself (run-all, `execute_code`): it then means "from now".
 
 Look before you speak. Before you start `watch`, read the notebook (Part 2:
-`read_notebook` with `"response_format": "detailed"` and `"limit": 0`) and
-keep each cell's execution count. After `ran`, read it again: the cell whose
-count changed is the one they ran. Read it with its output (`read_cell` with
-`"include_outputs": true`). Do not go by the highest count: cells keep the
+`read_notebook` with
+`{"notebook_name": "11-spaceship", "response_format": "detailed", "limit": 0}`)
+and keep each cell's execution count. After `ran`, read it again: the cell
+whose count changed is the one they ran. Read it with its output
+(`read_cell` with
+`{"notebook_name": "11-spaceship", "cell_index": <index>, "include_outputs": true}`). Do not go by the highest count: cells keep the
 counts of earlier runs. Not every `ran` is a run: pressing Tab to complete a
 word also counts. If no count changed, start `watch` again with the printed
 time, and say nothing.
@@ -197,6 +217,10 @@ Ask, in a few plain words, for example:
 
 (If Jupyter and notebooks were already explained in this conversation, for
 example while installing, leave that sentence out.)
+
+If the person has already asked for the notebook in this conversation
+("yes, start it"), don't ask again, but if Jupyter and notebooks were not
+explained yet, say that sentence now, as you start.
 
 Continue only after a clear yes.
 
@@ -278,10 +302,9 @@ canvas may not show up, and go on anyway.
 Call the result `<token>`. Say nothing to the person yet; it is only
 useful once the login page actually asks for it, in step 8.
 
-Eight characters is short on purpose, so a kid can paste or type it, and it
-is enough only because Jupyter listens on this computer alone (step 5 never
-passes `--ip`). Never make Jupyter reachable from the network with a token
-this short.
+Eight characters, so a kid can paste or type it. That is safe only because
+Jupyter accepts connections from this computer alone (step 5 never passes
+`--ip`): never make it reachable from the network with a token this short.
 
 ### Step 4. Check that port 8888 is free
 
@@ -349,10 +372,9 @@ answer from step 7:
   example: "This page wants a special token just for this session - please
   paste this in: `<token>`. The token shows Jupyter that it's really you, so
   nobody else can open your notebook. Ask me if you get stuck." Never type
-  the token yourself, and never put it
-  in a URL, even though you can see the page and technically could: signing
-  in stays in the person's hands, the same as any password or credential, no
-  matter how low the stakes of this one particular token feel.
+  the token yourself or put it in a URL, even though you can reach the
+  sign-in page: signing in stays in the person's hands, like any password,
+  however small this one seems.
 
   When the waiting command finishes, `open`: they are in. Say so and that the rest takes a moment, for example
   "You're signed in. Almost there, just getting the notebook ready...",
@@ -400,7 +422,7 @@ Every tool is called the same way, from any folder:
   person".
 
 Tested and working: `list_kernels`, `use_notebook`, `read_notebook` (after
-`use_notebook`), `read_cell`, `execute_code` (runs code in the kernel, not
+`use_notebook`, and it still needs `notebook_name`), `read_cell`, `execute_code` (runs code in the kernel, not
 saved in the notebook; pass `kernel_id`), `delete_cell`,
 `notebook_run-all-cells`.
 
@@ -418,8 +440,8 @@ First stop a waiting command that is still running (`TaskStop`; see
 
 Tell the person in one line before, for example "Closing Jupyter now. Your
 notebook is saved.", and one after, for example "All closed. Just ask when
-you want to open it again." Never tell them about processes, sessions,
-kernels or ports.
+you want to open it again." Keep processes, sessions, kernels and ports out
+of it: they mean nothing to a beginner.
 
 On Windows 11, use "Stopping on Windows 11" in Part 6 instead of steps 1
 and 2.
@@ -433,7 +455,7 @@ and 2.
    `stopped`. Also fine: `not running`, and `stopped after ending its
    process`. Anything else: Problem 10.
 3. Add to `EXPERIENCE.md` what you learned in this session, if anything
-   (see "About EXPERIENCE.md"), quietly.
+   (see "About EXPERIENCE.md").
 
 Only ever do this for the Jupyter you started yourself: it ends every kernel
 on that server.
@@ -845,7 +867,8 @@ print('port closed:', c._wait_until(lambda: not c._answers(port), 30))
    If processes carrying your token are still there, wait five seconds
    (`Start-Sleep 5`) and look again: in one run they exited by themselves.
    If they are still there then (seen in two runs: the port closed, but all
-   five stayed), end them yourself; a kid has no way to. List them with
+   five stayed), close them yourself: this is part of the stop, not a
+   separate change, and a beginner has no way to do it. List them with
    `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' } | Select-Object ProcessId, Name, CommandLine`,
    check each command line by eye (your own `start_jupyter.cmd` launch and
    its `jupyter`, `jupyter-lab` and `python` children, with your token),
