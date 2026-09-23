@@ -251,10 +251,15 @@ picture may show as text instead, and go on anyway.
 
 ### Step 3. Make a token
 
-`<python> -c "import secrets; print(secrets.token_hex(8))"`
+`<python> -c "import secrets; print(secrets.token_hex(4))"`
 
 Call the result `<token>`. Say nothing to the person yet; it is only
 useful once the login page actually asks for it, in step 8.
+
+Eight characters is short on purpose, so a kid can paste or type it, and it
+is enough only because Jupyter listens on this computer alone (step 5 never
+passes `--ip`). Never make Jupyter reachable from the network with a token
+this short.
 
 ### Step 4. Check that port 8888 is free
 

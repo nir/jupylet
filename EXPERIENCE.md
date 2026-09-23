@@ -122,6 +122,28 @@ Children need the same, put more gently (see `CLAUDE.md`).
   session, stop and read the entire person-facing sequence together, in the
   order a person would experience it, rather than trusting that each patch
   was locally enough.
+- **A test run is only a test if you stay in character.** `[any, seen once,
+  2026-09-23]` When the author asked for a trial run of `CLAUDE_SETUP.md`, I
+  opened it with a note to them as the developer ("from here on I'm
+  following the page, with you as the person...") and they stopped the run:
+  once it starts, talk to whoever is there as a beginner, exactly as the
+  page says, whoever they are. Anything for the developer goes before the
+  run starts or after it ends, never in between. And after fixing something
+  the author found in a test run, do not start the next run on your own:
+  say it is fixed and that you are ready, and wait for them to start it.
+- **Roll step by step; never present a whole plan to approve.** `[any, seen
+  once, 2026-09-23]` `CLAUDE_SETUP.md` used to gather everything first and
+  then ask once, in a long message listing every action, what it changes and
+  why. The author called it "a long text to read like a wikipedia article":
+  a beginner does not read it, so the yes means little. It now works like
+  `CLAUDE.md`: one short question at the moment each change is about to
+  happen, silent checks with no comment, one line before anything slow, and
+  an explanation only where the person has a decision to make. Plain is not
+  dumbed down: "in jp145 and a few other places" and "its own toolbox" were
+  too vague. Name the real thing ("a Miniforge environment called `jp145`",
+  "Miniforge's main environment, called `base`") and explain it once; the
+  person will meet those names again. And news counts: that Miniforge was
+  already there went unmentioned, because the page said to skip silently.
 - **Waiting for the person: watch in the background, never inside your
   turn.** `[any, verified on Windows 11 with Opus 5.5, 2026-09-22]` Step 8 used
   to say "check a handful of times a few seconds apart" inside one turn. A
@@ -143,8 +165,10 @@ Children need the same, put more gently (see `CLAUDE.md`).
   get it too. Whether they follow the pattern as reliably is not tested (the
   test would be the same lesson with Sonnet 5, picked in the app's model
   menu). Not tried on macOS. `wait-open` was tested to say `open` for an
-  open notebook and to stay `timeout` for 15 seconds on the login page, but
-  has not been watched end to end through a real sign-in yet.
+  open notebook and to stay `timeout` for 15 seconds on the login page, and
+  on 2026-09-23 end to end through a real sign-in: the person pasted the
+  token, `wait-open` printed `open` and woke the session, which went on to
+  attach and run-all without being told.
 
   Kids take their time: a 5-10 second wait is far too short. The person
   preferred a teacher-like check-in on a timeout ("How's it going? ...
@@ -199,8 +223,8 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   with a full, realistic clone layout, not just a toy reproduction. This is
   why `README.md`'s trust step has to run from inside `examples/`, never from
   the parent folder right after `download`/`git clone`, and why
-  `CLAUDE_SETUP.md` step 9 `cd`s into `<code>` before calling
-  `python -m jupylet`. It is not specific to `is_trusted`/`trust_notebooks`/
+  `CLAUDE_SETUP.md` step 8 runs `python -m jupylet` from inside
+  `<code>/examples` (through its helper script). It is not specific to `is_trusted`/`trust_notebooks`/
   `download`: any future `python -m jupylet <command>` needs the same care
   about where it is documented to be run from.
 - **An exit code says whether a check ran, not what it found.**
@@ -227,6 +251,15 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   the browser signed out and on the login page, none appeared. It looks the
   kernel up through the session on every check, so it keeps working after
   `replace-kernel`.
+- **Why the token is only 8 characters.** `[any, reasoning, not tested as
+  an attack, 2026-09-23]` `CLAUDE.md` step 3 makes a 32-bit token
+  (`token_hex(4)`), because the person has to paste or type it. That is
+  enough for a server that listens on this computer alone. Other computers
+  cannot reach it. A web page in the browser cannot read Jupyter's answers,
+  and Jupyter refuses requests not addressed to localhost, so a page cannot
+  try tokens. A program on the same computer does not need to guess: the
+  token is in Jupyter's command line. A short token would only matter if
+  Jupyter listened on the network (`--ip`), which the steps never do.
 
 ## macOS
 
@@ -334,6 +367,25 @@ file that calls `<miniforge>\condabin\activate.bat <name>`, then `cd /d`, then
 background output showed JupyterLab loading from `envs\<name>`. Not tried:
 `conda.bat run -n <name> --no-capture-output`, and `conda-hook.ps1`. Do not use
 `conda init` (PowerShell profile scripts are blocked by default).
+
+### `CLAUDE_SETUP.md` with Miniforge already installed
+
+`[Windows 11, verified, 2026-09-23, Miniforge 26.7.2 with Python 3.14 in
+base]` One full run, with the code from a local `git archive` tarball
+(`download` given a `file://` URL) instead of GitHub:
+- `conda create -y -p <miniforge>\envs\jupylet --override-channels -c
+  conda-forge python=3.13 moderngl glcontext` worked, about a minute, and the
+  environment is listed by name (`conda env list`), so `conda activate
+  jupylet` works even though it was created with `-p`.
+- `<env python> -m pip install -e <code>` worked without activating the
+  environment, a few minutes.
+- The helper's `download`, `overrides`, `jupylet ... trust_notebooks` /
+  `is_trusted` and `prompt` all gave the expected answers.
+- The handover into `CLAUDE.md` Part 1 worked: `find-env` listed the new
+  environment first, and the game canvas showed as a 512x512 picture.
+
+Not tried yet: installing Miniforge (the silent installer), updating an old
+one, and a computer with another conda.
 
 ### PowerShell quoting
 
