@@ -105,6 +105,21 @@ def _clear(
     return foo(red, green, blue, alpha, depth, viewport)
 
 
+_app = None
+
+
+def get_app():
+    """Return the most recently created app.
+
+    Raises:
+        RuntimeError: If no app has been created yet.
+    """
+    if _app is None:
+        raise RuntimeError('No app has been created yet. Create one first, for example with app = App().')
+
+    return _app
+
+
 class App(EventLeg, ClockLeg):
     
     """A Jupylet game object.
@@ -264,6 +279,9 @@ class App(EventLeg, ClockLeg):
 
         self._time2draw = 0
         self._time2draw_rm = 0
+
+        global _app
+        _app = self
 
     def __del__(self):
 
@@ -429,6 +447,17 @@ class App(EventLeg, ClockLeg):
         if self.is_running:
             self.scheduler.unschedule(self._redraw_windows)
             self._exit = True
+
+    def finish(self, foo):
+        """Stop given live loop once it completes its current pass through the loop.
+
+        Args:
+            foo (function or str): The live loop, or its name.
+        """
+        sc = self.schedules.get(foo if type(foo) is str else foo.__name__)
+
+        if sc and 'task' in sc:
+            sc['times'] = sc['ncall'] + 1
 
     def set_redraw_interval(self, interval):
 
@@ -645,14 +674,14 @@ class App(EventLeg, ClockLeg):
         if self.is_running:
             self._redraw_windows(0, 0)
 
-    def get_logging_widget(self, height='256px', quiet_default_logger=True):
-        """Returns an output ipywidget to which log messages will be printed.
+    def get_logging_widget(self, height='256px', quiet_default_logger=True, max_lines=320):
+        """Returns an ipywidget that shows the last log messages.
 
         Returns:
-            ipywidgets.widgets.widget_output.Output: an output ipywidget for 
-            log messages.
+            ipywidgets.HTML: an ipywidget showing the last max_lines log 
+            messages.
         """
-        return get_logging_widget(height, quiet_default_logger)
+        return get_logging_widget(height, quiet_default_logger, max_lines)
        
 
 def _b2i(buffer, size, format='RGBA'):

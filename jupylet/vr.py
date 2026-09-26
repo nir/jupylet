@@ -52,7 +52,7 @@ plain module functions, like jupylet.audio.
     app.run()
     ...
     vr.probe()      # which runtime, is a headset seen
-    vr.start(app)   # the headset takes over render(); returns immediately
+    vr.start()      # the headset takes over render(); returns immediately
     ...
     vr.stop()       # render() goes back to the canvas/window
 
@@ -138,6 +138,7 @@ try:
 except:
     xr = xrgl = GL = None
 
+from .app import get_app
 from .resource import get_context
 from .model import set_xr_view, disable_xr_view, reset_xr_cameras
 
@@ -265,13 +266,14 @@ def is_running():
     return _thread is not None and _thread.is_alive()
 
 
-def start(app, samples=0):
+def start(samples=0):
     """Take over the App's render handler and run it for the headset. Warns
     and does nothing if VR isn't available here (see probe()), if the App
     has no render handler, or if already running.
 
+    The App is the most recently created one (see jupylet.app.get_app()).
+
     Args:
-        app (jupylet.app.App): The running App to take over.
         samples (int, optional): Number of samples per pixel for multisample
             anti-aliasing (MSAA), which smooths jagged edges, for example 4.
             It costs frame time. Independent of the App's own `samples`,
@@ -282,6 +284,8 @@ def start(app, samples=0):
 
     if is_running():
         return
+
+    app = get_app()
 
     if _context is not None:
         stop()  # the thread died on its own - clean up its session first

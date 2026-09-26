@@ -644,6 +644,24 @@ class LatencyGate(Sound):
         """
         self.schedule('close', t, dt)
         
+    @property
+    def is_open(self):
+        """bool: True if the gate is open now, or is scheduled to open.
+
+        A gate that is open but has a close scheduled still counts as open 
+        until the close actually happens.
+        """
+        return self.value == 1 or any(e == 'open' for _, e in self.states)
+
+    def extend(self):
+        """Cancel any scheduled close, so the gate stays open.
+
+        This is what makes legato possible: a note that should run straight 
+        into the next one cancels its scheduled close, and the next note 
+        schedules a close of its own.
+        """
+        self.states = [s for s in self.states if s[1] != 'close']
+
     def schedule(self, event, t=None, dt=None):
         logger.debug('Enter LatencyGate.schedule(event=%r, t=%r, dt=%r).', event, t, dt)
 
@@ -724,6 +742,10 @@ class GatedSound(Sound):
         self.gate = LatencyGate()
 
         self.duration = duration
+
+        # True while the current note continues the previous one legato,
+        # see play().
+        self.legato = False
         
     @property
     def done(self):
@@ -748,20 +770,47 @@ class GatedSound(Sound):
         Returns:
             GatedSound: The sound object representing the newly playing note.
         """
+        # Each polyphonic note is a new note on a new copy, so it can never 
+        # continue a previous note legato.
+        kwargs.pop('legato', None)
+
         o = self.copy(track=True)
         o.play(note, duration, **kwargs)
 
         return o
 
-    def play(self, note=None, duration=None, **kwargs):
+    def play(self, note=None, duration=None, legato=False, **kwargs):
         """Play given note monophonically.
 
-        If sound is already playing, it will be reset.
+        If sound is already playing, it will be reset, unless legato is True.
         
+        With legato=True and the sound still playing, the new note continues 
+        the current one instead of starting over: the gate stays open, nothing 
+        is reset, so envelopes, oscillator phases and filters carry on, and 
+        only the note and the given properties change. If the sound is not 
+        playing, the note starts normally.
+
+        After the call, the ``legato`` attribute tells whether the note was 
+        actually played legato. A subclass can use it to implement a slide,
+        for example by gliding from the previous pitch to ``self.key`` in its
+        ``forward()`` method, and to keep per-note settings that should only 
+        change when a new note really starts:
+
+        ::
+
+            def play(self, note=None, duration=None, slide=False, **kwargs):
+
+                super().play(note, duration, legato=slide, **kwargs)
+
+                if not self.legato:
+                    self._glide = self.key
+
         Args:
             note (float): Note to play in units of semitones 
                 where 60 is middle C.
             duration (float, optional): Duration to play note, in whole notes.    
+            legato (bool): Continue the currently playing note, if any, 
+                instead of restarting the sound.
             **kwargs: Properties of intrument to modify.
         """
         if duration is None:
@@ -770,8 +819,20 @@ class GatedSound(Sound):
         t = kwargs.pop('t', None)
         dt = kwargs.pop('dt', None)
 
-        super().play(note, **kwargs)
-        self.gate.open(t, dt)
+        self.legato = legato and self.gate.is_open
+
+        if self.legato:
+
+            self.gate.extend()
+
+            if note is not None:
+                self.note = note
+
+            self.set(**kwargs)
+
+        else:
+            super().play(note, **kwargs)
+            self.gate.open(t, dt)
 
         if duration is not None:
             self.gate.close(dt=duration * get_note_value() * 60 / get_bpm())

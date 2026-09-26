@@ -41,6 +41,25 @@ logger = logging.getLogger(__name__)
 
 
 class BaseFilter(Sound):
+    """Base class for filters whose cutoff frequency may change from block to block.
+
+    Subclasses implement :meth:`filter`, which applies the filter at a fixed
+    frequency to a block of samples. It takes the filter state from the end of
+    the previous block and returns the state at the end of this one, so that
+    consecutive blocks are filtered seamlessly, following the convention of
+    ``scipy.signal.lfilter()``.
+
+    :meth:`forward` takes care of changes in frequency. The state of a running
+    filter is only valid for the coefficients that produced it, and switching
+    coefficients mid-stream would produce a click. So when the frequency
+    changes, the block is filtered twice: once by the running filter at the old
+    frequency, and once by a new filter at the new frequency, which is warmed up
+    on the previous block first. The two results are crossfaded linearly across
+    the block, and the new filter carries on into the next block.
+
+    Args:
+        freq (float): Initial cutoff frequency in Hz.
+    """
     
     def __init__(self, freq=8192):
         
@@ -59,6 +78,19 @@ class BaseFilter(Sound):
         self._z = None
         
     def forward(self, x, key_modulation=None):
+        """Filter one block of samples.
+
+        Args:
+            x (ndarray): Block of samples of shape (frames, channels).
+            key_modulation (float or ndarray, optional): Offset of the cutoff
+                frequency from the filter's key, in semitones. If an array,
+                only the value at the end of the block is used, so the cutoff
+                changes at most once per block. The resulting frequency is
+                rounded to a whole number of Hz.
+
+        Returns:
+            ndarray: The filtered block, of the same shape as x.
+        """
         
         if self._x is None:
             self._x = x * 0
@@ -72,6 +104,7 @@ class BaseFilter(Sound):
 
         freq = int(freq)
 
+        # Same frequency as the previous block; carry on with the running filter.
         if self._f == freq:
 
             a0, self._z = self.filter(x, self._f, self._z)
@@ -80,6 +113,7 @@ class BaseFilter(Sound):
             self._x = x
             return a0
 
+        # First block; start a new filter, warmed up on a block of silence.
         if self._f is None:
 
             xx = np.concatenate((self._x, x))
@@ -90,6 +124,8 @@ class BaseFilter(Sound):
             self._x = x
             return a1
 
+        # New frequency; crossfade from the running filter to a new one,
+        # warmed up on the previous block.
         a0, self._z = self.filter(x, self._f, self._z)
         
         xx = np.concatenate((self._x, x))
@@ -104,6 +140,20 @@ class BaseFilter(Sound):
         return a1
             
     def filter(self, x, freq, z=None):
+        """Filter a block of samples at a fixed frequency.
+
+        Subclasses override this method. The base implementation returns
+        the samples unchanged.
+
+        Args:
+            x (ndarray): Samples to filter, of shape (frames, channels).
+            freq (float): Cutoff frequency in Hz.
+            z (ndarray, optional): Filter state at the end of the previous
+                block. If None, the filter starts from its initial state.
+
+        Returns:
+            tuple: The filtered samples, and the filter state at their end.
+        """
         return x, None
     
 

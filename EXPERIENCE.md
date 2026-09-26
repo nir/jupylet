@@ -78,6 +78,8 @@ Retired, Unreviewed.
    `python -c` lines.
 9. Never wait for the person inside your turn: you cannot hear them until it
    ends. Wait in the background (`CLAUDE.md`, "Waiting for the person").
+10. Look for the simplest, most elegant solution. See "Simple beats clever"
+   below.
 
 ## Working with people in a shared coding environment (any platform)
 
@@ -231,6 +233,21 @@ Children need the same, put more gently (see `CLAUDE.md`).
   when told to end the turn silently. The instruction as the last line
   leaves nothing to add, and the waiter already runs if the person is quick.
 
+- **Simple beats clever.** `[any platform, recurring, Opus 5.5, 2026-09-25]`
+  Claude's first proposals and code tend to be more complex than the problem
+  needs, with extra state, flags, handles or layers where a few plain lines
+  would do it more elegantly. With the author, many designs had to be
+  simplified substantially before they went into jupylet. A beginner cannot
+  do that simplifying, and cannot find the subtle bugs, such as timing
+  errors, that extra machinery brings in. So avoid creating the complexity in
+  the first place. Before writing code, look for the simplest solution that
+  fits jupylet's existing ideas, and prefer it. When moving or generalizing
+  code that works, keep its logic unless there is a reason to change it.
+  Extra machinery is justified by a real problem. So when you suspect one,
+  check that it exists (measure, read the code, try it) before building a
+  fix, and say what you found. When the person asks for something simpler,
+  cut; don't restructure.
+
 ## Any platform: how the tools work
 
 These come from reading the source, so they do not depend on the operating
@@ -324,6 +341,46 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
 
 What was learned on the Mac before 2026-09-23 is in `CLAUDE.md`, Part 5.
 
+- **Test code in the person's kernel can leave side effects.** `[macOS, seen
+  once, Opus 5.5, 2026-09-25]` Calling jupylet's `get_logging_widget()` in a
+  test via `execute_code` added a handler to the root logger and set the stderr
+  handler to ERROR, so the person's later `logger.info` messages never showed.
+  Test in a separate process where possible; if it must be the kernel, undo
+  global changes (loggers, settings, tempo) and say so.
+- **"It does not run cells": the page is stuck, not the kernel.** `[macOS, seen
+  once, Opus 5.5, 2026-09-24, JupyterLab 4.6.4]` After a long session with many
+  cells added over MCP, ipywidgets and a sonic live loop, a cell showed `[*]`
+  while the server said the kernel was idle and `execute_code` ran fine; every
+  newer cell queued behind it. The console had repeated "Cannot read properties
+  of null (reading 'stateChanged')" and "CodeMirrorEditor already set". Check
+  the kernel first (sessions API, `execute_code`), then reload the page with
+  `navigate` to the notebook's URL: the kernel and its variables survive. Cause
+  not found. That reload did NOT fix it: the `[*]` survived the reload (it is
+  in the shared document), and Jupyter's log showed no "Executed cell" from
+  `jupyter_server_nb_model` since the stuck cell, i.e. the server-side
+  execution queue was stuck, not the page (the stuck cell was `app.stop(...)`
+  on a sonic live loop, after a kernel interrupt). What fixed it: `replace-kernel`
+  (with the person's yes; the variables are lost), then `unuse_notebook` and
+  `attach`. The queued cell ran at once on the new kernel. The old `[*]` mark
+  stays on the stuck cell until it is run again. An earlier `Error saving file
+  ... IndexError: Array index out of range` in `jupyter_ydoc` may be related.
+- **After the person restarts or replaces their kernel, `attach` keeps the old
+  one.** `[macOS, verified, Opus 5.5, 2026-09-24, jupyter-mcp-server 2.2.2]`
+  The person restarted the notebook's kernel a few times from the page; the
+  session had a new kernel id, but `attach` answered "already connected ... runs
+  on execution backend '<old id>' ... not applied". Fix that worked:
+  `call ... unuse_notebook '{"notebook_name": "<name>"}'`, then `attach` again;
+  it then connected to the new kernel and `execute_code` saw the person's
+  variables.
+- **Your own `execute_code` wakes a running `watch`.** `[macOS, verified, Opus
+  5.5, 2026-09-24]` While a `watch` waited for the person, each of my own test
+  runs in their kernel (`execute_code`) ended it with `ran`, and no cell count
+  had changed. That's harmless if you re-read the counts, as `CLAUDE.md` says,
+  but it's noise. Better: stop the waiting command (`TaskStop`) before your own
+  kernel runs, then start it again afterwards without `<since>`. With a
+  developer who also asks questions between runs, the 90 s / 5 / 10 min
+  back-off check-ins aren't wanted: they are actively in the conversation.
+
 - **`CLAUDE_SETUP.md` on a Mac with Miniconda.** `[macOS, verified, Sonnet
   5, 2026-09-23, Apple chip, Miniforge 26.7.2-0]` A full run from the
   `claude` branch on GitHub, with Miniconda in `/opt/miniconda3` set up in
@@ -358,7 +415,68 @@ them but could not test them there:
 - Does the "run one cell" recipe work with the allowlist flag? (Without the
   flag, the Mac server offered only `notebook_run-all-cells` and
   `notebook_get-selected-cell`, as expected.)
-- Does `insert_cell` show up in the page at once?
+- Does `insert_cell` show up in the page at once? Yes: `[macOS, verified,
+  Opus 5.5, 2026-09-23]` 17 `insert_cell` (index 0 and -1) and two
+  `overwrite_cell_source` calls into a notebook the person had just created
+  in the page all showed there within seconds (checked by counting
+  `.jp-Cell` elements with `javascript_tool`; `find` does not see cell
+  text, because the editor is not in the accessibility tree). `attach`
+  works for any notebook name, not only `11-spaceship.ipynb`.
+
+### A cell stays `[*]` forever while the kernel is idle
+
+`[macOS, seen 4 times, fix verified once, Opus 5.5, 2026-09-25]` After a
+live loop or a self-refreshing widget had been running for a while with no
+cell run, the next cell (always the "stop" cell) hung at `[*]`, with the
+cells after it queued. The kernel had run it (it is in `In`) and was idle.
+`GET /api/kernels/<id>/execute` showed the request `running`, and
+`DELETE .../requests/<rid>` did not help. Likely cause (a strong guess, no
+clean repro yet): `jupyter_server_nbmodel` keeps one kernel client open and
+reads IOPub only while a cell runs. Background output piles up in its
+ZeroMQ receive queue (1000 messages by default), newer messages are
+dropped, and so is that cell's `idle` status, which `execute_interactive`
+waits for with no timeout.
+Fix without losing variables: have the kernel send the missing `idle`. The
+request id is `<session>_<server pid>_<n>`. Tasks and `call_later` handles
+started from notebook cells carry their cell's header in
+`kernel._shell_parent` (`task.get_context()[var]`, `handle._context[var]`),
+which gives the session, the pid and a recent `n`. Then, with
+`execute_code`, call `kernel.session.send(kernel.iopub_socket, "status",
+{"execution_state": "idle"}, parent={"header": h}, ident=kernel._topic("status"))`
+for a range of `n`. The executor finished the cell at once, because the
+reply had been waiting on the shell channel. Mistake made once: do not send
+`idle` for numbers past the stuck one. The executor keeps those, so every
+later cell up to that number finishes early and shows no output (the log
+says `outputs=0`). To fix it, use up the numbers by posting `{"code": "pass"}`
+to `POST /api/kernels/<id>/execute` once per number; after that, output came
+back (verified).
+Otherwise `replace-kernel` fixes it (variables are lost).
+
+### Overwriting a cell by index hit the person's new cells
+
+`[macOS, seen once, Opus 5.5, 2026-09-25]` Cell indices shift whenever the
+person inserts or deletes cells, even between two of your own calls. A batch
+of `overwrite_cell_source` calls, using indices read a few minutes earlier,
+replaced three cells the person had just inserted. The script printed each
+cell's first line but did not stop when it didn't match. Before each
+overwrite, read the cell and check its content (or its `id` in the saved
+`.ipynb`), and stop if it isn't the expected cell. Recovery: the
+collaboration store `examples/.jupyter_ystore.db` (SQLite, table `yupdates`,
+per-notebook `path`) holds every edit. Open it read-only, replay the updates
+in `rowid` order into a `pycrdt.Doc` (`doc.get('cells', type=Array)`), and
+keep each cell's source as it changes: this recovered the overwritten text.
+
+### Rewinding the conversation stops Jupyter
+
+`[macOS, seen once, Opus 5.5, 2026-09-25]` Jupyter runs as a background
+Bash task of the Claude session. When the person rewound to an earlier
+question in the Claude app, the session restarted and its background tasks
+ended, so Jupyter shut down cleanly with its kernel ("Shutting down 1
+kernel" at the end of its log). The next message then reported the task as
+stopped. The notebook was saved, but the kernel's variables were lost. Fix:
+ask, then start Jupyter again (step 5) with the same token, so the page's
+sign-in still works, and `attach`. Worth telling a person before they
+rewind while a kernel holds work they care about.
 
 ## Windows 11
 

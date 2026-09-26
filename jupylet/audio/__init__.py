@@ -33,10 +33,10 @@ import os
 from ..utils import callerframe, callerpath
 
 
-def sonic_py(resource_dir='.'):
+def sonic_py(resource_dir='.', **kwargs):
     """Start an audio application.
 
-    An audio application is need to run live loops.
+    An audio application is needed to run live loops.
     
     Args:
         resource_dir (str): Path to root of resource dir, for samples, etc...
@@ -49,7 +49,7 @@ def sonic_py(resource_dir='.'):
     red = os.path.join(callerpath(), resource_dir)
     red = pathlib.Path(red).absolute()
 
-    app = App(32, 32, resource_dir=str(red))
+    app = App(32, 32, resource_dir=str(red), **kwargs)
     app.run(0)
     
     return app
@@ -107,10 +107,10 @@ def get_note_value():
     return _note_value
 
 
-_bpm = 240
+_bpm = 120
 
 
-def set_bpm(bpm=240):
+def set_bpm(bpm=120):
     """Set the tempo to the given beats per minute.
     
     Args:

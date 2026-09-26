@@ -191,6 +191,7 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 
 * Support for VR in Windows 11! Check out [examples/12-spaceship-3d.ipynb](https://github.com/nir/jupylet/blob/master/examples/12-spaceship-3d.ipynb) for an example.
 * A replica of the historical Atari 1978 Breakout, created entirely by AI. Check out [examples/31-breakout.ipynb](https://github.com/nir/jupylet/blob/master/examples/31-breakout.ipynb).
+* The default tempo is now 120 beats per minute, the common default of music software, instead of 240. Music that relied on the old default plays at half speed; call `set_bpm(240)` to restore it.
 
 <br>
 <p float="left">

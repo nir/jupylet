@@ -25,10 +25,13 @@
 """
 
 
+import collections
 import ipywidgets
+import ipyevents
 import functools
 import traceback
 import hashlib
+import html
 import inspect
 import logging
 import pickle
@@ -49,27 +52,75 @@ class StreamHandler(logging.StreamHandler):
 
 
 class LoggingWidget(logging.Handler):
-    """ Custom logging handler sending logs to an output widget """
+    """Logging handler that shows the last log messages in a widget.
 
-    def __init__(self, height='256px', *args, **kwargs):    
+    The messages are shown in a scrolling box that stays scrolled to the
+    newest message. While the mouse is over the box, the box is not updated,
+    so it can be scrolled back through without jumping; the messages that
+    arrive meanwhile are shown once the mouse leaves.
+
+    Args:
+        height (str): Height of the box, as a CSS length.
+        max_lines (int): Number of most recent messages to keep.
+    """
+
+    def __init__(self, height='256px', max_lines=320, *args, **kwargs):
         super(LoggingWidget, self).__init__(*args, **kwargs)
-        
-        self.out = ipywidgets.Output()
-        self.set_layout(height)
 
-    def set_layout(self, height='256px', overflow='scroll', **kwargs):
-        self.out.layout=ipywidgets.Layout(
-            height=height, 
-            overflow=overflow, 
-            **kwargs
+        self.lines = collections.deque(maxlen=max_lines)
+        self.height = height
+        self.hover = False
+
+        #
+        # With _view_count set to a number, the frontend keeps it up to date
+        # with the number of places the widget is displayed in. The widget is
+        # only redrawn while it is displayed somewhere, and once when it is
+        # displayed again.
+        #
+        self.out = ipywidgets.HTML(_view_count=0)
+        self.out.observe(lambda change: change['new'] and self.show(), names='_view_count')
+
+        self._event = ipyevents.Event(
+            source=self.out,
+            watched_events=['mouseenter', 'mouseleave']
         )
+        self._event.on_dom_event(self._on_hover)
+
+        self.show()
+
+    def set_layout(self, height='256px'):
+        self.height = height
+        self.show()
+
+    def show(self):
+        """Show the kept messages in the widget."""
+
+        #
+        # A column-reverse flex box starts out scrolled to its end, so the
+        # box is scrolled to the newest message each time it is redrawn.
+        #
+        self.out.value = (
+            '<div style="height: %s; overflow: auto; display: flex; flex-direction: column-reverse;">'
+            '<pre style="margin: 0; flex-shrink: 0; font-size: var(--jp-code-font-size); line-height: normal;">%s</pre>'
+            '</div>'
+        ) % (self.height, html.escape(''.join(self.lines)))
+
+    def _on_hover(self, event):
+
+        self.hover = event['type'] == 'mouseenter'
+
+        if not self.hover:
+            self.show()
 
     def emit(self, record):
-        with self.out:
-            print(self.format(record))
+
+        self.lines.append(self.format(record) + '\n')
+
+        if self.out._view_count and not self.hover:
+            self.show()
 
 
-def get_logging_widget(height='256px', quiet_default_logger=True):
+def get_logging_widget(height='256px', quiet_default_logger=True, max_lines=320):
 
     if type(height) is int:
         height = str(height) + 'px'
@@ -82,7 +133,7 @@ def get_logging_widget(height='256px', quiet_default_logger=True):
         w.set_layout(height)
         return w.out
 
-    handler = LoggingWidget(height)
+    handler = LoggingWidget(height, max_lines)
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
     
