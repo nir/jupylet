@@ -30,7 +30,11 @@ import pathlib
 import time
 import os
 
+import numpy as np
+
 from ..utils import callerframe, callerpath
+
+from .note import note2key
 
 
 def sonic_py(resource_dir='.', **kwargs):
@@ -59,7 +63,7 @@ DEFAULT_AMP = 0.5
 
 MIDDLE_C = 261.63
 
-FPS = 44100
+FS = FPS = 44100 # FPS is the old name and is kept for backward compatibility.
 
 
 def t2frames(t):
@@ -71,7 +75,7 @@ def t2frames(t):
     Returns:
         int: The number of frames.
     """
-    return int(FPS * t)
+    return int(FS * t)
 
 
 def frames2t(frames):
@@ -83,7 +87,7 @@ def frames2t(frames):
     Returns:
         float: The time duration in seconds.
     """
-    return frames  / FPS
+    return frames  / FS
 
 
 def get_time():
@@ -124,6 +128,28 @@ def get_bpm():
     return _bpm
 
 
+_safety_limit = 3.
+
+
+def set_safety_limit(limit):
+    """Set the highest peak of samples that jupylet will play.
+
+    An array of samples that peaks past this limit, for example the output
+    of a filter that ran away, is refused rather than played through the
+    speakers. Full scale is 1.
+
+    Args:
+        limit (float): The highest peak allowed, or None to turn the check
+            off.
+    """
+    global _safety_limit
+    _safety_limit = limit
+
+
+def get_safety_limit():
+    return _safety_limit
+
+
 dtd = {}
 syd = {}
 
@@ -158,19 +184,55 @@ def use(sound, **kwargs):
 PLAY_EXTRA_LATENCY = 0.150
 
 
+def _is_note(s):
+    """Tell whether a string names a note, like 'C4' or 'Eb'."""
+
+    try:
+        note2key(s)
+        return True
+    except (KeyError, ValueError, IndexError):
+        return False
+
+
 def play(note, duration=None, **kwargs):
-    """Play given note polyphonically with the instrument previously set by 
-    call to :func:`use`.
-    
-    You can supply key/value pairs of properties to modify in the given 
+    """Play given note polyphonically with the instrument previously set by
+    call to :func:`use`, or play a sample.
+
+    You can supply key/value pairs of properties to modify in the given
     instrument.
 
+    Instead of a note, you can give a sample to play: a :class:`Sample`
+    object, an array of samples at the sampling frequency FS, for example a
+    sound computed in a notebook, or the path to an audio file of type WAV,
+    OGG or FLAC. It plays as it is, with no need for :func:`use`. An array
+    or a file plays at full amplitude, amp=1, unless given another amp.
+
     Args:
-        note (float): Note to play in units of semitones 
-            where 60 is middle C.
+        note (float or str): Note to play in units of semitones
+            where 60 is middle C, or as a string like 'C4'; or a sample.
         duration (float, optional): Duration to play note, in whole notes.
-        **kwargs: Properties of intrument to modify.
+        **kwargs: Properties of intrument, or of the sample, to modify.
+
+    Returns:
+        GatedSound: The sound object representing the playing note or
+            sample.
     """
+    #
+    # Imported here rather than at the top: importing it loads the whole
+    # audio stack, which this module, imported by all of jupylet, avoids.
+    # It also imports this module itself.
+    #
+    from .sample import Sample
+
+    #
+    # Arrays and audio files play at full amplitude by default, as they
+    # would with sounddevice, since they carry their own levels.
+    #
+    if isinstance(note, (np.ndarray, pathlib.PurePath)) or (
+        type(note) is str and not _is_note(note)
+    ):
+        note = Sample(note)
+        kwargs.setdefault('amp', 1.)
 
     cf = callerframe()
     cn = cf.f_code.co_name
@@ -180,12 +242,22 @@ def play(note, duration=None, **kwargs):
     elif cn.startswith('<cell line'):
         hh = '<cell line'
     else:
-        hh = hash(cf) 
+        hh = hash(cf)
 
-    sy = syd[hh]
-    
     tt = dtd.get(hh) or get_time()
     tt += PLAY_EXTRA_LATENCY
+
+    if isinstance(note, Sample):
+        note.play(None, duration, t=tt, **kwargs)
+        return #note
+
+    sy = syd.get(hh)
+
+    if sy is None:
+        raise RuntimeError(
+            'No instrument to play: call use(instrument) first, '
+            'for example use(tb303).'
+        )
 
     return sy.play_poly(note, duration, t=tt, **kwargs)
 

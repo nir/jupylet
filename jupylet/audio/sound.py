@@ -39,10 +39,11 @@ import os
 import scipy.signal
 
 import numpy as np
+import numba
 
 from ..utils import settable, Dict, trimmed_traceback
 
-from ..audio import FPS, MIDDLE_C, DEFAULT_AMP, t2frames, frames2t   
+from ..audio import FS, MIDDLE_C, DEFAULT_AMP, t2frames, frames2t   
 from ..audio import get_time, get_bpm, get_note_value
 
 from .note import note2key, key2note
@@ -58,15 +59,33 @@ DEBUG = False
 EPSILON = 1e-6
 
 
-def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, xscale=None, **kwargs):
-        
-    import matplotlib.pyplot as plt
-    import PIL.Image
-    import io
-    
-    b = io.BytesIO()
+def plot(
+    *args,
+    grid=True,
+    figsize=(10, 5),
+    xlim=None,
+    ylim=None,
+    xscale=None,
+    labels=None,
+    **kwargs
+):
+    """Plot with matplotlib and return the plot as an image.
 
-    plt.figure(figsize=figsize)
+    Args:
+        *args: Arguments to ``matplotlib.pyplot.plot()``, for example ``y``,
+            or ``x, y``, or several of those for several lines.
+        labels (list): Optional names of the lines, shown in a legend.
+
+    Returns:
+        IPython.display.Image: The plot as a small JPEG image, which Jupyter
+            displays, also when the notebook is loaded from disk.
+    """
+
+    import matplotlib.pyplot as plt
+    import IPython.display
+    import io
+
+    fig = plt.figure(figsize=figsize)
     plt.grid(grid)
     
     if xlim:
@@ -78,11 +97,28 @@ def get_plot(*args, grid=True, figsize=(10, 5), xlim=None, ylim=None, xscale=Non
     if xscale:
         plt.xscale(xscale)
     
-    plt.plot(*args, **kwargs)    
-    plt.savefig(b, format='PNG', bbox_inches='tight')
-    plt.close()
-    
-    return PIL.Image.open(b).convert('RGB')
+    plt.plot(*args, **kwargs)
+
+    if labels:
+        plt.legend(labels)
+
+    #
+    # Return the plot as a small JPEG image, rather than let Jupyter show
+    # the figure itself as a PNG. A notebook saves every image it shows
+    # inside its file, so plots add up quickly: in a lesson notebook with
+    # a few dozen plots, the images are most of the file. A JPEG at this
+    # size takes about half the space of Jupyter's PNG, and looks nearly
+    # the same on screen. Closing the figure keeps Jupyter from showing
+    # it a second time.
+    #
+    b = io.BytesIO()
+    fig.savefig(b, format='jpeg', dpi=72, bbox_inches='tight', pil_kwargs={'quality': 75})
+    plt.close(fig)
+
+    return IPython.display.Image(b.getvalue(), format='jpeg')
+
+
+get_plot = plot
 
 
 def compute_running_mean(x, n=1024):
@@ -99,25 +135,44 @@ def compute_running_mean(x, n=1024):
     return (cs[n:] - cs[:-n]) / (ns[n:] - ns[:-n])
 
 
-def get_power_spectrum_plot(a0, sampling_frequency=FPS, window=None, **kwargs):
-    
-    ft = np.fft.fft(a0.squeeze())
-    sa = np.square(np.abs(ft))
-    ps = 10 * np.log10(sa)
-    
-    ff = np.fft.fftfreq(len(a0), 1/sampling_frequency)
+def get_power_spectrum_plot(*sounds, sampling_frequency=FS, window=None, **kwargs):
+    """Plot the power of each frequency in one or more sounds, in decibels.
 
-    #print(a0.shape, ps.shape, ff.shape)
-    
-    if window == 1:
-        return get_plot(ff, ps, **kwargs)
-    
-    if window is None:
-        window = len(a0) // 4096
-    
-    rm = compute_running_mean(ps, window)
-    
-    return get_plot(ff, rm, **kwargs)
+    Args:
+        *sounds: One or more sounds, as arrays of samples.
+        sampling_frequency (int): The sample rate of the sounds.
+        window (int): Number of neighboring frequencies to average, to smooth
+            the plot; by default one for every 4096 samples of the sound.
+        **kwargs: Arguments to :func:`plot`, for example ``xlim``,
+            ``ylim``, ``xscale='log'`` or ``labels``.
+    """
+    args = []
+
+    for a0 in sounds:
+
+        a0 = a0.squeeze()
+
+        #
+        # Fading the sound in and out with a Hann window keeps the loud
+        # frequencies from smearing over the whole spectrum, as they would
+        # with the sound cut off abruptly at its ends. The window is scaled
+        # to keep the average power of the sound as it is.
+        #
+        hw = np.hanning(len(a0))
+        hw /= np.sqrt(np.mean(np.square(hw)))
+
+        ft = np.fft.rfft(a0 * hw)
+        sa = np.square(np.abs(ft))
+        ps = 10 * np.log10(sa)
+
+        ff = np.fft.rfftfreq(len(a0), 1/sampling_frequency)
+
+        if window != 1:
+            ps = compute_running_mean(ps, window or len(a0) // 4096)
+
+        args += [ff, ps]
+
+    return plot(*args, **kwargs)
 
 
 #
@@ -237,7 +292,7 @@ class Sound(object):
         # for a few seconds after it's done, so a shared effect may still
         # be applied to it (for example in the case of a long reverb).
         self._done = 0
-        self._done_decay = 5 * FPS
+        self._done_decay = 5 * FS
 
         # The lastest output arrays of the forward() function.
         self._a0 = None
@@ -407,7 +462,7 @@ class Sound(object):
         if self._error:
             return True
 
-        if self.index < FPS / 8:
+        if self.index < FS / 8:
             return False
         
         if self._a0 is None or self._ac is None:
@@ -869,8 +924,8 @@ def get_exponential_adsr_curve(dt, start=0, end=None, th=0.01):
     Returns:
         ndarray: Array with curve values.    
     """
-    df = max(math.ceil(dt * FPS), 1)
-    end = min(df, end if end is not None else 60 * FPS)
+    df = max(math.ceil(dt * FS), 1)
+    end = min(df, end if end is not None else 60 * FS)
     start = start + 1
         
     a0 = np.arange(start/df, end/df + EPSILON, 1/df, dtype='float64')
@@ -891,8 +946,8 @@ def get_linear_adsr_curve(dt, start=0, end=None):
     Returns:
         ndarray: Array with curve values.    
     """
-    df = max(math.ceil(dt * FPS), 1)
-    end = min(df, end if end is not None else 60 * FPS)
+    df = max(math.ceil(dt * FS), 1)
+    end = min(df, end if end is not None else 60 * FS)
     start = start + 1
     
     a0 = np.arange(start/df, end/df + EPSILON, 1/df, dtype='float64')
@@ -1040,157 +1095,283 @@ class Envelope(Sound):
 
 
 #
-# Do not change this "constant"!
+# Waveform generators.
 #
-_NP_ZERO = np.zeros((1,), dtype='float64')
+# Imagine an array holding one cycle of a sine wave. Read it going around and
+# around, taking every entry, and you get a low tone. Read it in big steps,
+# skipping entries, and you go around faster, for a higher tone. The step size
+# is the frequency, divided by the sampling frequency. To change the
+# frequency, even from one sample to the next, just change the step size.
+#
+# The position in the cycle is called the phase. Steps rarely land exactly
+# on an entry, so the two nearest entries are blended. For the sine wave, the
+# value at the phase is simply computed with math.sin() instead.
+#
+# The sine wave is computed exactly. The triangle, sawtooth and square waves
+# are sums of sine waves, their harmonics. They are read from tables that
+# hold one cycle of each wave, made of only as many harmonics as fit below
+# the Nyquist frequency, half the sampling frequency. Higher harmonics cannot
+# be held by digital sound and would fold back down as out of tune tones, an
+# effect called aliasing.
+#
+# The loops below are compiled by numba to fast machine code. Inside them, the
+# phase is measured in cycles, from 0 to 1. Outside of them, it is measured in
+# radians, from 0 to 2π, as it always was in the Oscillator API.
+#
 
 
-def get_radians(freq, start=0, frames=8192):
-    
-    pt = 2 * math.pi / FPS * freq
-    
-    if isinstance(pt, np.ndarray):
-        pt = pt.reshape(-1)
-    else:
-        pt = pt * np.ones((frames,), dtype='float64')
-            
-    p0 = start + _NP_ZERO
-    p1 = np.concatenate((p0, pt))
-    p2 = np.cumsum(p1)
-    
-    radians = p2[:-1]
-    next_start = p2[-1] 
-    
-    return radians, next_start
+def _per_sample(value, frames):
+    """Return a number or an array as an array with one float per sample."""
+
+    # A number, e.g. freq=440: the same value at every sample.
+    if np.isscalar(value):
+        return np.full(frames, float(value))
+
+    # An array, e.g. a gliding frequency computed by another sound, of
+    # shape (frames, 1): one value per sample, flattened to (frames,).
+    return np.asarray(value, dtype='float64').reshape(-1)
+
+
+def _get_steps(freq, frames):
+    """Return how far the phase advances at each sample, in cycles."""
+    return _per_sample(freq / FS, frames)
+
+
+def _get_nharmonics(freq):
+    """Return the number of harmonics below the Nyquist frequency, up to 128.
+
+    For a changing frequency, its highest value is used, so that no harmonic
+    aliases.
+    """
+    if isinstance(freq, np.ndarray):
+        freq = freq.max()
+
+    freq = max(1., float(freq))
+    return int(max(1, min(128, FS / 2 // freq)))
+
+
+@numba.njit(cache=True)
+def _sine(steps, phase):
+
+    samples = np.empty(len(steps))
+
+    for i in range(len(steps)):
+
+        samples[i] = math.sin(2 * math.pi * phase)
+
+        # Advance, and keep only the fraction of the cycle.
+        phase += steps[i]
+        phase %= 1.
+
+    return samples, phase
+
+
+@numba.njit(cache=True)
+def _lookup(table, phase):
+    """Read a waveform's cycle table at a phase, blending the two nearest entries.
+
+    Args:
+        table (ndarray): One cycle of a waveform, as values at equal steps
+            of the cycle, e.g. 1024 values of one cycle of a sawtooth.
+        phase (float): Where in the cycle to read, in cycles: 0 is the
+            start, 0.5 halfway, and 1 is the start of the next cycle.
+            Values outside 0 to 1 wrap around.
+
+    Returns:
+        float: The waveform's value at that phase, blended in a straight
+            line between the two table entries around it.
+    """
+
+    size = len(table)
+
+    # The position in the table falls between entries j and j + 1, at
+    # fraction f of the way from one to the next.
+    x = phase % 1. * size
+    j = int(x)
+    f = x - j
+
+    a = table[j % size]
+    b = table[(j + 1) % size]
+
+    return a + f * (b - a)
+
+
+@numba.njit(cache=True)
+def _read_table(table, steps, phase):
+
+    samples = np.empty(len(steps))
+
+    for i in range(len(steps)):
+
+        samples[i] = _lookup(table, phase)
+
+        phase += steps[i]
+        phase %= 1.
+
+    return samples, phase
+
+
+@numba.njit(cache=True)
+def _read_pulse(sawtooth, steps, duties, phase):
+    """Read a pulse wave from a sawtooth table, as the difference of two readers.
+
+    A pulse wave is the difference of two sawtooth waves. Picture two
+    readers going around the sawtooth table with the same steps, a duty
+    of a cycle apart. The sawtooth drops once per cycle, so their
+    difference jumps up as the reader in front passes the drop, and down
+    as the one behind does: it is high for the duty fraction of the
+    cycle. Adding 2 * duty - 1 makes it swing between -1 and 1.
+
+    Only one phase is kept, with the readers half a duty on either side of
+    it. When the duty changes, the readers move apart or together, and the
+    gap between them always equals the duty exactly, with no rounding
+    errors building up, as there would be with a phase for each.
+
+    Args:
+        sawtooth (ndarray): One cycle of a band-limited sawtooth, from
+            get_sawtooth_cycle(), which drops at the middle of the table.
+        steps (ndarray): How far the phase advances at each sample, in
+            cycles.
+        duties (ndarray): The duty at each sample: the fraction of the
+            cycle the pulse is high, from 0 to 1.
+        phase (float): The phase to start from, in cycles.
+
+    Returns:
+        tuple: The samples, and the phase to continue from.
+    """
+    samples = np.empty(len(steps))
+
+    for i in range(len(steps)):
+
+        #
+        # The two readers, half a duty on either side of the phase. The 0.5
+        # brings the sawtooth's drop, at the middle of its table, to the
+        # start of the cycle, so the pulse is high around the start.
+        #
+        d = duties[i]
+        a = _lookup(sawtooth, phase + 0.5 - d / 2)
+        b = _lookup(sawtooth, phase + 0.5 + d / 2)
+        samples[i] = a - b + 2 * d - 1
+
+        phase += steps[i]
+        phase %= 1.
+
+    return samples, phase
+
+
+def _get_table_size(nharmonics):
+    """Return how many entries a cycle table with nharmonics harmonics gets.
+
+    Reading between the entries of a table, in a straight line, adds a
+    little noise. 24 entries for each cycle of the highest harmonic, and at
+    least 768 in all, keep it 76dB or more below the sound, for every note.
+    """
+    return max(768, 24 * nharmonics)
+
+
+@functools.lru_cache(maxsize=256)
+def get_sawtooth_cycle(nharmonics, size=None):
+    """Return one cycle of a band-limited sawtooth wave, as a table.
+
+    It is the sum of its first nharmonics harmonics, where harmonic k is a
+    sine wave with k times the frequency and 1/k of the amplitude. It starts
+    at 0, rises to 1, drops to -1 at the middle of the cycle, and rises back.
+
+    The table has size entries, by default as many as _get_table_size()
+    says. They are stored as float32, which halves the memory, and is still
+    far more precise than needed.
+    """
+    size = size or _get_table_size(nharmonics)
+    radians = np.linspace(0, 2 * math.pi, size, endpoint=False)
+    k = np.arange(1, nharmonics + 1)[:, None]
+
+    table = 2 / math.pi * ((-1) ** (k + 1) / k * np.sin(k * radians)).sum(0)
+
+    return table.astype('float32')
+
+
+@functools.lru_cache(maxsize=256)
+def get_triangle_cycle(nharmonics, size=None):
+    """Return one cycle of a band-limited triangle wave, as a table.
+
+    It is the sum of its odd harmonics up to harmonic nharmonics, where
+    harmonic k is a cosine wave with k times the frequency and 1/k² of the
+    amplitude. It starts at -1, rises to 1 at the middle of the cycle, and
+    falls back.
+
+    The table has size entries, by default as many as _get_table_size()
+    says. They are stored as float32, which halves the memory, and is still
+    far more precise than needed.
+    """
+    size = size or _get_table_size(nharmonics)
+    radians = np.linspace(0, 2 * math.pi, size, endpoint=False)
+    k = np.arange(1, nharmonics + 1, 2)[:, None]
+
+    table = -8 / math.pi ** 2 * (np.cos(k * radians) / k ** 2).sum(0)
+
+    return table.astype('float32')
 
 
 def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
-    
-    radians, phase_o = get_radians(freq, phase, frames)
-    
-    a0 = np.sin(radians)
-    
-    return a0, phase_o
+
+    steps = _get_steps(freq, frames)
+    samples, phase = _sine(steps, phase / 2 / math.pi)
+
+    return samples, phase * 2 * math.pi
 
 
 def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
-    
-    radians, phase_o = get_radians(freq, phase, frames)
 
-    a0 = radians % (2 * math.pi)
-    a1 = a0 / math.pi - 1
-    a2 = a1 * np.sign(-a1)
-    a3 = a2 * 2 + 1
+    nharmonics = kwargs.get('nharmonics') or _get_nharmonics(freq)
+    triangle = get_triangle_cycle(nharmonics, kwargs.get('size'))
 
-    return a3, phase_o
+    steps = _get_steps(freq, frames)
+    samples, phase = _read_table(triangle, steps, phase / 2 / math.pi)
 
-
-@functools.lru_cache(maxsize=256)
-def get_sawtooth_cycle(nharmonics, size=1024):
-    
-    k = nharmonics
-    radians = 2 * math.pi * np.arange(0, 1, 1 / size)
-    harmonic = - 2 / math.pi * ((-1) ** k) / k * np.sin(k * radians)
-
-    if k == 1:
-        return harmonic
-
-    return harmonic + get_sawtooth_cycle(nharmonics - 1, size)
-    
-# Warmup
-len(get_sawtooth_cycle(128))
+    return samples, phase * 2 * math.pi
 
 
 def get_sawtooth_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
-    
-    radians, phase_o = get_radians(freq, phase, frames)
 
-    size = 1024
+    nharmonics = kwargs.get('nharmonics') or _get_nharmonics(freq)
+    sawtooth = get_sawtooth_cycle(nharmonics, kwargs.get('size'))
 
-    # Use mean frequency for the purpose of determining number of 
-    # harmonics to use - this may introduce some aliasing.
-    if type(freq) not in (int, float):
-        freq = float(np.mean(freq))
+    steps = _get_steps(freq, frames)
+    samples, phase = _read_table(sawtooth, steps, phase / 2 / math.pi)
 
-    nharmonics = max(1, min(128, FPS / 2 // freq))
-    nharmonics = kwargs.get('nharmonics', nharmonics)
-
-    sawtooth = get_sawtooth_cycle(nharmonics, size)
-
-    indices = (size / 2 / math.pi * radians).astype('int32') % size
-    samples = sawtooth[indices]
-    
     if sign != 1.:
-        samples = samples * sign
+        samples *= sign
 
-    return samples, phase_o
-
-
-_nduties = 64
-_nharmonics = 128
-
-_km = np.arange(0, _nharmonics+1)[:, None, None] 
-_dm = np.linspace(0, 1, _nduties+1)[None, :, None]
-_kdm = _km * _dm
-
-
-@functools.lru_cache(maxsize=256)
-def get_square_cycle(nharmonics, size=1024):
-    
-    k = nharmonics
-    radians = 2 * math.pi * np.arange(0, 1, 1 / size)
-    harmonic = 4 / math.pi / k * np.sin(math.pi * _kdm[k]) * np.cos(k * radians)[None, :]
-    
-    if k == 1:
-        return harmonic + 2 * _kdm[1] - 1
-
-    return harmonic + get_square_cycle(nharmonics - 1, size)
-
-# Warmup
-len(get_square_cycle(128))
+    return samples, phase * 2 * math.pi
 
 
 def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
-    
-    if isinstance(duty, np.ndarray):
-        duty = duty.reshape(-1).clip(0.01, 0.99)
-        
-    radians, phase_o = get_radians(freq, phase, frames)
 
-    # Use mean frequency for the purpose of determining number of 
-    # harmonics to use - this may introduce some aliasing.
-    if type(freq) not in (int, float):
-        freq = float(np.mean(freq))
+    nharmonics = kwargs.get('nharmonics') or _get_nharmonics(freq)
+    sawtooth = get_sawtooth_cycle(nharmonics, kwargs.get('size'))
 
-    nharmonics = max(1, min(128, FPS / 2 // freq))
-    nharmonics = kwargs.get('nharmonics', nharmonics)
+    steps = _get_steps(freq, frames)
+    duties = _per_sample(duty, len(steps)).clip(0, 1)
 
-    size = 1024
+    if len(duties) != len(steps):
+        raise ValueError('duty must have one value per sample, like freq.')
 
-    square0 = get_square_cycle(nharmonics, size)
+    samples, phase = _read_pulse(sawtooth, steps, duties, phase / 2 / math.pi)
 
-    indices = (size / 2 / math.pi * radians).astype('int32') % size
+    return samples, phase * 2 * math.pi
 
-    #
-    # When duty is a modulating array, the following simple scheme
-    # may result in aliasing. It would be preferable to find
-    # a scheme that can efficiently sync changes in duty with the
-    # begining of wave cycles.
-    #
-    if type(duty) in (int, float):
-        duty = int(duty * _nduties)
-    else:
-        duty = (duty * _nduties).astype('int32')
 
-    samples = square0[duty, indices]
-
-    return samples, phase_o
+# Warmup: compile the loops now rather than while playing.
+get_sine_wave(MIDDLE_C, frames=64)
+get_triangle_wave(MIDDLE_C, frames=64)
+get_sawtooth_wave(MIDDLE_C, frames=64)
+get_square_wave(MIDDLE_C, frames=64)
 
 
 class Oscillator(Sound):
 
-    """Waveform generator for `sine`, `triangle`, anti-aliased `sawtooth`, and 
-    variable duty anti-aliased `square` waveforms.
+    """Waveform generator for `sine`, and anti-aliased `triangle`, `sawtooth`,
+    and variable duty `square` waveforms.
 
     Args:
         shape (str): Waveform to generate - one of `sine`, `triangle`, 
@@ -1199,7 +1380,8 @@ class Oscillator(Sound):
         key (float, optional): Fundamental frequency of generator in semitone
             units where middle C is 60.
         sign (float): Set to -1 to flip sawtooth waveform upside down.
-        duty (float): The fraction of the square waveform cycle its value is 1.
+        duty (float): The fraction of the square waveform cycle its value is 1,
+            from 0 to 1.
 
     Note:
         An Oscillator inherits all the methods and properties of a Sound class.
@@ -1251,7 +1433,7 @@ class Oscillator(Sound):
             freq, 
             self.phase, 
             self.frames, 
-            sign=self.sign,
+            sign=sign,
             duty=duty, 
             **kwargs
         )
@@ -1320,7 +1502,7 @@ class Noise(Sound):
         return a0[:,None]
 
 
-def get_noise(color, frames=4096, state=None, kernel_size=2048, fs=FPS):
+def get_noise(color, frames=4096, state=None, kernel_size=2048, fs=FS):
     
     assert kernel_size % 2 == 0
     
@@ -1360,7 +1542,7 @@ def get_noise(color, frames=4096, state=None, kernel_size=2048, fs=FPS):
 
 
 @functools.lru_cache(maxsize=128)
-def get_noise_kernel(color, kernel_size=8192, fs=FPS):
+def get_noise_kernel(color, kernel_size=8192, fs=FS):
     
     cc = 6.020599915832349
     

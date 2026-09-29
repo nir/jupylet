@@ -26,7 +26,9 @@
 
 
 import functools
+import warnings
 import logging
+import pathlib
 import random
 import os
 import re
@@ -34,10 +36,10 @@ import re
 import soundfile as sf
 import numpy as np
 
-from ..resource import find_path
+from ..resource import find_path, _regd
 from ..utils import auto
 
-from ..audio import FPS, MIDDLE_C, DEFAULT_AMP
+from ..audio import FS, MIDDLE_C, DEFAULT_AMP, get_safety_limit
 
 from .sound import GatedSound, Envelope, Oscillator, Noise
 from .sound import key2freq
@@ -46,7 +48,7 @@ from .sound import key2freq
 logger = logging.getLogger(__name__)
     
 
-_SFCACHE_THRESHOLD = 10 * FPS
+_SFCACHE_THRESHOLD = 10 * FS
 _SFCACHE_SIZE = 64
 
 _sfcache = {}
@@ -74,6 +76,76 @@ def soundfile_read(path, zero_pad=False):
         data = data[:-1]
         
     return data, fps
+
+
+_warned_no_resource_dirs = False
+
+
+def find_sample_path(path):
+    """Find an audio file in the resource folders, or as a normal path.
+
+    The resource folders are registered by creating an App() or by calling
+    sonic_py(). Without them, the path is taken as it is, relative to the
+    current folder, and a warning says so, once.
+    """
+    global _warned_no_resource_dirs
+
+    if _regd:
+        return find_path(path)
+
+    if not _warned_no_resource_dirs:
+        _warned_no_resource_dirs = True
+        warnings.warn(
+            'Neither App() nor sonic_py() was called, so audio files are '
+            'found relative to the current folder.',
+            stacklevel=3,
+        )
+
+    pp = pathlib.Path(path).absolute()
+
+    if not pp.exists():
+        raise IOError("Path %r not found." % path)
+
+    return pp
+
+
+def check_safety(samples):
+    """Refuse samples that peak past the safety limit, or are not numbers.
+
+    See :func:`jupylet.audio.set_safety_limit`.
+    """
+    limit = get_safety_limit()
+
+    if limit is None or samples.size == 0:
+        return
+
+    peak = np.abs(samples).max()
+
+    if np.isnan(peak) or peak > limit:
+        raise ValueError(
+            'Not playing: the samples peak at %.3g, past the safety limit '
+            'of %g. See set_safety_limit().' % (peak, limit)
+        )
+
+
+def normalized(x):
+    """Scale an array of samples so that its peak is exactly 1.
+
+    Silence, an array of zeros, is returned as it is.
+
+    Args:
+        x (ndarray): An array of samples.
+
+    Returns:
+        ndarray: A new array, scaled.
+    """
+    x = np.asarray(x, dtype='float64')
+    peak = np.abs(x).max()
+
+    if peak == 0:
+        return x.copy()
+
+    return x / peak
 
 
 #
@@ -154,8 +226,13 @@ class Sample(GatedSound):
     sample of a virtual instrument includes markers for a loop segment, the 
     `loop` argument will cause the sample to loop around its loop segment.
 
+    It can also play a sound given as an array of samples, rather than as
+    the path to an audio file, for example a sound computed in a notebook.
+
     Args:
-        path (str): Path to audio file.
+        path (str or ndarray): Path to audio file, or an array of samples at
+            the sampling frequency FS, of shape (frames,) or (frames,
+            channels).
         freq (float): Fundamental frequency.
         key (float, optional): Fundamental frequency of generator in semitone
             units where middle C is 60.
@@ -179,15 +256,6 @@ class Sample(GatedSound):
         
         self.env0 = Envelope(0., 0., 1., 1., linear=False)
 
-        self.path = str(find_path(path))
-        self.buff = None
-        
-        self.phase = 0        
-        self.freq = freq
-        
-        if key is not None:
-            self.key = key
-
         self.loop = loop
         self.loop_power = None
         
@@ -197,6 +265,29 @@ class Sample(GatedSound):
             pitch_keycenter = None,
         )
         
+        #
+        # An array of samples is kept in memory as if loaded from a file,
+        # padded with one silent sample at the end.
+        #
+        if isinstance(path, np.ndarray):
+            check_safety(path)
+            buff = np.array(path, dtype='float64')
+            if buff.ndim == 1:
+                buff = buff[:, None]
+            self.buff = np.pad(buff, ((0, 1), (0, 0)))
+            self.path = None
+            self.region['loop_end'] = len(self.buff) - 1
+            
+        else:
+            self.path = str(find_sample_path(path))
+            self.buff = None
+        
+        self.phase = 0        
+        self.freq = freq
+        
+        if key is not None:
+            self.key = key
+
     def reset(self, shared=False):
         
         super().reset(shared)
@@ -268,7 +359,7 @@ class Sample(GatedSound):
         Returns:
             Sample: self
         """
-        if self.path.endswith('.sfz'):
+        if self.path is not None and self.path.endswith('.sfz'):
             self.load_sfz()
             return self
             

@@ -50,6 +50,7 @@ setuptools.setup(
         'tqdm',
         'jedi',
         'numpy~=2.5',
+        'numba',
         'PyGLM',
         'scipy',
         'pillow~=12.0',

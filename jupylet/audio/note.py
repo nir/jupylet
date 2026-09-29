@@ -50,6 +50,8 @@ for o in range(8):
         no = (n + str(o)).rstrip('0')
         globals()[no] = k + 11 + 12 * (o if o else 4)
 
+del o, n, k, no
+
 
 def note2key(n):
     

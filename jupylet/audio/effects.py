@@ -37,7 +37,7 @@ import numpy as np
 
 from ..resource import find_path
 from ..utils import np_is_zero, Enum
-from ..audio import FPS, t2frames
+from ..audio import FS, t2frames
 
 from .filters import ButterFilter
 from .sound import Sound

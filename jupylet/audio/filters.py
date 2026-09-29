@@ -33,7 +33,7 @@ import scipy.signal
 
 import numpy as np
 
-from ..audio import FPS, t2frames
+from ..audio import FS, t2frames
 from .sound import Sound, key2freq, freq2key
 
 
@@ -176,7 +176,7 @@ class ButterFilter(BaseFilter):
 
     def warmup(self):
 
-        for freq in sorted(set(fround(f) for f in range(1, FPS//2))):
+        for freq in sorted(set(fround(f) for f in range(1, FS//2))):
             signal_butter(self.get_wp(freq), 3, self.db, self.btype, self.output)
             time.sleep(0)
 
@@ -184,7 +184,7 @@ class ButterFilter(BaseFilter):
 
         freq = key2freq(round(freq2key(freq), 1))
 
-        nyq = FPS // 2
+        nyq = FS // 2
 
         if self.btype[:3] in ('low', 'hig'):
             return max(1, min(nyq-1, freq))
@@ -214,7 +214,7 @@ class ButterFilter(BaseFilter):
 
 
 @functools.lru_cache(maxsize=4096)
-def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FPS):
+def signal_butter(wp, gpass=3, gstop=24, btype='lowpass', output='ba', fs=FS):
 
     nyq = fs // 2
 
@@ -253,7 +253,7 @@ class PeakFilter(BaseFilter):
 
     def warmup(self):
 
-        for freq in sorted(set(fround(f) for f in range(1, FPS//2))):
+        for freq in sorted(set(fround(f) for f in range(1, FS//2))):
             signal_iirpeak(freq, self.q)
             time.sleep(0)
 
@@ -264,7 +264,7 @@ class PeakFilter(BaseFilter):
         
 
 @functools.lru_cache(maxsize=4096)
-def signal_iirpeak(w0, q, fs=FPS):
+def signal_iirpeak(w0, q, fs=FS):
 
     nyq = fs // 2
     w0 = max(1, min(w0, nyq - 1))

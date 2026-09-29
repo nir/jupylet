@@ -47,7 +47,7 @@ except:
 
 import numpy as np
 
-from ..audio import FPS
+from ..audio import FS
 from ..env import is_sphinx_build
 
 
@@ -103,7 +103,7 @@ def _start_sound_stream():
         if _sp.pop('reset', None):
             _reset()
             
-        with sd.OutputStream(samplerate=FPS, channels=2, callback=_stream_callback, **_sp):
+        with sd.OutputStream(samplerate=FS, channels=2, callback=_stream_callback, **_sp):
             _workerq.get()
         
     global _worker_tid
@@ -266,7 +266,7 @@ def _stream_callback(outdata, frames, _time, status):
     # Aggregate the output data and timers for the oscilloscope.
     #
 
-    while len(_al) * frames > _al_seconds * FPS:
+    while len(_al) * frames > _al_seconds * FS:
         _al.pop(0)
         _dt.pop(0)
 
@@ -399,7 +399,7 @@ def _apply_effects(effects, a):
     return a
 
 
-def get_output_as_array(start=-FPS, length=None, mono=False, resample=None):
+def get_output_as_array(start=-FS, length=None, mono=False, resample=None):
 
     _dt0, _al0 = _dt, _al
     
@@ -407,7 +407,7 @@ def get_output_as_array(start=-FPS, length=None, mono=False, resample=None):
         return None, None, None
 
     t0, st, _, da, ct = _dt0[-1]
-    t1 = t0 + da - ct + st / FPS
+    t1 = t0 + da - ct + st / FS
 
     if start >= 0:
         start = max(start - t1, -1)
@@ -417,7 +417,7 @@ def get_output_as_array(start=-FPS, length=None, mono=False, resample=None):
 
     if type(start) is float:
         start = max(start, -1)
-        start = int(start * FPS)
+        start = int(start * FS)
 
     else:
         start = int(start)
@@ -430,7 +430,7 @@ def get_output_as_array(start=-FPS, length=None, mono=False, resample=None):
 
     elif type(length) is float:
         length = min(length, 1)
-        length = int(length * FPS)
+        length = int(length * FS)
 
     end = start + length
 
@@ -453,8 +453,8 @@ def get_output_as_array(start=-FPS, length=None, mono=False, resample=None):
 
     a0 = np.concatenate(_al2)[start:end]
     
-    tend = t1 + (end or 0) / FPS
-    tstart = tend - len(a0) / FPS
+    tend = t1 + (end or 0) / FS
+    tstart = tend - len(a0) / FS
 
     if mono:
         a0 = a0.mean(-1, keepdims=True)

@@ -248,6 +248,47 @@ Children need the same, put more gently (see `CLAUDE.md`).
   fix, and say what you found. When the person asks for something simpler,
   cut; don't restructure.
 
+- **Understand an explanation fully before you give it, then give only what
+  it is for.** `[any platform, recurring, Opus 5.5, 2026-09-28]` Writing a
+  lesson with the author, most of the rounds went into explanations that
+  sounded right but were not: a made-up cause, a claim about a real circuit
+  when the equations described only the code, two opposite effects presented
+  as one. Fluent wording hid the gaps; the author found each by asking "why?"
+  and "is that true of this, exactly?". A child or a student cannot do that
+  checking, and will simply learn the wrong thing. So before explaining, lay
+  the explanation out as a plain chain of claims and question each one as a
+  sharp beginner would: what exactly is it about (the code, the math, a real
+  device), how do I know (computed, read, or assumed), why is it so, does it
+  follow, and has the person been told everything it rests on. Compute or
+  drop what fails, before writing a word. Then, separately, decide what the
+  explanation is for, and give only the detail that serves it: understanding
+  every step yourself does not mean telling every step. A short answer that
+  names the causes and their effect usually teaches better than a full
+  derivation. Rule lists ("one idea per sentence", "change the least") do not
+  replace this; followed literally, they make new problems.
+- **True is not the same as understandable: write from where the learner
+  stands.** `[any platform, recurring, Opus 5.5, 2026-09-29]` A lesson
+  section whose every claim had been checked still took many rounds with its
+  author. The problem was not an error but a point of view: it was written
+  from inside the writer's own understanding, so it only had to make sense
+  to someone who already knew. It jumped to the mechanism in compact
+  notation, used words and symbols the reader had never met, and skipped the
+  questions any newcomer would ask, which the author then had to ask one by
+  one ("what is that 1?", "why may we write it like that?", "why does the
+  subtraction work if the output is shifted?"). The writer had never asked
+  them, because the writer never stood where the reader stands.
+  The remedy is a way of thinking, not a procedure: before and while
+  writing, actually take the place of someone who does not know, as a good
+  teacher sees the question on a student's face before it is asked. Walk
+  the path from what they already have to the new idea yourself, as if for
+  the first time, and notice where you would stumble, wonder or lose
+  interest. What to explain, in what order, and how much, then follows from
+  that. Beware of turning this into a fixed recipe (a set sequence of
+  questions, a template for every section, "define every term first"):
+  followed mechanically, a recipe produces its own bad text, stiff and
+  formulaic, answering questions nobody asked, and it replaces the one thing
+  that matters, looking through the reader's eyes, with ticking boxes.
+
 ## Any platform: how the tools work
 
 These come from reading the source, so they do not depend on the operating
@@ -300,6 +341,25 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   `<code>/examples` (through its helper script). It is not specific to `is_trusted`/`trust_notebooks`/
   `download`: any future `python -m jupylet <command>` needs the same care
   about where it is documented to be run from.
+- **`read_cell` returns the outputs too, even with `include_outputs` false.**
+  `[macOS, verified, Opus 5.5, 2026-09-26]` Its text is the source followed by
+  the cell's outputs as text (for example `<IPython.core.display.Image
+  object>`, printed lines, a traceback). A script that read a cell with it,
+  changed a word and wrote it back with `overwrite_cell_source` wrote that
+  output text into the source of every cell that had been run, which then
+  failed with a `SyntaxError`. To edit a cell's source, take the source from
+  the saved `.ipynb` on disk (read only; Jupyter saves it within seconds), or
+  only edit cells that have never been run, and check the result.
+- **Which jupylet does a notebook import?** `[macOS, seen once, Opus 5.5,
+  2026-09-26]` The environment can have jupylet installed in editable mode
+  from a different checkout than the one you are working in. The example
+  notebooks that need the repo's own code start with
+  `sys.path.insert(0, os.path.abspath('./..'))`; a new example notebook needs
+  that line too, or it imports the other checkout and fails on anything new
+  (`cannot import name ...`). Check with
+  `python -c "import jupylet; print(jupylet.__file__)"`. When testing a
+  notebook outside Jupyter (for example with `nbconvert --execute`), do not
+  set `PYTHONPATH` to the repo: that hides exactly this mistake.
 - **An exit code says whether a check ran, not what it found.**
   `[any, verified, 2026-09-22]` `is_trusted` first exited non-zero whenever
   any notebook was untrusted, which is a normal, expected first-run result,
@@ -466,6 +526,56 @@ per-notebook `path`) holds every edit. Open it read-only, replay the updates
 in `rowid` order into a `pycrdt.Doc` (`doc.get('cells', type=Array)`), and
 keep each cell's source as it changes: this recovered the overwritten text.
 
+### Rewriting a section: address cells by id, move them, and check the saved file
+
+`[macOS, verified, Opus 5.5, 2026-09-27, jupyter-mcp-server as installed]`
+`overwrite_cell_source`, `clear_cell_output` and `move_cell` accept a
+`cell_id` (the `id` field in the saved `.ipynb`) instead of an index, which
+stays true while cells are inserted around it. To rewrite and reorder a whole
+section (55 cells in, 74 out), this worked in one pass: first overwrite every
+changed source by id; then walk the target order, calling `insert_cell` (by
+index) for new cells and `move_cell(source_index, target_index)` for existing
+ones, while keeping a local list of ids in step with every call (`move_cell`
+pops and inserts: the cell ends up at `target_index`). Moving an existing
+cell keeps its output with it, while overwriting a code cell in another
+position would leave a stale output under the wrong code. Check afterwards
+against the saved file, which the collaboration extension writes within a few
+seconds. Run every new code cell first in a separate Python, with
+`sounddevice.play` replaced by a stub, so nothing plays aloud.
+`delete_cell` takes `cell_ids_to_delete` (a list), not `cell_id` or
+`cell_ids`. Two edits to the same cell in one script must build on each
+other: overwriting twice from the same saved copy silently undid the first
+edit (seen 2026-09-27).
+
+### Markdown in notebook cells: boxes, code blocks and math
+
+`[macOS, verified, Opus 5.5, 2026-09-27, JupyterLab 4.6]` Rendered in
+JupyterLab: a Markdown blockquote (`>` on each line) shows as an indented
+block with a gray bar; `<div class="alert alert-block alert-info">` as a teal
+box whose tinted text clashes with inline code; a `<div style="...">` keeps
+its inline background style; `<details>` collapses; GitHub's `> [!NOTE]` is
+not supported (it shows the literal text). Inside a blockquote, a fenced code
+block gets no top or bottom margin (outside it gets 24px), so the next
+paragraph sticks to it. `$$...$$` math keeps its spacing there, but a
+multi-line `$$` block inside a blockquote breaks (the `>` marks end up inside
+the equation): write it on one line, e.g.
+`> $$\begin{aligned} a &= b \\ c &= d \end{aligned}$$`. To see how a cell
+renders without touching the person's page, write a throwaway notebook, open
+it in a background tab (`tabs_create`), click "No Kernel", look, then close
+the tab and delete the file.
+
+### The "File Changed" dialog on almost every save
+
+`[macOS, code reading and the server log, Opus 5.5, 2026-09-27, JupyterLab
+4.6]` With real-time collaboration on, the server keeps each open notebook as
+a shared document and writes it to disk by itself a few seconds after each
+change (the log shows `YDocExtension] Saving file: <notebook>` again and
+again). When the person presses Ctrl+S, the page compares the file's time on
+disk with its own last save, finds the server's newer write, and asks
+"Overwrite or Revert". Both hold the same document, so Overwrite loses
+nothing, and saving by hand is not needed at all. Unknown: whether turning
+off the page's own autosave setting makes the dialog go away.
+
 ### Rewinding the conversation stops Jupyter
 
 `[macOS, seen once, Opus 5.5, 2026-09-25]` Jupyter runs as a background
@@ -564,6 +674,18 @@ in the page at once on the fresh server.
 Do: stop adding cells, tell the person, stop Jupyter, delete the state files,
 start again. Inserted cells are saved into the notebook file within seconds; the
 old copy in the page did not overwrite the file.
+
+`[macOS, seen once, Opus 5.5, 2026-09-28, JupyterLab 4.6, jupyter-collaboration
+3.0.4]` Seen again, worse: a notebook whose room held over 22,000 edits showed
+only its first 140 of 163 cells in the page, and kept doing so after a page
+reload, closing and reopening the tab, restarting the kernel, and "reload from
+disk". `read_notebook`, the file on disk, and the room replayed read-only
+with `pycrdt` (as above) all had 163. The person saw code "gone" that the tools
+said was there: count the page's cells before telling a person something is in
+the notebook (scroll the windowed list; `data-windowed-list-index` of the last
+cell + 1, since off-screen cells are not in the page). Stopping Jupyter, moving
+`.jupyter_ystore.db` and `collaboration_sessions.json` aside (kept, not
+deleted), and starting again fixed it: the page loaded all 163 from the file.
 
 ### Starting Jupyter
 

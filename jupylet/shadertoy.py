@@ -46,7 +46,7 @@ from moderngl_window.meta import ProgramDescription
 from moderngl_window.opengl import program
 
 from .audio.device import get_output_as_array
-from .audio import FPS
+from .audio import FS
 
 from .resource import load_texture, pil_from_texture, find_path, get_context
 from .model import moderngl_release
@@ -367,7 +367,7 @@ class Shadertoy(Node):
             self.shader._members['iDate'].write(glm.vec4(dt.year, dt.month, dt.day, time.time()))
 
         if 'iSampleRate' in self.shader._members:
-            self.shader._members['iSampleRate'].value = FPS
+            self.shader._members['iSampleRate'].value = FS
 
         self.geometry.render(self.shader)
 

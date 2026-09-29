@@ -74,7 +74,7 @@ visualize them by plotting the first 169 numbers:
 
 .. code-block:: python
 
-    get_plot(a0[:169])
+    plot(a0[:169])
     
 .. image:: ../images/sawtooth.png 
 
@@ -85,7 +85,7 @@ You can play this array to hear how it sounds with:
 
 .. code-block:: python
 
-    sd.play(a0)
+    play(a0)
 
 .. raw:: html
 
@@ -115,7 +115,7 @@ looks like:
 
 .. code-block:: python
 
-    get_plot(a1)
+    plot(a1)
 
 .. image:: ../images/fm-sawtooth.png 
 
@@ -219,7 +219,7 @@ Let's see it in action:
     gate.close(dt=0.012)
 
     g0 = gate()
-    get_plot(g0)
+    plot(g0)
 
 .. image:: ../images/gate.png 
 
@@ -410,7 +410,7 @@ some `violet` noise:
 .. code-block:: python
 
     noise = Noise('violet')
-    sd.play(noise(frames=44100))
+    play(noise(frames=44100))
 
 .. raw:: html
 
