@@ -21,7 +21,7 @@ setuptools.setup(
     data_files=[
         ('share/jupyter/lab/settings', ['jupylet/assets/jupyterlab/overrides.json']),
     ],
-    version = '0.9.5',
+    version = '0.10.0',
     license='bsd-2-clause',
     description = 'Python game programming in Jupyter notebooks.',
     long_description=long_description,
@@ -29,7 +29,7 @@ setuptools.setup(
     author = 'Nir Aides',
     author_email = 'nir.8bit@gmail.com',
     url = 'https://github.com/nir/jupylet',
-    download_url = 'https://github.com/nir/jupylet/archive/v0.9.5.tar.gz',
+    download_url = 'https://github.com/nir/jupylet/archive/v0.10.0.tar.gz',
     keywords = [
         'reinforcement learning', 
         'deep learning', 

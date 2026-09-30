@@ -500,7 +500,7 @@ it attenuates the power of different frequencies; Let's do that with a
 .. code:: python
 
     noise = Noise('white')
-    lowpass = ResonantFilter(3000, 'lowpass')
+    lowpass = ButterFilter(3000, 'lowpass')
 
     n0 = noise(frames=44100 * 128)
     a0 = lowpass(n0)
@@ -515,7 +515,7 @@ frequency:
 .. code:: python
 
     noise = Noise('white')
-    lowpass = ResonantFilter(3000, 'lowpass', resonance=2)
+    lowpass = ButterFilter(3000, 'lowpass', resonance=0.7)
 
     n0 = noise(frames=44100 * 128)
     a0 = lowpass(n0)
@@ -561,7 +561,7 @@ the modulation is done in logarithmic scale with semitones as units.
             super().__init__()
             
             self.shape = 'sawtooth'
-            self.resonance = 2
+            self.resonance = 0.7
             self.cutoff = 0
             self.decay = 1
 
@@ -570,7 +570,7 @@ the modulation is done in logarithmic scale with semitones as units.
             
             self.osc0 = Oscillator('sawtooth')
             
-            self.filter = ResonantFilter(btype='lowpass', resonance=2)
+            self.filter = ButterFilter(mode='lowpass')
             
         def forward(self):
             
@@ -594,7 +594,7 @@ the modulation is done in logarithmic scale with semitones as units.
     We declared the `shape`, `resonance`, `cutoff`, and `decay` variables as 
     members of the synthesizer class since this will enable us to specify 
     their values in calls to the ``use()`` and ``play()`` functions - for 
-    example ``play(C4, 1/2, resonance=4, decay=2)``.
+    example ``play(C4, 1/2, resonance=0.8, decay=2)``.
 
 And now that the synthesizer is ready let's instantiate it, set up a nice 
 reverb effect, and start two simple simultaneous loops:
@@ -609,7 +609,7 @@ reverb effect, and start two simple simultaneous loops:
     @app.sonic_live_loop2
     async def loop0():
 
-        use(tb303, resonance=8, decay=1, cutoff=12, amp=1)
+        use(tb303, resonance=0.9, decay=1, cutoff=12, amp=1)
 
         play(C3, 1/2)
         await sleep(2)
@@ -627,7 +627,7 @@ reverb effect, and start two simple simultaneous loops:
     @app.sonic_live_loop2
     async def loop1():
                 
-        use(tb303, resonance=8, decay=1/8, cutoff=48, amp=1)
+        use(tb303, resonance=0.9, decay=1/8, cutoff=48, amp=1)
         
         play(C2, 1/8)
         await sleep(1/4)

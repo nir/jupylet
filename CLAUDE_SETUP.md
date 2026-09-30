@@ -430,7 +430,7 @@ are the ones Jupylet uses. The folder must stay where it is.
 
 Then check: `"<env python>" -I -c "import jupylet; print(jupylet.VERSION)"`
 
-Expected: a version number such as `0.9.5`. If not: Problem 3.
+Expected: a version number such as `0.10.0`. If not: Problem 3.
 
 Tell the person it worked, and that one small setting comes next, for
 example "Jupylet is installed. One small setting: I'm turning off a pop-up

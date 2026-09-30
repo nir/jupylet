@@ -30,7 +30,7 @@ import logging
 from .sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color
 from .sound import PhaseModulator
 from .effects import SchroederReverb, Overdrive
-from .filters import ResonantFilter
+from .filters import ButterFilter
 
 from ..audio import note, DEFAULT_AMP
 
@@ -259,7 +259,7 @@ class TB303(GatedSound):
         
         self.osc0 = Oscillator(shape)
         
-        self.filter = ResonantFilter(btype='lowpass', resonance=resonance)
+        self.filter = ButterFilter(mode='lowpass', order=4)
         
     def forward(self):
         
@@ -270,10 +270,15 @@ class TB303(GatedSound):
                 
         a0 = self.osc0(shape=self.shape, freq=self.freq) 
         
+        #
+        # The resonance of this synth goes from 0 up, as it did with the
+        # filter it had before, and is mapped to the filter's 0 to 1 so that
+        # the peak at the cutoff has the same height as before.
+        #
         a1 = self.filter(
             a0, 
             key_modulation=e1+self.cutoff, 
-            resonance=self.resonance,
+            resonance=self.resonance / (1 + self.resonance),
             freq=self.freq,
         )
         
