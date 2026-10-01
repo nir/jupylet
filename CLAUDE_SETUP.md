@@ -28,7 +28,8 @@ there is no `<branch>`, and the steps change only in this:
   script, since later steps use it.
 - Step 10: the session already works from `<code>`: skip moving it
   (`change_directory`) and its message. Then go back to `CLAUDE.md`'s step
-  2, not Part 1: the person already said yes to opening a notebook.
+  2, not Part 1: they asked for Jupylet to try its examples, so go on to
+  open a notebook without asking again.
 
 **Claude tools for an existing install.** `CLAUDE.md` (its Problem 17) sends
 you here when Jupylet is installed and set up, but without its `[claude]`
@@ -394,7 +395,7 @@ is typing `conda activate <env>` first when they use Jupylet on their own.
 
 After a clear yes, say one line, for example "Setting up the environment now,
 this takes a minute. It gets its own Python, and the graphics tools Jupylet
-uses to draw your games...", then:
+uses for graphics...", then:
 
 `"<conda>" create -y -p "<miniforge>/envs/<env>" --override-channels -c conda-forge python=3.13 moderngl glcontext`
 
@@ -448,7 +449,7 @@ Expected: `ok`. It refuses a folder that exists and is not empty. If it
 prints anything else: Problem 2.
 
 Then tell the person in one line, for example "The code is in the folder
-`<code>`. Its `examples` folder has the notebooks with the games we'll try."
+`<code>`. Its `examples` folder has the example notebooks we'll try."
 
 ## Step 7. Install Jupylet
 
@@ -507,9 +508,9 @@ Jupylet. Ask, for example:
 
 > One more thing. Jupyter treats notebooks you didn't make yourself as
 > untrusted, as a safety check, and doesn't show their interactive parts.
-> In the example notebooks, that includes the game canvas: the area in the
-> notebook where the game is drawn and played. May I mark the example
-> notebooks as trusted?
+> In the example notebooks, that includes the canvas: the area in the
+> notebook where the examples draw. May I mark the example notebooks as
+> trusted?
 
 (If a notebook was not explained yet, add half a sentence: a page where you
 write code in small boxes and run each one.)
@@ -520,7 +521,7 @@ After a clear yes:
 Check: `"<env python>" "<helper>" jupylet "<code>" is_trusted` prints
 `trusted` for every file.
 
-If they decline, tell them plainly that the game canvas will not show up in
+If they decline, tell them plainly that the canvas will not show up in
 the example notebooks until they trust them (in JupyterLab: File > Trust
 Notebook), and go on anyway.
 

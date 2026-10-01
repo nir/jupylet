@@ -2,7 +2,7 @@
 
 This file is written only for Claude, the AI assistant in the Claude app. It
 describes how Claude opens a Jupylet notebook together with a person, runs
-the games with them, and handles problems along the way. A person does not
+its examples with them, and handles problems along the way. A person does not
 need to read it.
 
 From here on, "you" means Claude, and "the person" means whoever Claude is
@@ -205,15 +205,21 @@ other steps have small differences.
 Words in `<angle brackets>` are values you fill in. `<folder>` is the folder
 this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 
-### Step 1. Ask permission
+### Step 1. Look, then ask
 
-Ask, in a few plain words, for example:
+Before your first reply, look silently: read `<version>` and run the first
+`find-env` command of step 2. Your first words answer what the person asked,
+with what you found. Jupylet is for games, music, sound and graphics alike:
+don't call it games, unless they do; follow what they want to make.
 
-> May I open a Jupyter notebook here so we can work on the game together?
-> Jupyter is the program where you write and run your code, and a notebook
-> is a page in it where you type code in small boxes, called cells, and run
-> each one to see what it does. It runs only on this computer, and you'll
-> see it right next to our chat.
+**Its first line says `this folder`:** Jupylet is set up. Ask to open a
+notebook, in a few plain words, for example:
+
+> Jupylet is set up here, so we can try its examples together. May I open a
+> Jupyter notebook for us? Jupyter is the program where you write and run
+> your code, and a notebook is a page in it where you type code in small
+> boxes, called cells, and run each one to see what it does. It runs only on
+> this computer, and you'll see it right next to our chat.
 
 (If Jupyter and notebooks were already explained in this conversation, for
 example while installing, leave that sentence out.)
@@ -223,6 +229,18 @@ If the person has already asked for the notebook in this conversation
 explained yet, say that sentence now, as you start.
 
 Continue only after a clear yes.
+
+**Anything else** (no lines, or none says `this folder`): Jupylet is not
+set up for this folder. Offer to set it up. If they said they just
+downloaded it, that is all there is to it, for example:
+
+> Hi! The next step is to install Jupylet, so you can try its examples and
+> start creating with it. Shall I set it up for you? I'll go one small step
+> at a time and ask before each change.
+
+If nothing they said tells whether they installed it, add one sentence, for
+example "If you already installed it yourself, tell me and I'll look for
+it." Then go on with step 2, at "Otherwise".
 
 ### Step 2. Find the environment
 
@@ -275,21 +293,22 @@ Call that environment's path `<env>` and its python `<python>`
   clear yes; if they name a different one, use that.
 
 **Otherwise** (no lines, or none says `this folder`): Jupylet is not set up
-for this folder, whatever the other lines say. Another environment's
-Jupylet runs another copy's code, which may not match the examples here,
-even with the same version number. Ask, as the only question in that
-message:
+for this folder, whatever the other lines say, and step 1 offered to set it
+up. Another environment's Jupylet runs another copy's code, which may not
+match the examples here, even with the same version number.
 
-> Did you already install Jupylet on this computer yourself, for example by
-> following the instructions on its website?
-
-- **Yes:** look for every Jupylet, of any version:
+- **Yes, set it up:** read `<folder>/CLAUDE_SETUP.md` and follow it as its
+  "Code already here" section says, with `<code>` = `<folder>`. When it
+  hands back to this file, start this step again: the new environment is
+  then the one that says `this folder`.
+- **They say they installed it themselves:** look for every Jupylet, of any
+  version:
 
   `$HOME/miniforge3/bin/python <folder>/jupylet/claude.py find-env --all <version>`
 
-  If it finds none, say so plainly, and go on as for "No". Otherwise name
-  what it found, propose the first, and say plainly that it was not set up
-  from this folder, and, if its version is not `<version>`, that it is
+  If it finds none, say so plainly, and offer setting it up again. Otherwise
+  name what it found, propose the first, and say plainly that it was not set
+  up from this folder, and, if its version is not `<version>`, that it is
   another version. Offer setting Jupylet up for this folder as the other
   choice, for example:
 
@@ -299,19 +318,9 @@ message:
   > folder, which takes about ten minutes. Which would you like?
 
   If they pick an environment, use it (`<env>`, `<python>` as above). If they
-  pick setting up, go on as for "No".
-- **No, or not sure:** offer to set it up, for example:
-
-  > Then let's set it up. I'll install it on this computer, one small step
-  > at a time, and ask before each change. It takes about ten minutes. Shall
-  > I go ahead?
-
-  After a clear yes, read `<folder>/CLAUDE_SETUP.md` and follow it as its
-  "Code already here" section says, with `<code>` = `<folder>`. When it
-  hands back to this file, start this step again: the new environment is
-  then the one that says `this folder`. If they say no, tell them plainly
-  that the notebook needs Jupylet installed, and that they can ask you any
-  time.
+  pick setting up, go on as for "Yes, set it up".
+- **No:** tell them plainly that the examples need Jupylet installed, and
+  that they can ask you any time.
 
 For a conda environment, call the last part of `<env>`'s path `<name>`
 (needed in step 5 to activate it). If `<env>` is Miniforge's own folder, not
@@ -337,16 +346,16 @@ work in the notebook with the person:
 Expected: no error. If it fails: Problem 17.
 
 Then check that the example notebooks are trusted (a Jupyter safety check; an
-untrusted notebook does not show its game canvas):
+untrusted notebook does not show its canvas, where it draws):
 
 `<python> -m jupylet is_trusted <folder>/examples`
 
 Expected: every line says `trusted`. If any line says `NOT TRUSTED`, explain
 and ask, for example:
 
-> These notebooks aren't trusted on this computer yet, so the game canvas,
-> the area in the notebook where the game is drawn and played, won't show
-> up until they are. May I trust them?
+> These notebooks aren't trusted on this computer yet, so the canvas, the
+> area in the notebook where the examples draw, won't show up until they
+> are. May I trust them?
 
 After a clear yes:
 
@@ -355,7 +364,7 @@ After a clear yes:
 Then run the check again to confirm every line says `trusted`, and tell the
 person in one plain line, for example "The example notebooks are trusted
 now." Never describe the check itself (lines, output, step numbers) to them.
-If the person declines to trust them, tell them plainly that the game
+If the person declines to trust them, tell them plainly that the
 canvas may not show up, and go on anyway.
 
 ### Step 3. Make a token
@@ -482,10 +491,10 @@ there is no kernel: Problem 6.
 
 `<python> -m jupylet.claude call 8888 <token> notebook_run-all-cells`
 
-Expected: `True` after a second or two. Tell the person, for example "Your
-game should be showing at the bottom of the notebook now. I ran every cell,
-top to bottom, and the last one started the game. Click the game canvas,
-the area where the game is drawn, then steer the spaceship with the arrow
+Expected: `True` after a second or two. Tell the person, for example "The
+spaceship example should be showing at the bottom of the notebook now. I
+ran every cell, top to bottom, and the last one started it. Click the
+canvas, the area where it's drawn, then steer the spaceship with the arrow
 keys." If it says
 "Timeout waiting for result": Problem 1. If it says "Not Found": Problem 2.
 
