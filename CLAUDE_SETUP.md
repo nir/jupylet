@@ -424,9 +424,10 @@ in small boxes, run each one, and see the result right below it. Plus a
 few dozen smaller tools that Jupylet builds on..."
 
 It installs the code folder itself (`-e`, "editable"), so the examples in it
-are the ones Jupylet uses. The folder must stay where it is.
+are the ones Jupylet uses. The folder must stay where it is. `[claude]` adds
+the tools you use to work in a live notebook with the person (`CLAUDE.md`).
 
-`"<env python>" -m pip install -e "<code>"`
+`"<env python>" -m pip install -e "<code>[claude]"`
 
 Then check: `"<env python>" -I -c "import jupylet; print(jupylet.VERSION)"`
 
@@ -445,6 +446,18 @@ into the environment's own folder, where JupyterLab reads it:
 
 Expected: `ok`. This is only cosmetic: if it fails, don't retry and go on.
 The person then sees the pop-up once, and can answer No.
+
+Then turn off `jupyter_server_nbmodel`, which `[claude]` brings along. With
+it, Jupyter runs cells on the server, and a notebook that keeps sending
+messages (a panel, a live loop, a thread that prints) can leave a cell hanging
+at `[*]` for good after a few minutes. Say nothing to the person about it
+unless it fails:
+
+`"<env python>" -I -m jupylet.claude nbmodel-off`
+
+Expected: `turned off` (or `off`). Anything else: tell the person plainly
+that one setting could not be changed, that their notebooks may freeze after
+a few minutes, and go on.
 
 ## Step 8. Trust the example notebooks
 

@@ -39,10 +39,13 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
+    python -m jupylet.claude nbmodel-off
 
-`find-env` is the one command meant to run from a plain Miniforge `base`
-Python (run this file by path: it never imports jupylet itself, on purpose,
-since jupylet is never installed into `base`). Every other command needs an
+`find-env` is the one command meant to run from any Python, with or
+without jupylet, such as Miniforge's `base` or a plain python3 (run this
+file by path: it never imports jupylet itself, on purpose). It prints one environment per line:
+its path, its kind (conda or venv), and where its jupylet comes from ("this
+folder", or a version and its source). Every other command needs an
 environment that actually has jupylet installed.
 """
 
@@ -62,8 +65,8 @@ import urllib.request
 
 
 def _python_of(env):
-    """The python executable inside a conda environment folder, or None."""
-    for rel in ('python.exe', os.path.join('bin', 'python')):
+    """The python executable inside an environment folder, or None."""
+    for rel in ('python.exe', os.path.join('Scripts', 'python.exe'), os.path.join('bin', 'python')):
         p = os.path.join(env, rel)
         if os.path.exists(p):
             return p
@@ -71,29 +74,83 @@ def _python_of(env):
     return None
 
 
-def find_env(version, root=None):
-    """Every conda environment with exactly this jupylet version, newest first.
+# Run by each candidate environment's python: jupylet's version, and where it
+# was installed from, if it was installed from a folder (pip records that in
+# direct_url.json).
+_PROBE = """
+import importlib.metadata as m, json
+d = m.distribution('jupylet')
+u = json.loads(d.read_text('direct_url.json') or '{}')
+print(json.dumps([d.version, u.get('url', ''), u.get('dir_info', {}).get('editable', False)]))
+"""
 
-    root is Miniforge's own folder; guessed from sys.executable when not
-    given, which only works when this runs under Miniforge's own base
-    Python (`<miniforge>/python.exe` or `<miniforge>/bin/python`) - the one
-    Python guaranteed to exist without knowing which environment jupylet is
-    actually in. Only the standard library and a subprocess call per
-    candidate, so it works the same on macOS and Windows and needs nothing
-    installed beyond Miniforge itself.
 
-    Returns a list of (env path, python path) tuples.
+def _candidates(root, folder):
+    """Folders that may be Python environments, each listed once.
+
+    Miniforge's own folder and its envs, every environment any conda install
+    on this computer recorded in ~/.conda/environments.txt, and a venv in the
+    jupylet folder itself (.venv or venv).
+    """
+    paths = [root] + sorted(glob.glob(os.path.join(root, 'envs', '*')))
+
+    try:
+        with open(os.path.expanduser(os.path.join('~', '.conda', 'environments.txt'))) as f:
+            paths += [line.strip() for line in f if line.strip()]
+    except OSError:
+        pass
+
+    paths += [os.path.join(folder, '.venv'), os.path.join(folder, 'venv')]
+
+    seen, unique = set(), []
+
+    for path in paths:
+        real = os.path.realpath(path)
+
+        if real not in seen and os.path.isdir(real):
+            seen.add(real)
+            unique.append(path)
+
+    return unique
+
+
+def _source_folder(url):
+    """The folder a file:// url points to, or None."""
+    if not url.startswith('file:'):
+        return None
+
+    import urllib.parse
+    return os.path.realpath(urllib.request.url2pathname(urllib.parse.urlparse(url).path))
+
+
+def find_env(version, root=None, folder=None):
+    """Every environment that can run the jupylet in folder, best first.
+
+    An environment qualifies when its jupylet is installed (editable) from
+    folder itself, whatever version it reports, or when it has exactly this
+    version from anywhere else. The first kind comes first; within each,
+    the most recently changed environment comes first.
+
+    root is Miniforge's own folder, ~/miniforge3 by default. folder is the
+    jupylet folder this file is in, by default. Only the standard library
+    and a subprocess call per candidate, so it runs by file path under any
+    Python (Miniforge's base Python, or a plain python3), the same on macOS
+    and Windows.
+
+    Returns a list of (env path, python path, kind, source) tuples: kind is
+    'conda' or 'venv', and source is 'this folder', or the version and where
+    it came from.
     """
     if root is None:
-        root = os.path.dirname(sys.executable)
+        root = os.path.expanduser(os.path.join('~', 'miniforge3'))
 
-        if os.path.basename(root) == 'bin':
-            root = os.path.dirname(root)
+    if folder is None:
+        folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    candidates = [root] + sorted(glob.glob(os.path.join(root, 'envs', '*')))
+    folder = os.path.realpath(folder)
     matches = []
 
-    for env in candidates:
+    for env in _candidates(root, folder):
         python = _python_of(env)
 
         if not python:
@@ -101,7 +158,7 @@ def find_env(version, root=None):
 
         try:
             out = subprocess.run(
-                [python, '-c', "import importlib.metadata as m; print(m.version('jupylet'))"],
+                [python, '-c', _PROBE],
                 capture_output=True, text=True, timeout=20,
                 # Pinned so a folder named "jupylet" in *our own* cwd (this
                 # file's own repo, for instance) can never shadow the real
@@ -109,15 +166,23 @@ def find_env(version, root=None):
                 # both consult the current directory first.
                 cwd=env,
             )
-        except OSError:
+            found, url, editable = json.loads(out.stdout.strip().splitlines()[-1])
+        except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
             continue
 
-        if out.stdout.strip() == version:
-            matches.append((env, python, os.path.getmtime(env)))
+        source = _source_folder(url)
+        kind = 'venv' if os.path.exists(os.path.join(env, 'pyvenv.cfg')) else 'conda'
 
-    matches.sort(key=lambda m: m[2], reverse=True)
+        if editable and source == folder:
+            matches.append((0, -os.path.getmtime(env), env, python, kind, 'this folder'))
 
-    return [(env, python) for env, python, _mtime in matches]
+        elif found == version:
+            where = source or 'a package index'
+            matches.append((1, -os.path.getmtime(env), env, python, kind, '%s from %s' % (found, where)))
+
+    matches.sort()
+
+    return [m[2:] for m in matches]
 
 
 def _rpc(port, token, body):
@@ -436,12 +501,71 @@ def cleanup(root='.', delete=False):
         print('nothing to clean up')
 
 
+NBMODEL = 'jupyter_server_nbmodel'
+NBMODEL_LAB = '@datalayer/jupyter-server-nbmodel'
+
+
+def _nbmodel_on():
+    """Whether nbmodel's server part and browser part are on, as a tuple.
+
+    Reads the configuration Jupyter itself would read when started from this
+    Python's environment, so a setting at any level (environment, user) counts.
+    """
+    from jupyter_core.paths import jupyter_config_path, jupyter_path
+    from jupyter_server.extension.config import ExtensionConfigManager
+    from jupyterlab.commands import get_app_dir
+    from jupyterlab_server.config import get_page_config
+
+    manager = ExtensionConfigManager(read_config_path=jupyter_config_path())
+    server = bool(manager.enabled(NBMODEL))
+
+    page = get_page_config(jupyter_path('labextensions'), os.path.join(get_app_dir(), 'settings'))
+    browser = NBMODEL_LAB not in page.get('disabledExtensions', [])
+
+    return server, browser
+
+
+def nbmodel_off():
+    """Make sure jupyter_server_nbmodel is off in this Python's environment.
+
+    jupyter-mcp-server requires it, but with it Jupyter runs cells on the
+    server, and the server reads the kernel's messages only while a cell
+    runs. A panel or a thread that keeps sending messages then fills that
+    unread queue, and a few minutes later a cell hangs at [*] for good.
+    Without it, the page runs cells itself, as in plain JupyterLab.
+
+    Both its parts are turned off, in this environment's own configuration,
+    using Jupyter's own commands. Returns 'off', 'turned off',
+    'not installed', or 'still on: ...'.
+    """
+    import importlib.util
+
+    if importlib.util.find_spec(NBMODEL) is None:
+        return 'not installed'
+
+    if _nbmodel_on() == (False, False):
+        return 'off'
+
+    for command in (
+        ['server', 'extension', 'disable', '--sys-prefix', NBMODEL],
+        ['labextension', 'disable', '--level=sys_prefix', NBMODEL_LAB],
+    ):
+        subprocess.run([sys.executable, '-m', 'jupyter'] + command, capture_output=True, timeout=120)
+
+    server, browser = _nbmodel_on()
+
+    if server or browser:
+        return 'still on: ' + ', '.join(n for n, on in (('server', server), ('browser', browser)) if on)
+
+    return 'turned off'
+
+
 def main(argv):
     cmd, args = (argv[0], argv[1:]) if argv else ('', [])
 
     if cmd == 'find-env' and len(args) == 1:
-        for env, python in find_env(args[0]):
-            print(env)
+        for env, python, kind, source in find_env(args[0]):
+            print('%s\t%s\t%s' % (env, kind, source))
 
     elif cmd == 'wait' and len(args) == 2:
         ok = wait(*args)
@@ -474,6 +598,11 @@ def main(argv):
 
     elif cmd == 'cleanup' and args in ([], ['--yes']):
         cleanup(delete=args == ['--yes'])
+
+    elif cmd == 'nbmodel-off' and not args:
+        result = nbmodel_off()
+        print(result)
+        return 1 if result.startswith('still on') else 0
 
     else:
         print(USAGE)

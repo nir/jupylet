@@ -512,6 +512,29 @@ to `POST /api/kernels/<id>/execute` once per number; after that, output came
 back (verified).
 Otherwise `replace-kernel` fixes it (variables are lost).
 
+`[macOS, verified, Opus 5.5, 2026-10-01, JupyterLab 4.6.4,
+jupyter_server_nbmodel 0.2.9]` Seen again with a jupylet `Panel` displayed:
+its 0.5s refresh, while a live loop moved a knob, gave about 8 IOPub messages
+a second (slider `update`, the page's `echo_update`, busy/idle). Related
+symptom: with nbmodel, output a thread prints after its cell finished never
+shows in the page (plain JupyterLab without nbmodel shows it).
+Without nbmodel, everything we use still works (verified): start Jupyter with
+`JUPYTER_CONFIG_PATH=<dir>`, where `<dir>/jupyter_server_config.json` has
+`{"ServerApp": {"jpserver_extensions": {"jupyter_server_nbmodel": false}}}`
+and `<dir>/labconfig/page_config.json` has
+`{"disabledExtensions": {"@datalayer/jupyter-server-nbmodel": true}}`. The
+page's `serverSideExecution` is then `false`, and the collaboration
+extension's cell executor falls back to running cells in the page. Worked:
+`attach`, `read_notebook`, `read_cell`, `insert_cell`, `edit_cell_source`,
+`overwrite_cell_source`, `move_cell`, `delete_cell`, `clear_cell_output`,
+`execute_code`, `restart_notebook`, run-all (also right after
+`restart_notebook`), thread output live in the page, and one cell with
+`notebook_run-cell` (needs `allowed_jupyter_mcp_tools`, as on Windows).
+Lost: only `execute_cell` and `insert_execute_code_cell` (error "extension
+not found"), which hang anyway (`CLAUDE.md` Problem 8). Watch: run-all goes
+to whichever page the tools pick; a page loaded before the restart still uses
+the server executor and gets 404s, so reload or close old pages.
+
 ### Overwriting a cell by index hit the person's new cells
 
 `[macOS, seen once, Opus 5.5, 2026-09-25]` Cell indices shift whenever the

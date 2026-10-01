@@ -66,10 +66,10 @@ setuptools.setup(
         'soundcard; platform_system=="Darwin"',
         'pyopenxr; platform_system=="Windows"',
         'moderngl-window~=3.1',
-        'jupyter-mcp-server[jupyterlab]',
     ],
     extras_require = {
-        'midi': ['python-rtmidi']
+        'midi': ['python-rtmidi'],
+        'claude': ['jupyter-mcp-server[jupyterlab]'],
     },
     classifiers=[
         'Development Status :: 4 - Beta',

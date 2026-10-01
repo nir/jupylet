@@ -228,50 +228,77 @@ Continue only after a clear yes.
 
 Read `<folder>/jupylet/__init__.py`; the line `VERSION = '<version>'` near
 the top gives `<version>`. This is what every command below was tested
-against, so the environment must have exactly this version, not just any
-jupylet.
+against.
 
-Miniforge's own Python (`$HOME/miniforge3/bin/python`) finds every
-environment that has it installed, without needing to know in advance which
-one that is (it runs `jupylet/claude.py` by file path on purpose: jupylet is
-never installed into `base`, so `base`'s own Python cannot `import` it, but
-running the file directly does not need to):
+The person may have installed Jupylet themselves, into any environment, or
+not at all. This finds every environment that can run the Jupylet in
+`<folder>`, without needing to know in advance which one that is,
+including `base` itself (the README's own steps install Jupylet straight
+into `base`). It runs `jupylet/claude.py` by file path, under Miniforge's
+own Python, on purpose: that Python may or may not have jupylet, and running
+the file directly does not need it. If there is no Miniforge
+(`$HOME/miniforge3/bin/python` does not exist), use `python3` instead: the
+file needs only the standard library.
 
 `$HOME/miniforge3/bin/python <folder>/jupylet/claude.py find-env <version>`
 
-One path per line, most recently set up first.
+It looks in Miniforge's environments, in every conda environment on this
+computer, and in a venv inside `<folder>` (`.venv` or `venv`; a venv is
+Python's own kind of environment, a folder like a conda environment, without
+conda). One line per environment, best first, with three columns separated
+by tabs: its path, its kind (`conda` or `venv`), and where its jupylet comes
+from. `this folder` means it was installed from `<folder>` itself (`pip
+install -e`), so it runs exactly this code: the best kind. Otherwise it is
+the same `<version>`, installed from another copy (`<version> from <path>`)
+or from the internet (`<version> from a package index`).
 
-- **No lines:** tell the person plainly that jupylet `<version>` is not
-  installed in any environment on this computer, point them to Problem 14,
-  and stop.
-- **One line:** that is the environment. Call its path `<env>` and its
-  python `<python>` (`<env>/bin/python`). Tell the person in one plain line,
-  for example "Found Jupylet, in its Miniforge environment `jupylet`." Do
-  not ask; there is nothing to choose between.
-- **More than one line:** the first is the most recently set up. Name the
-  environments to the person (the last part of each path is its name, the one
-  they picked when they set it up) and propose the first one explicitly, for
-  example:
+- **No lines:** tell the person plainly that Jupylet is not installed in
+  any environment on this computer, point them to Problem 14, and stop.
+- **One line that says `this folder`:** that is the environment. Call its
+  path `<env>` and its python `<python>` (`<env>/bin/python`). Tell the
+  person in one plain line, for example "Found Jupylet, in its environment
+  `jupylet`." Do not ask; there is nothing to choose between.
+- **More than one line, or a first line that does not say `this folder`:**
+  name the environments to the person (the last part of each path is its
+  name, the one they picked when they set it up; for a venv inside
+  `<folder>`, say "the venv in the Jupylet folder") and propose the first one
+  explicitly. If it comes from another copy, say so plainly, for example:
 
-  > I found Jupylet in more than one Miniforge environment on your
-  > computer: `jupylet`, `jupylet2`. I'll use `jupylet2`, the most recently
-  > set up one - is that right, or did you mean a different one?
+  > I found Jupylet in more than one environment on your computer:
+  > `jupylet`, `jupylet2`. I'll use `jupylet2`, the most recently set up
+  > one - is that right, or did you mean a different one?
+
+  > I found Jupylet in the environment `jupylet`, but it was installed from
+  > another copy of Jupylet, in `<path>`, not from this folder. It is the
+  > same version, so it should work the same. Shall I use it?
 
   If you came here from `CLAUDE_SETUP.md`, which just installed Jupylet into
   one of them, use that one without asking.
 
   Continue only after a clear yes; if they name a different one, use that.
 
-Call the last part of `<env>`'s path `<name>` (needed in step 5 to activate
-it). If `<env>` is Miniforge's own folder itself, not a folder under `envs`,
-it is the `base` environment, which has no separate name: leave out
-`conda activate <name> &&` in step 5 instead, the same as on a Mac.
+For a conda environment, call the last part of `<env>`'s path `<name>`
+(needed in step 5 to activate it). If `<env>` is Miniforge's own folder, not
+a folder under `envs`, it is Miniforge's `base` environment, which has no
+separate name: leave out `conda activate <name> &&` in step 5 instead (a
+new shell already starts in it). For a conda environment outside Miniforge
+(another conda installation), use its full path as `<name>`: `conda
+activate` accepts a path too. A venv is activated differently: see step 5. (The venv and other-conda cases were
+added on 2026-10-01 and are not tested yet with a real venv; see
+`EXPERIENCE.md` before trusting them.)
 
 Then check that the environment also has jupyterlab:
 
 `<python> -c "import jupyterlab"`
 
 Expected: no error. If it fails: Problem 14.
+
+Then check that it also has jupylet's `[claude]` extra, the tools you use to
+work in the notebook with the person:
+
+`<python> -c "import jupyter_mcp_server"`
+
+Expected: no error. If it fails: Problem 17.
 
 Then check that the example notebooks are trusted (a Jupyter safety check; an
 untrusted notebook does not show its game canvas):
@@ -306,7 +333,7 @@ Eight characters, so a kid can paste or type it. That is safe only because
 Jupyter accepts connections from this computer alone (step 5 never passes
 `--ip`): never make it reachable from the network with a token this short.
 
-### Step 4. Check that port 8888 is free
+### Step 4. Check that port 8888 is free, and that nbmodel is off
 
 `<python> -c "import socket; print(socket.socket().connect_ex(('127.0.0.1', 8888)))"`
 
@@ -315,12 +342,32 @@ it has nothing for them to act on unless it fails, and it should not feel
 like a separate moment from starting Jupyter in step 5. If it prints `0`:
 Problem 11.
 
+Then make sure `jupyter_server_nbmodel` is off. Do this every time, right
+before starting Jupyter:
+
+`<python> -m jupylet.claude nbmodel-off`
+
+The `[claude]` extra brings nbmodel along. With it, Jupyter runs cells on the
+server, and a notebook that keeps sending messages (a panel, a live loop, a
+thread that prints) leaves a cell hanging at `[*]` for good after a few
+minutes. Turning it off is part of starting Jupyter, not a separate change:
+don't ask, and say nothing to the person.
+
+Expected: `off`, or `turned off` (it was on, and is now off, saved in the
+environment). `not installed` is also fine. If it prints `still on: ...`,
+tell the person plainly that the notebook may freeze after a few minutes, and
+go on.
+
 ### Step 5. Start Jupyter
 
 Run this with the Bash tool, with `run_in_background` set (leave out
 `conda activate <name> &&` for `base`):
 
 `$SHELL -ic "conda activate <name> && cd <folder>/examples && jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
+
+For a venv, activate it with its own script instead of `conda activate`:
+
+`$SHELL -ic "source <env>/bin/activate && cd <folder>/examples && jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
 
 Never use the Terminal panel for this (Problem 5). Starting takes a few
 seconds; say so once, and use the wait to explain, for example "Starting
@@ -533,6 +580,8 @@ Do: step 8. The sign-in otherwise survives restarts.
 Symptom: `execute_cell` and `insert_execute_code_cell` run until they time out
 (minutes), even for `1+1`. Cause: unknown.
 Do: use run-all, or `execute_code` for a quick check. Don't use those two.
+With nbmodel off (step 4), both fail at once with "jupyter_server_nbmodel
+extension not found": expected.
 
 **9. Run-all with a failing cell.**
 Symptom: it stops at the failing cell and reports a vague "500 Internal
@@ -580,8 +629,9 @@ endpoint (`http://localhost:8888/mcp`) directly, and that always worked.
 Explain in plain words what is missing, and guide the person through
 installing it, following the "How to Install and Run Jupylet" section of
 `README.md` step by step: one step at a time, waiting for them to finish and
-confirm before the next, and answering their questions. You never install
-software yourself; they run every command. Stop before the part where the
+confirm before the next, and answering their questions. Apart from jupylet's
+own `[claude]` extra (Problem 17), you never install software yourself; they
+run every command. Stop before the part where the
 README starts Jupyter, because you do that in step 5.
 
 **15. Jupyter does not become ready (step 6).**
@@ -592,6 +642,40 @@ person plainly and stop.
 **16. A second browser tab.**
 A second tab on the same notebook opens a different layout and can confuse
 which page answers. Use one tab; close extra ones with `tabs_close`.
+
+**17. The `[claude]` extra is not installed (step 2 fails).**
+The environment has jupylet, but not the tools you work with in the notebook
+(`jupyter-mcp-server` and what it brings). Unlike the rest of Jupylet, you
+install these yourself, after asking:
+
+> To work in the notebook with you, I need to install Jupylet's Claude
+> tools. They let me collaborate with you on the code in your notebook: see
+> it, add to it, run it, and see what it does. May I install them?
+
+If step 2 said the environment's jupylet comes from another copy, add that
+installing also points the environment at this Jupylet folder, instead of
+the copy in `<path>`. After a clear yes:
+
+`<python> -m pip install -e "<folder>[claude]"`
+
+It installs jupylet from `<folder>` (editable) with the extra. Then run the
+check in step 2 again; step 4 turns off nbmodel, which comes with it. If the
+install fails, tell the person plainly and stop.
+
+If they say no, tell them plainly what that means, for example:
+
+> No problem. Without them, I can't see or change your notebook while it's
+> open, or run it for you. I can still help: explain how the code works,
+> write code for you to paste into the notebook, figure out an error if you
+> paste it here, and work with you on ordinary Python files. If you change
+> your mind, just ask.
+
+Then go on with Part 1, but skip steps 9 and 10 (they need the tools), and
+tell them how to run the notebook themselves, for example "Click into the
+first box of code and press Shift+Enter to run it; each press runs one box
+and moves to the next." Never work around the missing tools by editing the
+`.ipynb` file on disk while it is open (Problem 12); reading the saved file
+to see their code is fine.
 
 Problems found later, each marked with its platform and how sure it is, are
 in `EXPERIENCE.md`.
@@ -615,46 +699,20 @@ PowerShell tool for every command here. Do not use the Bash tool or
 
 Miniforge is normally in `C:\Users\<user>\miniforge3` (`<miniforge>`); ask if
 it is elsewhere. Read `<folder>\jupylet\__init__.py`; the line
-`VERSION = '<version>'` near the top gives `<version>`. This is what every
-command below was tested against, so the environment must have exactly this
-version, not just any jupylet.
+`VERSION = '<version>'` near the top gives `<version>`.
 
-The same idea as on a Mac, only the path convention differs, and deliberately
-no PowerShell-specific syntax: Miniforge's own Python finds every environment
-that has jupylet installed, without needing to know in advance which one that
-is (it runs `jupylet\claude.py` by file path on purpose: jupylet is never
-installed into `base`, so `base`'s own Python cannot `import` it, but running
-the file directly does not need to):
+The same as on a Mac (read step 2 there for what the output means and what
+to tell the person), only the path convention differs, and deliberately no
+PowerShell-specific syntax:
 
 `& "<miniforge>\python.exe" "<folder>\jupylet\claude.py" find-env <version>`
 
-One path per line, most recently set up first.
-
-- **No lines:** tell the person plainly that jupylet `<version>` is not
-  installed in any environment on this computer, point them to Problem 14,
-  and stop.
-- **One line:** that is the environment. Call its path `<env>` and its
-  python `<python>` (`<env>\python.exe`). Tell the person in one plain line,
-  for example "Found Jupylet, in its Miniforge environment `jupylet`." Do
-  not ask; there is nothing to choose between.
-- **More than one line:** the first is the most recently set up. Name the
-  environments to the person (the last part of each path is its name, the one
-  they picked when they set it up) and propose the first one explicitly, for
-  example:
-
-  > I found Jupylet in more than one Miniforge environment on your
-  > computer: `jupylet`, `jupylet2`. I'll use `jupylet2`, the most recently
-  > set up one - is that right, or did you mean a different one?
-
-  If you came here from `CLAUDE_SETUP.md`, which just installed Jupylet into
-  one of them, use that one without asking.
-
-  Continue only after a clear yes; if they name a different one, use that.
-
-Call the last part of `<env>`'s path `<name>` (needed in step 5 to activate
-it). If `<env>` is Miniforge's own folder itself, not a folder under `envs`,
-it is the `base` environment, which has no separate name: leave out
-`conda activate <name> &&` in step 5 instead, the same as on a Mac.
+`<python>` is `<env>\python.exe` for a conda environment, and
+`<env>\Scripts\python.exe` for a venv. For a conda environment, call the
+last part of `<env>`'s path `<name>`; if `<env>` is Miniforge's own folder,
+it is `base`: leave out the name after `activate.bat` in step 5. A venv is
+activated differently: see step 5. (Not tried on Windows: a venv, another
+conda, a computer without Miniforge.)
 
 Then check that the environment also has jupyterlab:
 
@@ -662,9 +720,16 @@ Then check that the environment also has jupyterlab:
 
 Expected: no error. If it fails: Problem 14.
 
+Then check for the `[claude]` extra:
+
+`& "<python>" -c "import jupyter_mcp_server"`
+
+Expected: no error. If it fails: Problem 17, with `& "<python>"` in front.
+
 The helper commands (`wait`, `attach`, `call`, `tools`) are plain HTTP and
 need no activation; only Jupyter itself does (step 5). Steps 3 and 4 are the
-same, with `& "<python>"` in front. A free port prints `10061` (connection
+same, with `& "<python>"` in front (for `nbmodel-off`, with the current folder
+set to `<folder>` first, as in "Steps 6 to 10 on Windows 11"). A free port prints `10061` (connection
 refused): only `0` means it is taken. The trust check and fix are also the
 same as in step 2, with `& "<python>"` in front: they resolve the notebook
 files themselves, so there is nothing Windows-specific about them.
@@ -681,6 +746,9 @@ call <miniforge>\condabin\activate.bat <name>
 cd /d <folder>\examples
 jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=%1 "--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up"
 ```
+
+For a venv, replace the `call ...activate.bat <name>` line with
+`call <env>\Scripts\activate.bat` (not tried yet).
 
 Run it with the PowerShell tool, with `run_in_background` set:
 
