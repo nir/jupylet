@@ -201,11 +201,11 @@ is to install it. Offer that, for example:
 > start creating with it. Shall I set it up for you? I'll go one small step
 > at a time and ask before each change.
 
-After a clear yes, go on with step 2. If step 2 then finds it already set
-up for this folder, say so in one line, for example "Looks like Jupylet is
-already set up for this folder, so there's nothing to install. Let's go
-straight to the examples.", and go on from there: their yes to setting it
-up was a yes to trying it.
+After a clear yes, install it: read `<folder>/CLAUDE_SETUP.md` and follow it
+as its "Code already here" section says, with `<code>` = `<folder>`. Do this
+even if Jupylet turns out to be installed somewhere already: they asked for
+it to be installed, and setup tells them what it finds and leaves an
+existing install as it is. When setup hands back, go on with step 2.
 
 **They ask to open a notebook, or to try something:** ask, in a few plain
 words, for example:
@@ -260,8 +260,7 @@ Call that environment's path `<env>` and its python `<python>`
 (`<env>/bin/python`).
 
 - If it is the only line that says `this folder`, use it: there is nothing
-  to choose between, and nothing new to tell, unless step 1 offered to
-  install (then its "already set up" line).
+  to choose between, and nothing new to tell.
 - If several lines say `this folder`, name those environments and propose
   the first, for example:
 
@@ -276,8 +275,7 @@ Call that environment's path `<env>` and its python `<python>`
 **Otherwise** (no lines, or none says `this folder`): Jupylet is not set up
 for this folder, whatever the other lines say. Another environment's
 Jupylet runs another copy's code, which may not match the examples here,
-even with the same version number. If step 1 already offered to set it up
-and they said yes, go on as for "Yes, set it up". Otherwise offer it now,
+even with the same version number. Offer to set it up,
 for example "Jupylet isn't set up for this folder yet. Shall I set it up
 for you? I'll go one small step at a time and ask before each change.",
 adding "If you already installed it yourself, tell me and I'll look for
@@ -392,10 +390,10 @@ For a venv, activate it with its own script instead of `conda activate`:
 
 Never use the Terminal panel for this (Problem 5). Starting takes a few
 seconds; say so once, and use the wait to explain, for example "Starting
-Jupyter now, one second. Jupyter runs as a small program on this computer,
-and the notebook is its page, which you'll see in the browser panel next to
-our chat...", so the wait does not look like nothing is happening. Nothing else in steps 5 or
-6 needs a comment; go straight to step 7 once it is ready.
+Jupyter now, one second. It runs here on your computer, and the browser panel
+next to our chat connects to it, so you can work with it there.", so the wait
+does not look like nothing is happening. Nothing else in steps 5 or 6 needs
+a comment; go straight to step 7 once it is ready.
 
 ### Step 6. Wait until Jupyter is ready
 
@@ -464,18 +462,24 @@ there is no kernel: Problem 6.
 
 ### Step 10. Run all cells
 
+Before you run it, tell the person, for example "Running the notebook now.
+It can take up to a minute to get going, while Jupylet gets everything
+ready for the first time; after that it starts in seconds." (The first run compiles
+Jupylet's code, and the page can sit at `[*]` for half a minute with nothing
+visible happening.)
+
 `<python> -m jupylet.claude call 8888 <token> notebook_run-all-cells`
 
-Expected: `True` after a second or two. Tell the person, for example "The
-spaceship example should be showing at the bottom of the notebook now. I
-ran every cell, top to bottom, and the last one started it. Click the
-canvas, the area where it's drawn, then steer the spaceship with the arrow
-keys." If it says
-"Timeout waiting for result": Problem 1. If it says "Not Found": Problem 2.
+Expected: `True` after a second or two; the cells may still be running. If
+it says "Timeout waiting for result": Problem 1. If it says "Not Found":
+Problem 2. Wait until the example is running (`read_notebook`: every code
+cell has an execution count, and `read_cell` of the last one shows no
+error), then tell the person, for example "The spaceship example should be
+showing at the bottom of the notebook now. I ran every cell, top to bottom,
+and the last one started it. Click the canvas, the area where it's drawn,
+then steer the spaceship with the arrow keys."
 
-Only once the example is verified running (`read_notebook`: every code cell
-has an execution count, and `read_cell` of the last one shows no error),
-and only if Jupylet was installed in this session (`CLAUDE_SETUP.md`) and
+Only once the example is running, and only if Jupylet was installed in this session (`CLAUDE_SETUP.md`) and
 setup's check of their own Terminal or Prompt passed, add one short
 paragraph, for example:
 

@@ -28,7 +28,7 @@ USAGE = """
 Helpers for Claude Code sessions that work with a person in a live Jupyter
 notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
 
-    python -m jupylet.claude find-env <version>
+    python -m jupylet.claude find-env [--all] <version>
     python -m jupylet.claude wait <port> <token>
     python -m jupylet.claude attach <port> <token> <notebook path>
     python -m jupylet.claude kernel <port> <token> <notebook path>
@@ -37,6 +37,7 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
     python -m jupylet.claude watch <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
+    python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
     python -m jupylet.claude nbmodel-off
@@ -45,7 +46,8 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
 without jupylet, such as Miniforge's `base` or a plain python3 (run this
 file by path: it never imports jupylet itself, on purpose). It prints one environment per line:
 its path, its kind (conda or venv), and where its jupylet comes from ("this
-folder", or a version and its source). Every other command needs an
+folder", or a version and its source). With --all it also lists
+environments with any other version of jupylet. Every other command needs an
 environment that actually has jupylet installed.
 """
 
@@ -123,13 +125,14 @@ def _source_folder(url):
     return os.path.realpath(urllib.request.url2pathname(urllib.parse.urlparse(url).path))
 
 
-def find_env(version, root=None, folder=None):
+def find_env(version, root=None, folder=None, any_version=False):
     """Every environment that can run the jupylet in folder, best first.
 
     An environment qualifies when its jupylet is installed (editable) from
     folder itself, whatever version it reports, or when it has exactly this
-    version from anywhere else. The first kind comes first; within each,
-    the most recently changed environment comes first.
+    version from anywhere else, or, with any_version, any jupylet at all.
+    They come in that order; within each kind, the most recently changed
+    environment comes first.
 
     root is Miniforge's own folder, ~/miniforge3 by default. folder is the
     jupylet folder this file is in, by default. Only the standard library
@@ -176,9 +179,10 @@ def find_env(version, root=None, folder=None):
         if editable and source == folder:
             matches.append((0, -os.path.getmtime(env), env, python, kind, 'this folder'))
 
-        elif found == version:
+        elif found == version or any_version:
             where = source or 'a package index'
-            matches.append((1, -os.path.getmtime(env), env, python, kind, '%s from %s' % (found, where)))
+            rank = 1 if found == version else 2
+            matches.append((rank, -os.path.getmtime(env), env, python, kind, '%s from %s' % (found, where)))
 
     matches.sort()
 
@@ -387,16 +391,31 @@ def _wait_until(check, timeout):
 
 
 def _pids(token):
-    """Ids of the processes started with this Jupyter token (macOS, Linux)."""
+    """Ids of the processes started with this Jupyter token.
+
+    On macOS and Linux, the processes whose command has the token option. On
+    Windows, every process whose command line has the token: the launcher
+    `cmd` passes it on as a plain argument, and all of them belong to that
+    Jupyter (CLAUDE.md, Part 6).
+    """
+    if sys.platform == 'win32':
+        script = (
+            "Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID "
+            "-and $_.CommandLine -match '%s' } | ForEach-Object { $_.ProcessId }" % token
+        )
+        command = ['powershell', '-NoProfile', '-Command', script]
+        match = lambda line: True
+    else:
+        command = ['ps', '-axo', 'pid=,command=']
+        match = lambda line: 'IdentityProvider.token=' + token in line
+
     try:
-        out = subprocess.run(
-            ['ps', '-axo', 'pid=,command='], capture_output=True, text=True
-        ).stdout
+        out = subprocess.run(command, capture_output=True, text=True).stdout
     except OSError:
         return []
 
     pids = [int(line.split(None, 1)[0]) for line in out.splitlines()
-            if 'IdentityProvider.token=' + token in line]
+            if line.strip() and match(line)]
 
     return [p for p in pids if p != os.getpid()]
 
@@ -442,7 +461,8 @@ def shutdown(port, token, timeout=30):
     if _wait_until(lambda: not _pids(token), timeout):
         return 'stopped'
 
-    for sig in (signal.SIGTERM, signal.SIGKILL):
+    # Windows has no SIGKILL; there SIGTERM already ends a process at once.
+    for sig in (signal.SIGTERM, getattr(signal, 'SIGKILL', signal.SIGTERM)):
         for pid in _pids(token):
             try:
                 os.kill(pid, sig)
@@ -453,6 +473,37 @@ def shutdown(port, token, timeout=30):
             return 'stopped after ending its process'
 
     return 'still running'
+
+
+def run_cell(port, token, index, start):
+    """Run one cell the way a person would: select it in the page, then run it.
+
+    Moves the page's selection (the person's cursor) to the cell at index, one
+    cell at a time, and runs it only if its source starts with start, since
+    the wrong cell could restart what the person is running. Needs the
+    run-cell tools allowed in the start command (CLAUDE.md, Part 6). Returns
+    the answer of notebook_run-cell, or why it did not run.
+    """
+    import ast
+
+    index = int(index)
+    selected = lambda: ast.literal_eval(call(port, token, 'notebook_get-selected-cell'))
+    sel = selected()
+
+    while sel['cellIndex'] != index:
+        step = 1 if sel['cellIndex'] < index else -1
+        call(port, token, 'notebook_move-cursor-down' if step == 1 else 'notebook_move-cursor-up')
+        new = selected()
+
+        if new['cellIndex'] != sel['cellIndex'] + step:
+            return 'not run: the selection moved from %r to %r' % (sel['cellIndex'], new['cellIndex'])
+
+        sel = new
+
+    if not sel.get('source', '').strip().startswith(start.strip()):
+        return 'not run: cell %d starts with %r' % (index, sel.get('source', '')[:60])
+
+    return call(port, token, 'notebook_run-cell')
 
 
 def _runtime_dir():
@@ -563,8 +614,8 @@ def nbmodel_off():
 def main(argv):
     cmd, args = (argv[0], argv[1:]) if argv else ('', [])
 
-    if cmd == 'find-env' and len(args) == 1:
-        for env, python, kind, source in find_env(args[0]):
+    if cmd == 'find-env' and len(args) in (1, 2) and args[:-1] in ([], ['--all']):
+        for env, python, kind, source in find_env(args[-1], any_version=args[0] == '--all'):
             print('%s\t%s\t%s' % (env, kind, source))
 
     elif cmd == 'wait' and len(args) == 2:
@@ -592,6 +643,9 @@ def main(argv):
 
     elif cmd == 'replace-kernel' and len(args) == 3:
         print(replace_kernel(*args))
+
+    elif cmd == 'run-cell' and len(args) == 4:
+        print(run_cell(*args))
 
     elif cmd == 'shutdown' and len(args) == 2:
         print(shutdown(*args))
