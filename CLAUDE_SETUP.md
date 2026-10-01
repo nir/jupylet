@@ -82,7 +82,7 @@ no list of what it installs, no tool or command names.
   explain each new thing the first time it comes up, briefly: Miniforge ("the
   free program that gives your computer Python and the tools Jupylet uses"),
   an environment, GitHub and a branch (step 6), Jupyter and a notebook (step
-  7), Terminal and `(base)` (step 10, macOS). They should come out of it
+  7). They should come out of it
   knowing their way around a little. Never a lecture: a sentence or two per
   step. Put the examples below in your own words if you like, but keep what
   they explain: that sentence is part of the step.
@@ -339,7 +339,7 @@ Problem 3.
 Terminal needs setting up so it finds Miniforge (new windows then show
 `(base)`). Setting up Terminal is part of installing Miniforge on a Mac, not
 an extra: without it, the person's own Terminal keeps using another conda,
-or none, and `conda activate <env>` (step 10) fails the first time they try
+or none, and `conda activate <env>` fails the first time they try
 on their own. There is no "Miniforge, but not Terminal": if they say no,
 stop (see "Rules").
 
@@ -528,9 +528,10 @@ Notebook), and go on anyway.
 ## Step 9. Check the person's own way in
 
 Run what they will use later, the way they will use it: a new Terminal
-window on macOS, the Miniforge Prompt on Windows. Say one line first, for
-example "A last check: making sure you'll be able to start Jupylet on your
-own later, too...".
+window on macOS, the Miniforge Prompt on Windows. It matters: without it,
+the person cannot start Jupylet on their own. Run it without announcing it;
+when it passes, say nothing, since the next thing the person sees is the
+notebook.
 
 `"<base python>" "<helper>" prompt "<miniforge>"`
 
@@ -540,28 +541,14 @@ Prompt. Either way: Problem 4.
 
 ## Step 10. Hand over
 
-Tell the person it is done, and teach them the one thing they need when
-using Jupylet on their own: where to type commands, and how to switch to
-Jupylet's environment. Name the window and say how to open it; they may
-never have used one. Nothing more: no summary of what went where (no
-paths, no settings files, no backups), and no question whether to go on,
-since the notebook part asks its own. For example:
-
-**macOS:**
-
-> Jupylet is installed. To use it on your own later, open Terminal: press
-> Cmd+Space, type *Terminal* and press Enter. It's a window where you type
-> commands. Each line starts with `(base)`, the environment you are in. Type
-> `conda activate <env>` and it changes to `(<env>)`: now you are in
-> Jupylet's environment. Now let's try it out in a notebook.
-
-**Windows 11:**
-
-> Jupylet is installed. To use it on your own later, open the Start menu,
-> type *Miniforge* and open **Miniforge Prompt**. It's a small window where
-> you type commands, with Miniforge's Python ready to use. Then type
-> `conda activate <env>`, which switches it to Jupylet's environment. Now
-> let's try it out in a notebook.
+Tell the person it is done, in one line, for example "Jupylet is
+installed. Now let's try it out." Nothing more: no summary of what went
+where (no paths, no settings files, no backups), no lesson about Terminal
+or environments, and no question whether to go on. What comes next, opening
+the browser pane for the first time and signing in with a token, is new and
+can feel intimidating; nothing should come between. How to start Jupylet on
+their own is for later: `CLAUDE.md` offers it once the first example runs
+(its step 10).
 
 Then move this session to the code folder. Tell the person first what is
 about to happen and which of the names this is, since the app's own words
@@ -607,8 +594,8 @@ checked that.
 
 **4. The person's Terminal or Prompt does not find Miniforge (step 9).**
 Jupylet is installed and works; this only affects using it on their own, not
-the next part with you. Tell them plainly, go on with step 10, and write what
-the helper printed into `EXPERIENCE.md` in `<code>`.
+the next part with you. Tell them plainly, now, while setting up, go on with
+step 10, and write what the helper printed into `EXPERIENCE.md` in `<code>`.
 
 **5. Miniforge is too old, on Windows (step 4).**
 Tell the person plainly that the Miniforge on their computer is too old for

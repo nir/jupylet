@@ -498,6 +498,18 @@ canvas, the area where it's drawn, then steer the spaceship with the arrow
 keys." If it says
 "Timeout waiting for result": Problem 1. If it says "Not Found": Problem 2.
 
+Only once the example is verified running (`read_notebook`: every code cell
+has an execution count, and `read_cell` of the last one shows no error),
+and only if Jupylet was installed in this session (`CLAUDE_SETUP.md`) and
+setup's check of their own Terminal or Prompt passed, add one short
+paragraph, for example:
+
+> By the way, you can also start Jupylet on your own, without me, from the
+> Terminal. Whenever you'd like, just ask and I'll show you how.
+
+On Windows, say "from the Miniforge Prompt". If they ask, see "When they
+ask how to start Jupylet on their own" in Part 2.
+
 ## Part 2: Working in the notebook
 
 Every tool is called the same way, from any folder:
@@ -525,6 +537,33 @@ Not tested: `insert_cell`, `edit_cell_source`, `overwrite_cell_source`,
 
 If the person presses Restart Kernel, or run-all times out, replace the
 kernel (Problem 1).
+
+### When they ask how to start Jupylet on their own
+
+Tell them where to type commands, and how to switch to Jupylet's
+environment. Name the window and say how to open it; they may never have
+used one. `<name>` is the environment from step 2. For example:
+
+**macOS:**
+
+> Open Terminal: press Cmd+Space, type *Terminal* and press Enter. It's a
+> window where you type commands. Each line starts with `(base)`, the
+> environment you are in. Type `conda activate <name>` and it changes to
+> `(<name>)`: now you are in Jupylet's environment. Then type
+> `cd "<folder>/examples"` to go to the example notebooks, and
+> `jupyter lab`: Jupyter opens in your web browser.
+
+**Windows 11:**
+
+> Open the Start menu, type *Miniforge* and open **Miniforge Prompt**. It's
+> a small window where you type commands, with Miniforge's Python ready to
+> use. Type `conda activate <name>`, which switches it to Jupylet's
+> environment. Then type `cd /d "<folder>\examples"` to go to the example
+> notebooks, and `jupyter lab`: Jupyter opens in your web browser.
+
+If setup's check of their own Terminal or Prompt failed (`CLAUDE_SETUP.md`,
+its Problem 4), tell them plainly that starting it on their own isn't set up
+yet, instead of these steps.
 
 ## Part 3: Stopping
 
