@@ -16,6 +16,44 @@ this page (for example `claude` in
 they name in the chat. If neither names one, use `master`. Call it
 `<branch>`.
 
+**Code already here.** `CLAUDE.md` (its step 2) sends you here when the
+person already has the Jupylet code in a folder, downloaded or cloned, but
+Jupylet is not set up for it. Then `<code>` is that folder from the start,
+there is no `<branch>`, and the steps change only in this:
+
+- Step 2: they were already greeted. Instead of the hello, one line, for
+  example "First, a quick look at what's already on your computer...".
+- Step 3: skip check 4; the code folder is already there.
+- Step 6: skip the question and the download, but still save the helper
+  script, since later steps use it.
+- Step 10: the session already works from `<code>`: skip moving it
+  (`change_directory`) and its message. Then go back to `CLAUDE.md`'s step
+  2, not Part 1: the person already said yes to opening a notebook.
+
+**Claude tools for an existing install.** `CLAUDE.md` (its Problem 17) sends
+you here when Jupylet is installed and set up, but without its `[claude]`
+extra, the tools you use to work in a live notebook with the person. Only this
+section applies, none of the steps below; `<python>` and `<folder>` are as in
+`CLAUDE.md`. The full setup never asks this separately: step 7 installs the
+extra as part of installing Jupylet. Ask:
+
+> To work in the notebook with you, I need to install Jupylet's Claude
+> tools. They let me collaborate with you on the code in your notebook: see
+> it, add to it, run it, and see what it does. May I install them?
+
+If `CLAUDE.md`'s step 2 said the environment's Jupylet comes from another
+copy, add that installing also points the environment at this Jupylet
+folder, instead of the other copy. After a clear yes:
+
+`"<python>" -m pip install -e "<folder>[claude]"` (Windows: `& "<python>" ...`)
+
+It installs Jupylet from `<folder>` (editable) with the extra. Check:
+`"<python>" -I -c "import jupyter_mcp_server"` gives no error. If the install
+or the check fails, tell the person plainly and stop. Then go back to
+`CLAUDE.md`'s step 2 (its step 4 turns off nbmodel, which comes with the
+extra, before Jupyter starts). If they say no, go back to `CLAUDE.md`'s Problem 17,
+which says what to do without the tools.
+
 ## How to talk to the person
 
 The person is a beginner: a kid, a parent, someone new to programming. Not
@@ -450,12 +488,14 @@ The person then sees the pop-up once, and can answer No.
 Then turn off `jupyter_server_nbmodel`, which `[claude]` brings along. With
 it, Jupyter runs cells on the server, and a notebook that keeps sending
 messages (a panel, a live loop, a thread that prints) can leave a cell hanging
-at `[*]` for good after a few minutes. Say nothing to the person about it
-unless it fails:
+at `[*]` for good after a few minutes. It is part of installing, so don't
+ask:
 
 `"<env python>" -I -m jupylet.claude nbmodel-off`
 
-Expected: `turned off` (or `off`). Anything else: tell the person plainly
+Expected: `turned off`; tell the person in one plain line, for example "I
+switched off a Jupyter setting that can make notebooks freeze after a few
+minutes." (`off` needs no comment.) Anything else: tell the person plainly
 that one setting could not be changed, that their notebooks may freeze after
 a few minutes, and go on.
 

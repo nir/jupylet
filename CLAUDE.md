@@ -252,30 +252,66 @@ install -e`), so it runs exactly this code: the best kind. Otherwise it is
 the same `<version>`, installed from another copy (`<version> from <path>`)
 or from the internet (`<version> from a package index`).
 
-- **No lines:** tell the person plainly that Jupylet is not installed in
-  any environment on this computer, point them to Problem 14, and stop.
-- **One line that says `this folder`:** that is the environment. Call its
-  path `<env>` and its python `<python>` (`<env>/bin/python`). Tell the
-  person in one plain line, for example "Found Jupylet, in its environment
-  `jupylet`." Do not ask; there is nothing to choose between.
-- **More than one line, or a first line that does not say `this folder`:**
-  name the environments to the person (the last part of each path is its
-  name, the one they picked when they set it up; for a venv inside
-  `<folder>`, say "the venv in the Jupylet folder") and propose the first one
-  explicitly. If it comes from another copy, say so plainly, for example:
+Never show the person paths or these columns. Call an environment by its
+name, the last part of its path (the one they picked when they set it up),
+and a venv inside `<folder>` "the venv in the Jupylet folder".
 
-  > I found Jupylet in more than one environment on your computer:
+**The first line says `this folder`:** Jupylet is set up for this folder.
+Call that environment's path `<env>` and its python `<python>`
+(`<env>/bin/python`).
+
+- If it is the only line that says `this folder`, use it. Tell the person in
+  one plain line, for example "Found Jupylet, in its environment
+  `jupylet`." Do not ask; there is nothing to choose between.
+- If several lines say `this folder`, name those environments and propose
+  the first, for example:
+
+  > I found Jupylet set up for this folder in more than one environment:
   > `jupylet`, `jupylet2`. I'll use `jupylet2`, the most recently set up
   > one - is that right, or did you mean a different one?
 
-  > I found Jupylet in the environment `jupylet`, but it was installed from
-  > another copy of Jupylet, in `<path>`, not from this folder. It is the
-  > same version, so it should work the same. Shall I use it?
-
   If you came here from `CLAUDE_SETUP.md`, which just installed Jupylet into
-  one of them, use that one without asking.
+  one of them, use that one without asking. Otherwise continue only after a
+  clear yes; if they name a different one, use that.
 
-  Continue only after a clear yes; if they name a different one, use that.
+**Otherwise** (no lines, or none says `this folder`): Jupylet is not set up
+for this folder, whatever the other lines say. Another environment's
+Jupylet runs another copy's code, which may not match the examples here,
+even with the same version number. Ask, as the only question in that
+message:
+
+> Did you already install Jupylet on this computer yourself, for example by
+> following the instructions on its website?
+
+- **Yes:** look for every Jupylet, of any version:
+
+  `$HOME/miniforge3/bin/python <folder>/jupylet/claude.py find-env --all <version>`
+
+  If it finds none, say so plainly, and go on as for "No". Otherwise name
+  what it found, propose the first, and say plainly that it was not set up
+  from this folder, and, if its version is not `<version>`, that it is
+  another version. Offer setting Jupylet up for this folder as the other
+  choice, for example:
+
+  > I found Jupylet in an environment called `jupylet`. It was set up from
+  > another copy of Jupylet, not from this folder, so the examples here may
+  > not all work with it. I can use it anyway, or set Jupylet up for this
+  > folder, which takes about ten minutes. Which would you like?
+
+  If they pick an environment, use it (`<env>`, `<python>` as above). If they
+  pick setting up, go on as for "No".
+- **No, or not sure:** offer to set it up, for example:
+
+  > Then let's set it up. I'll install it on this computer, one small step
+  > at a time, and ask before each change. It takes about ten minutes. Shall
+  > I go ahead?
+
+  After a clear yes, read `<folder>/CLAUDE_SETUP.md` and follow it as its
+  "Code already here" section says, with `<code>` = `<folder>`. When it
+  hands back to this file, start this step again: the new environment is
+  then the one that says `this folder`. If they say no, tell them plainly
+  that the notebook needs Jupylet installed, and that they can ask you any
+  time.
 
 For a conda environment, call the last part of `<env>`'s path `<name>`
 (needed in step 5 to activate it). If `<env>` is Miniforge's own folder, not
@@ -351,12 +387,13 @@ The `[claude]` extra brings nbmodel along. With it, Jupyter runs cells on the
 server, and a notebook that keeps sending messages (a panel, a live loop, a
 thread that prints) leaves a cell hanging at `[*]` for good after a few
 minutes. Turning it off is part of starting Jupyter, not a separate change:
-don't ask, and say nothing to the person.
+don't ask.
 
-Expected: `off`, or `turned off` (it was on, and is now off, saved in the
-environment). `not installed` is also fine. If it prints `still on: ...`,
-tell the person plainly that the notebook may freeze after a few minutes, and
-go on.
+Expected: `off` or `not installed`: say nothing. `turned off`: it was on,
+and is now off, saved in the environment; tell the person in one plain line,
+for example "I switched off a Jupyter setting that can make notebooks freeze
+after a few minutes." If it prints `still on: ...`, tell the person plainly
+that the notebook may freeze after a few minutes, and go on.
 
 ### Step 5. Start Jupyter
 
@@ -626,13 +663,9 @@ Do: don't create an `.mcp.json`. `jupylet/claude.py` calls Jupyter's own
 endpoint (`http://localhost:8888/mcp`) directly, and that always worked.
 
 **14. jupylet or JupyterLab is not installed (step 2 fails).**
-Explain in plain words what is missing, and guide the person through
-installing it, following the "How to Install and Run Jupylet" section of
-`README.md` step by step: one step at a time, waiting for them to finish and
-confirm before the next, and answering their questions. Apart from jupylet's
-own `[claude]` extra (Problem 17), you never install software yourself; they
-run every command. Stop before the part where the
-README starts Jupyter, because you do that in step 5.
+Explain in plain words what is missing, and offer to set Jupylet up for this
+folder, as in step 2's "No, or not sure" (`CLAUDE_SETUP.md`, "Code already
+here"), which installs both into a new environment.
 
 **15. Jupyter does not become ready (step 6).**
 Do: read the background task's output file. If the port is taken, see
@@ -644,23 +677,11 @@ A second tab on the same notebook opens a different layout and can confuse
 which page answers. Use one tab; close extra ones with `tabs_close`.
 
 **17. The `[claude]` extra is not installed (step 2 fails).**
-The environment has jupylet, but not the tools you work with in the notebook
-(`jupyter-mcp-server` and what it brings). Unlike the rest of Jupylet, you
-install these yourself, after asking:
-
-> To work in the notebook with you, I need to install Jupylet's Claude
-> tools. They let me collaborate with you on the code in your notebook: see
-> it, add to it, run it, and see what it does. May I install them?
-
-If step 2 said the environment's jupylet comes from another copy, add that
-installing also points the environment at this Jupylet folder, instead of
-the copy in `<path>`. After a clear yes:
-
-`<python> -m pip install -e "<folder>[claude]"`
-
-It installs jupylet from `<folder>` (editable) with the extra. Then run the
-check in step 2 again; step 4 turns off nbmodel, which comes with it. If the
-install fails, tell the person plainly and stop.
+Jupylet is installed, but without the tools you work with in the notebook
+(`jupyter-mcp-server` and what it brings). Adding them is an install: read
+`<folder>/CLAUDE_SETUP.md` and follow its section "Claude tools for an
+existing install", which asks the person first. It hands back here: after a
+yes and a working install, run the checks in step 2 again and go on.
 
 If they say no, tell them plainly what that means, for example:
 
@@ -707,6 +728,14 @@ PowerShell-specific syntax:
 
 `& "<miniforge>\python.exe" "<folder>\jupylet\claude.py" find-env <version>`
 
+and, for the "Yes" answer there:
+
+`& "<miniforge>\python.exe" "<folder>\jupylet\claude.py" find-env --all <version>`
+
+If there is no Miniforge (`<miniforge>\python.exe` does not exist), use the
+Python launcher instead, `py "<folder>\jupylet\claude.py" ...`; if there is
+no `py` either, treat it as finding nothing (not tried).
+
 `<python>` is `<env>\python.exe` for a conda environment, and
 `<env>\Scripts\python.exe` for a venv. For a conda environment, call the
 last part of `<env>`'s path `<name>`; if `<env>` is Miniforge's own folder,
@@ -724,7 +753,7 @@ Then check for the `[claude]` extra:
 
 `& "<python>" -c "import jupyter_mcp_server"`
 
-Expected: no error. If it fails: Problem 17, with `& "<python>"` in front.
+Expected: no error. If it fails: Problem 17.
 
 The helper commands (`wait`, `attach`, `call`, `tools`) are plain HTTP and
 need no activation; only Jupyter itself does (step 5). Steps 3 and 4 are the
