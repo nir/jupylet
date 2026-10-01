@@ -155,11 +155,11 @@ Let a command wait in the background instead, and end your turn:
 The two waiting commands:
 
 - For the notebook to open after signing in (step 8):
-  `<python> -m jupylet.claude wait-open 8888 <token> 11-spaceship.ipynb <seconds>`
+  `<python> -m jupylet.claude wait-open <port> <token> 11-spaceship.ipynb <seconds>`
   prints `open`, or `timeout`. The server cannot see the browser's sign-in,
   but the notebook only opens (and gets its kernel) after it.
 - For them to run something in the notebook:
-  `<python> -m jupylet.claude watch 8888 <token> 11-spaceship.ipynb <seconds> <since>`
+  `<python> -m jupylet.claude watch <port> <token> 11-spaceship.ipynb <seconds> <since>`
   prints `ran <time>` once the notebook's kernel did something after
   `<since>`, or `timeout <since>`. Always pass the time it printed as
   `<since>` to the next `watch`, so nothing that happens in between is
@@ -350,14 +350,16 @@ Eight characters, so a kid can paste or type it. That is safe only because
 Jupyter accepts connections from this computer alone (step 5 never passes
 `--ip`): never make it reachable from the network with a token this short.
 
-### Step 4. Check that port 8888 is free, and that nbmodel is off
+### Step 4. Choose a port, and check that nbmodel is off
+
+Jupyter listens on a port, a number on this computer. Use 8888 if it is
+free:
 
 `<python> -c "import socket; print(socket.socket().connect_ex(('127.0.0.1', 8888)))"`
 
-Expected: a number other than `0`. Say nothing to the person about this step;
-it has nothing for them to act on unless it fails, and it should not feel
-like a separate moment from starting Jupyter in step 5. If it prints `0`:
-Problem 11.
+A number other than `0`: it is free, and `<port>` is 8888. This is part of
+starting Jupyter in step 5, with nothing for the person to act on. If it
+prints `0`: Problem 11, which gives you `<port>`.
 
 Then make sure `jupyter_server_nbmodel` is off. Do this every time, right
 before starting Jupyter:
@@ -382,11 +384,11 @@ that the notebook may freeze after a few minutes, and go on.
 Run this with the Bash tool, with `run_in_background` set (leave out
 `conda activate <name> &&` for `base`):
 
-`$SHELL -ic "conda activate <name> && cd <folder>/examples && jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
+`$SHELL -ic "conda activate <name> && cd <folder>/examples && jupyter lab --no-browser --port <port> --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
 
 For a venv, activate it with its own script instead of `conda activate`:
 
-`$SHELL -ic "source <env>/bin/activate && cd <folder>/examples && jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
+`$SHELL -ic "source <env>/bin/activate && cd <folder>/examples && jupyter lab --no-browser --port <port> --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
 
 Never use the Terminal panel for this (Problem 5). Starting takes a few
 seconds; say so once, and use the wait to explain, for example "Starting
@@ -397,7 +399,7 @@ a comment; go straight to step 7 once it is ready.
 
 ### Step 6. Wait until Jupyter is ready
 
-`<python> -m jupylet.claude wait 8888 <token>`
+`<python> -m jupylet.claude wait <port> <token>`
 
 Expected: `ready`. If not: Problem 15.
 
@@ -405,7 +407,7 @@ Expected: `ready`. If not: Problem 15.
 
 Use `preview_start` with the URL
 
-`http://localhost:8888/doc/tree/11-spaceship.ipynb?reset`
+`http://localhost:<port>/doc/tree/11-spaceship.ipynb?reset`
 
 Use this one browser tab only. Before saying anything to the person, also run
 the sign-in check from step 8: it works whether or not the pane is visible to
@@ -433,7 +435,7 @@ answer from step 7:
 - `200`: already signed in. Go to step 9.
 - `403`: unless step 7 already did, start waiting for them first, as in
   "Waiting for the person", with
-  `<python> -m jupylet.claude wait-open 8888 <token> 11-spaceship.ipynb 90`.
+  `<python> -m jupylet.claude wait-open <port> <token> 11-spaceship.ipynb 90`.
   Then, if you have not already told them (see step 7), tell the person, for
   example: "This page wants a special token just for this session - please
   paste this in: `<token>`. The token shows Jupyter that it's really you, so
@@ -455,7 +457,7 @@ This can take up to a minute; say so once first, before running it (unless
 you just said it on signing in), for example "Almost there, just getting the
 notebook ready...", so the wait does not look stuck:
 
-`<python> -m jupylet.claude attach 8888 <token> 11-spaceship.ipynb`
+`<python> -m jupylet.claude attach <port> <token> 11-spaceship.ipynb`
 
 Expected: the output contains `Successfully activate notebook`. If it says
 there is no kernel: Problem 6.
@@ -468,7 +470,7 @@ ready for the first time; after that it starts in seconds." (The first run compi
 Jupylet's code, and the page can sit at `[*]` for half a minute with nothing
 visible happening.)
 
-`<python> -m jupylet.claude call 8888 <token> notebook_run-all-cells`
+`<python> -m jupylet.claude call <port> <token> notebook_run-all-cells`
 
 Expected: `True` after a second or two; the cells may still be running. If
 it says "Timeout waiting for result": Problem 1. If it says "Not Found":
@@ -493,13 +495,13 @@ ask how to start Jupylet on their own" in Part 2.
 
 Every tool is called the same way, from any folder:
 
-`<python> -m jupylet.claude call 8888 <token> <tool> '<json arguments>'`
+`<python> -m jupylet.claude call <port> <token> <tool> '<json arguments>'`
 
-`<python> -m jupylet.claude tools 8888 <token>` lists the tools.
+`<python> -m jupylet.claude tools <port> <token>` lists the tools.
 
 - Change and run the notebook only through these tools.
 - The kernel id is needed by some tools:
-  `<python> -m jupylet.claude kernel 8888 <token> 11-spaceship.ipynb`
+  `<python> -m jupylet.claude kernel <port> <token> 11-spaceship.ipynb`
 - Work directly in the person's notebook.
 - Read cell outputs to find the real error when something fails.
 - When you ask them to type or run something, wait as in "Waiting for the
@@ -563,7 +565,7 @@ On Windows 11, also see "Stopping on Windows 11" in Part 6.
 
 1. Close the browser page with `tabs_close`, first: a page left open while
    Jupyter stops shows an error pop-up that can worry a beginner.
-2. `<python> -m jupylet.claude shutdown 8888 <token>`
+2. `<python> -m jupylet.claude shutdown <port> <token>`
    It ends every notebook and every kernel first (there can be kernels
    without a notebook), then shuts the server down, waits for it to exit, and
    only if the process lingers, stops it. It takes a few seconds. Expected:
@@ -605,7 +607,7 @@ Cause: unknown. It happened after the kernel was restarted in place (the
 Restart Kernel button, which kids will press), never with a fresh kernel, and
 not in one test with nbmodel off (step 4).
 Do: replace the kernel:
-`<python> -m jupylet.claude replace-kernel 8888 <token> 11-spaceship.ipynb`
+`<python> -m jupylet.claude replace-kernel <port> <token> 11-spaceship.ipynb`
 It shuts the old kernel down, starts a new one, waits until it is ready
 (about 10 seconds) and prints the new id. Then run all cells once more. Don't
 retry in a loop.
@@ -660,13 +662,26 @@ it prints `a kernel is still running: not shutting the server down`, or
 `still running`, tell the person plainly and stop; don't kill anything
 yourself.
 
-**11. Port 8888 is already in use, or a second Jupyter is running.**
-Cause: another Jupyter is open, from an earlier session or the person's own
-terminal. Do not start a second Jupyter on the same folder: once, a notebook
-ended up with hundreds of empty cells in that situation (we never proved the
-cause). Do: ask the person whether they have Jupyter open. If they do, use it
-(its port and token), or ask them to close it. Never kill a process you did
-not start.
+**11. Port 8888 is already in use: another Jupyter is running.**
+It may be left from an earlier session, or be the person's own. See where it
+is and how to reach it: `<python> -m jupyter server list` prints one line per
+running Jupyter, with its address (port and token) and the folder it serves.
+Tell the person plainly and ask, for example:
+
+> Jupyter is already open on this computer, from earlier. May I close it? If
+> you're still using it, just say no, and I'll start a separate one.
+
+- **Yes:** close it with `<python> -m jupylet.claude shutdown 8888 <its token>`,
+  and use 8888 as `<port>`.
+- **No:** leave it, and use the first free port from 8889 on as `<port>`
+  (check each as in step 4). Ports mean nothing to the person, so there is
+  nothing more to tell them.
+
+If it serves this same folder (`<folder>/examples`), don't start a second
+one: two Jupyters writing the same notebooks once left a notebook with
+hundreds of empty cells (Problem 12). Then closing it is the only way; if
+they say no, tell them plainly that a second one can't open the same
+notebooks, and stop. Never close a Jupyter without their yes.
 
 **12. A notebook was corrupted (hundreds of empty cells, wrong content).**
 It happened while the `.ipynb` file was edited on disk, and while Jupyter's
@@ -676,7 +691,7 @@ happens, tell the person; their last saved copy is in git or on disk.
 
 **13. Claude Code's own MCP connection to Jupyter.**
 Don't create an `.mcp.json`: it never worked reliably. `jupylet/claude.py`
-calls Jupyter's own endpoint (`http://localhost:8888/mcp`) directly, and
+calls Jupyter's own endpoint (`http://localhost:<port>/mcp`) directly, and
 that always worked.
 
 **14. jupylet or JupyterLab is not installed (step 2 fails).**
@@ -790,7 +805,7 @@ the name after `activate.bat`:
 @echo off
 call <miniforge>\condabin\activate.bat <name>
 cd /d <folder>\examples
-jupyter lab --no-browser --port 8888 --ServerApp.port_retries=0 --IdentityProvider.token=%1 "--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up"
+jupyter lab --no-browser --port %2 --ServerApp.port_retries=0 --IdentityProvider.token=%1 "--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up"
 ```
 
 For a venv, replace the `call ...activate.bat <name>` line with
@@ -798,7 +813,7 @@ For a venv, replace the `call ...activate.bat <name>` line with
 
 Run it with the PowerShell tool, with `run_in_background` set:
 
-`cmd /c "<scratchpad>\start_jupyter.cmd <token>"`
+`cmd /c "<scratchpad>\start_jupyter.cmd <token> <port>"`
 
 The long last argument makes the MCP server offer the "run one cell" tools
 (below); without it only run-all is offered. The background task's output
@@ -842,7 +857,7 @@ Running one cell (needs the flag from step 5). `execute_code` runs code in the
 kernel but puts nothing in a cell. To run a particular cell the way a person
 would, with the current folder set to `<folder>`:
 
-`& "<python>" -m jupylet.claude run-cell 8888 <token> <cell index> "<start of its source>"`
+`& "<python>" -m jupylet.claude run-cell <port> <token> <cell index> "<start of its source>"`
 
 It moves the page's selection to the cell, one cell at a time, checks that
 its source starts with what you gave, and only then runs it (the wrong cell
