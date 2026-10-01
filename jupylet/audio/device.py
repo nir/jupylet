@@ -210,6 +210,7 @@ _od = _get_default_sc_device()
 
 _dt = []
 _safety_event0 = 0
+_frames = None
 
 
 def _stream_callback(outdata, frames, _time, status):
@@ -221,7 +222,12 @@ def _stream_callback(outdata, frames, _time, status):
             buffer.
         _time (struct): A bunch of clocks.
     """
-    global _safety_event0, _ot, _od
+    global _safety_event0, _ot, _od, _frames
+
+    # Log the block size the sound device asks for, when it changes.
+    if frames != _frames:
+        _frames = frames
+        logger.info('The sound device asks for blocks of %d frames.', frames)
 
     t0 = time.time()
     dt = _time.outputBufferDacTime - _time.currentTime

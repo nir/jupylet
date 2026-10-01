@@ -1312,8 +1312,27 @@ def get_triangle_cycle(nharmonics, size=None):
     return table.astype('float32')
 
 
-def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
+#
+# The wave functions below take the frequency either as a number, which then
+# holds for the whole block, or as an array with one frequency per sample,
+# which the wave follows sample by sample, for example to glide, or for
+# vibrato or FM. An array sets the length of the block, and frames is then
+# ignored. Each returns the samples, and the phase to continue from in the
+# next block.
+#
 
+
+def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
+    """Return a block of a sine wave.
+
+    Args:
+        freq (float or ndarray): The frequency in Hz, or one per sample.
+        phase (float): The phase to start from, in radians.
+        frames (int): The number of samples, when freq is a number.
+
+    Returns:
+        tuple: The samples, and the phase to continue from, in radians.
+    """
     steps = _get_steps(freq, frames)
     samples, phase = _sine(steps, phase / 2 / math.pi)
 
@@ -1321,7 +1340,17 @@ def get_sine_wave(freq, phase=0, frames=8192, **kwargs):
 
 
 def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
+    """Return a block of a band-limited triangle wave.
 
+    Args:
+        freq (float or ndarray): The frequency in Hz, or one per sample. For
+            an array, the number of harmonics is set by its highest value.
+        phase (float): The phase to start from, in radians.
+        frames (int): The number of samples, when freq is a number.
+
+    Returns:
+        tuple: The samples, and the phase to continue from, in radians.
+    """
     nharmonics = kwargs.get('nharmonics') or _get_nharmonics(freq)
     triangle = get_triangle_cycle(nharmonics, kwargs.get('size'))
 
@@ -1332,7 +1361,18 @@ def get_triangle_wave(freq, phase=0, frames=8192, **kwargs):
 
 
 def get_sawtooth_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
+    """Return a block of a band-limited sawtooth wave.
 
+    Args:
+        freq (float or ndarray): The frequency in Hz, or one per sample. For
+            an array, the number of harmonics is set by its highest value.
+        phase (float): The phase to start from, in radians.
+        frames (int): The number of samples, when freq is a number.
+        sign (float): -1 flips the wave upside down.
+
+    Returns:
+        tuple: The samples, and the phase to continue from, in radians.
+    """
     nharmonics = kwargs.get('nharmonics') or _get_nharmonics(freq)
     sawtooth = get_sawtooth_cycle(nharmonics, kwargs.get('size'))
 
@@ -1346,7 +1386,19 @@ def get_sawtooth_wave(freq, phase=0, frames=8192, sign=1., **kwargs):
 
 
 def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
+    """Return a block of a band-limited square, or pulse, wave.
 
+    Args:
+        freq (float or ndarray): The frequency in Hz, or one per sample. For
+            an array, the number of harmonics is set by its highest value.
+        phase (float): The phase to start from, in radians.
+        frames (int): The number of samples, when freq is a number.
+        duty (float or ndarray): The fraction of the cycle the wave is high,
+            from 0 to 1, or one per sample.
+
+    Returns:
+        tuple: The samples, and the phase to continue from, in radians.
+    """
     nharmonics = kwargs.get('nharmonics') or _get_nharmonics(freq)
     sawtooth = get_sawtooth_cycle(nharmonics, kwargs.get('size'))
 
@@ -1373,10 +1425,17 @@ class Oscillator(Sound):
     """Waveform generator for `sine`, and anti-aliased `triangle`, `sawtooth`,
     and variable duty `square` waveforms.
 
+    When the frequency changes from one block to the next, it ramps from
+    the old frequency to the new one across the block, so that it sweeps
+    rather than steps. A new note starts at its frequency, since playing a
+    note resets the oscillator. The frequency can also be given as an array
+    with one frequency per sample, which the oscillator follows exactly.
+
     Args:
         shape (str): Waveform to generate - one of `sine`, `triangle`, 
             `sawtooth`, or `square`.
-        freq (float): Fundamental frequency of generator.
+        freq (float or ndarray): Fundamental frequency of generator, or one
+            per sample.
         key (float, optional): Fundamental frequency of generator in semitone
             units where middle C is 60.
         sign (float): Set to -1 to flip sawtooth waveform upside down.
@@ -1401,13 +1460,41 @@ class Oscillator(Sound):
         self.sign = sign
         self.duty = duty
         self.kwargs = kwargs
+
+        # The frequency at the end of the previous block, to ramp from.
+        self._freq0 = None
         
+    def reset(self, shared=False):
+
+        super().reset(shared)
+
+        self._freq0 = None
+
     def forward(self, key_modulation=None, sign=None, duty=None, **kwargs):
         
         if key_modulation is not None:
             freq = key2freq(self.key + key_modulation)
         else:
             freq = self.freq
+
+        if np.isscalar(freq):
+
+            #
+            # A frequency given as a number: if it changed since the
+            # previous block, ramp to it across the block, rather than
+            # jump.
+            #
+            freq1 = freq
+
+            if self._freq0 is not None and freq1 != self._freq0:
+                freq = np.linspace(self._freq0, freq1, self.frames + 1)[1:]
+
+            self._freq0 = freq1
+
+        else:
+            # A frequency given per sample is followed as it is. Its last
+            # value is where the next ramp starts from.
+            self._freq0 = freq.reshape(-1)[-1]
             
         if sign is None:
             sign = self.sign
