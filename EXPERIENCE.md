@@ -66,8 +66,8 @@ Retired, Unreviewed.
    old runtime files or process ids, and never touch anything that is not yours.
 3. Before running or deleting something in the person's notebook, check that
    the target is what you think it is, and stop if it is not.
-4. `execute_cell` hangs on both platforms. Use run-all, or the "run one cell"
-   recipe (`CLAUDE.md`, Part 6).
+4. `execute_cell` needs nbmodel, which `CLAUDE.md` step 4 turns off. Use
+   run-all, or `claude.py run-cell` (`CLAUDE.md`, Part 6).
 5. Canvas shown as `Image(value=...)` text: check notebook/cell trust
    first (see "The canvas shows as text instead of a picture"). It is not
    about state files, position, the browser, or the executor.
@@ -132,107 +132,44 @@ Children need the same, put more gently (see `CLAUDE.md`).
   session, stop and read the entire person-facing sequence together, in the
   order a person would experience it, rather than trusting that each patch
   was locally enough.
-- **A test run is only a test if you stay in character.** `[any, seen once,
-  2026-09-23]` When the author asked for a trial run of `CLAUDE_SETUP.md`, I
-  opened it with a note to them as the developer ("from here on I'm
-  following the page, with you as the person...") and they stopped the run:
-  once it starts, talk to whoever is there as a beginner, exactly as the
-  page says, whoever they are. Anything for the developer goes before the
-  run starts or after it ends, never in between. And after fixing something
-  the author found in a test run, do not start the next run on your own:
-  say it is fixed and that you are ready, and wait for them to start it.
-  `[macOS, seen once, Sonnet 5, 2026-09-23]` A session broke character on
-  its own: it saw a Jupylet checkout with `CLAUDE_SETUP.md` in it, told the
-  person it looked like "your own repo you're dry-running the onboarding
-  doc for", and asked whether to use a technical tone. The same session
-  opened with a summary of the page (Miniforge → environment → `pip install
-  -e`) instead of the hello, invented a multiple-choice answer the page never
+- **A test run is only a test if you stay in character.** `[any, seen
+  twice, 2026-09-23]` Once a trial run of `CLAUDE_SETUP.md` starts, talk to
+  whoever is there as a beginner, exactly as the page says, even if they are
+  the author or the computer looks like a developer's. Notes for the
+  developer go before the run or after it, never in between; after fixing
+  something the author found, say it is ready and let them start the next
+  run. A session that broke character also opened with a summary of the
+  page instead of the hello, invented an in-between choice the page never
   offered ("install Miniforge but leave Terminal alone", which would have
-  made `conda activate` fail in the person's own Terminal later), dropped the
-  page's explanations of GitHub, a branch, Jupyter and `(base)`, and ended
-  with a summary of paths and settings files. `CLAUDE_SETUP.md` now says
-  each of these outright. One thing it did better than the page: it asked
-  about installing Miniforge and setting up Terminal to use Miniforge
-  instead of Miniconda in one question. The page used to ask them one after
-  the other, so a no to
-  Terminal came after Miniforge was already installed, leaving it unused.
-  The author agreed, and the page now asks one question: a no leaves the
-  computer untouched, and there is no "Miniforge, but not Terminal".
+  broken `conda activate` later), dropped the page's explanations, and ended
+  with a list of paths; the page now says each of these outright. One thing
+  it did better, asking about Miniforge and Terminal in one question so a no
+  leaves the computer untouched, became the page's way.
 - **Roll step by step; never present a whole plan to approve.** `[any, seen
-  once, 2026-09-23]` `CLAUDE_SETUP.md` used to gather everything first and
-  then ask once, in a long message listing every action, what it changes and
-  why. The author called it "a long text to read like a wikipedia article":
-  a beginner does not read it, so the yes means little. It now works like
-  `CLAUDE.md`: one short question at the moment each change is about to
-  happen. (A first version also kept the steps in between silent; the
-  author corrected that too, see the end of this entry.) Plain is not
-  dumbed down: "in jp145 and a few other places" and "its own toolbox" were
-  too vague. Name the real thing ("a Miniforge environment called `jp145`",
-  "Miniforge's main environment, called `base`") and explain it once; the
-  person will meet those names again. And news counts: that Miniforge was
-  already there went unmentioned, because the page said to skip silently.
-  Last, be a teacher as well as a guide: "activate it in Miniforge Prompt"
-  meant nothing to a beginner who does not know that window or how to open
-  it. Now each step may add one sentence on what a thing is and why it
-  matters, best during a slow wait, and the handover says how to open the
-  Prompt (or Terminal) and what `(base)` means. And an install is several
-  steps and a few long minutes, so it must not be silent: say as you go what
-  you are doing on their computer and why, a bit technical is fine, as long
-  as nothing reads like a foreign language (commands, output, lists of what
-  you checked), and explain Jupyter the first time it comes up. What is
-  never fine is repeating the instructions themselves ("go to step 9").
-  When one name means two things (the environment `jupylet2` and the folder
-  `jupylet2`, which the app then calls a workspace), say which one every
-  time. The author put it as striking the balance between not speaking a
-  foreign language and not dumbing down. Short technical status lines ("Attached
-  successfully. Now running all the cells.") were fine with the author, and
-  so was loose, human wording ("the environment of the same-ish name"):
-  clear and warm beats dry and formal. Two
-  more from the same review: "the game shows as text instead of a picture"
-  was a strange way to explain trust; say what does not show up, "the game
-  canvas", and explain the canvas once ("the area in the notebook where the
-  game is drawn and played"). And close the browser page before stopping
-  Jupyter: a page left open while its server stops shows an error pop-up
-  that can worry a beginner.
+  once, 2026-09-23]` A long message listing every action up front read "like
+  a wikipedia article": a beginner does not read it, so the yes means little.
+  Ask one short question at the moment each change is about to happen. Plain
+  is not dumbed down: name the real thing ("a Miniforge environment called
+  `jp145`", "Miniforge's main environment, called `base`") and explain it
+  once, since the person will meet those names again; news counts (say that
+  Miniforge was already there). Be a teacher as well as a guide: say how to
+  open a window they have never used. Keep them with you during long
+  installs with a sentence on what you are doing and why, never the
+  instructions themselves ("go to step 9"). When one name means two things
+  (the environment `jupylet2`, the folder `jupylet2`, which the app calls a
+  workspace), say which every time. Short technical status lines and loose,
+  human wording ("same-ish") were fine: clear and warm beats dry and formal.
 - **Waiting for the person: watch in the background, never inside your
-  turn.** `[any, verified on Windows 11 with Opus 5.5, 2026-09-22]` Step 8 used
-  to say "check a handful of times a few seconds apart" inside one turn. A
-  message the person sends during that stretch is not seen until the turn
-  ends, so a kid asking "what globe?" would get no answer, and when the
-  checks ran out before the kid was done, the session just sat there. The
-  person who raised it called it "not good". It is the same for anything you
-  ask a person to do, not only signing in: you cannot both watch and listen
-  inside one turn.
-
-  What works (now `CLAUDE.md`, "Waiting for the person"): start a waiting
-  command with `run_in_background`, end the turn, and let its finishing wake
-  you. Tested in a small lesson (`7 * 6`, `print("hello")`, a typo with
-  mismatched quotes, then the fix): each run woke the session within a few
-  seconds, with no message from the person. A question asked mid-wait ("what
-  does print do?") was answered at once while the watcher kept running.
-  The 90-second timeout woke the session for a gentle check-in when nothing
-  was run. The waking comes from Claude Code, not the model, so other models
-  get it too. Whether they follow the pattern as reliably is not tested (the
-  test would be the same lesson with Sonnet 5, picked in the app's model
-  menu). Not tried on macOS. `wait-open` was tested to say `open` for an
-  open notebook and to stay `timeout` for 15 seconds on the login page, and
-  on 2026-09-23 end to end through a real sign-in: the person pasted the
-  token, `wait-open` printed `open` and woke the session, which went on to
-  attach and run-all without being told.
-
-  Kids take their time: a 5-10 second wait is far too short. The person
-  preferred a teacher-like check-in on a timeout ("How's it going? ...
-  just ask") over silence, and backing off (90 seconds, 5 minutes, 10) so it
-  does not nag.
-
-  Start the waiting command first, and make the instruction to the person
-  the last thing you say. `[Windows 11, seen twice, 2026-09-23]` With the
-  order the other way round, a session always added a line after starting
-  the waiter: "I'll wait for you to sign in" once, and "No response
-  requested - waiting for the sign-in in the background" the next time, even
-  when told to end the turn silently. The instruction as the last line
-  leaves nothing to add, and the waiter already runs if the person is quick.
-
+  turn.** `[any, verified on Windows 11 with Opus 5.5, 2026-09-22]` Checking
+  again and again inside one turn meant a kid's question ("what globe?") went
+  unheard until the checks ran out. Now in `CLAUDE.md`, "Waiting for the
+  person", and tested: each run woke the session within seconds, a question
+  asked mid-wait was answered at once, and the timeout gave a gentle
+  check-in. Kids take their time, so waits are long and back off (90 s, 5
+  min, 10 min). Start the waiter first and make the instruction the last
+  thing you say: with the order reversed, sessions kept adding "I'll wait for
+  you" after it `[Windows 11, seen twice, 2026-09-23]`. Not tried with other
+  models than Opus 5.5.
 - **Simple beats clever.** `[any platform, recurring, Opus 5.5, 2026-09-25]`
   Claude's first proposals and code tend to be more complex than the problem
   needs, with extra state, flags, handles or layers where a few plain lines
@@ -414,8 +351,8 @@ What was learned on the Mac before 2026-09-23 is in `CLAUDE.md`, Part 5.
   newer cell queued behind it. The console had repeated "Cannot read properties
   of null (reading 'stateChanged')" and "CodeMirrorEditor already set". Check
   the kernel first (sessions API, `execute_code`), then reload the page with
-  `navigate` to the notebook's URL: the kernel and its variables survive. Cause
-  not found. That reload did NOT fix it: the `[*]` survived the reload (it is
+  `navigate` to the notebook's URL: the kernel and its variables survive. That
+  reload did NOT fix it: the `[*]` survived the reload (it is
   in the shared document), and Jupyter's log showed no "Executed cell" from
   `jupyter_server_nb_model` since the stuck cell, i.e. the server-side
   execution queue was stuck, not the page (the stuck cell was `app.stop(...)`
@@ -424,6 +361,8 @@ What was learned on the Mac before 2026-09-23 is in `CLAUDE.md`, Part 5.
   `attach`. The queued cell ran at once on the new kernel. The old `[*]` mark
   stays on the stuck cell until it is run again. An earlier `Error saving file
   ... IndexError: Array index out of range` in `jupyter_ydoc` may be related.
+  The cause was found later: the nbmodel hang, in "A cell stays `[*]` forever
+  while the kernel is idle" below (2026-10-01).
 - **After the person restarts or replaces their kernel, `attach` keeps the old
   one.** `[macOS, verified, Opus 5.5, 2026-09-24, jupyter-mcp-server 2.2.2]`
   The person restarted the notebook's kernel a few times from the page; the
@@ -472,9 +411,10 @@ them but could not test them there:
 
 - Does the canvas show when cells are run by hand, with `jupyter-mcp-server`
   installed? (On Windows 11 it did not, without the config in the entry below.)
-- Does the "run one cell" recipe work with the allowlist flag? (Without the
-  flag, the Mac server offered only `notebook_run-all-cells` and
-  `notebook_get-selected-cell`, as expected.)
+- Does the "run one cell" recipe work with the allowlist flag? Yes:
+  `[macOS, verified, Opus 5.5, 2026-10-01]` with nbmodel off and the flag in
+  the start command, selecting a cell and `notebook_run-cell` ran it, a
+  syntax error included.
 - Does `insert_cell` show up in the page at once? Yes: `[macOS, verified,
   Opus 5.5, 2026-09-23]` 17 `insert_cell` (index 0 and -1) and two
   `overwrite_cell_source` calls into a notebook the person had just created
@@ -482,6 +422,25 @@ them but could not test them there:
   `.jp-Cell` elements with `javascript_tool`; `find` does not see cell
   text, because the editor is not in the accessibility tree). `attach`
   works for any notebook name, not only `11-spaceship.ipynb`.
+
+### How some of `CLAUDE.md`'s Problems were found
+
+`[macOS, 2026-09-22 to 2026-09-24]` Moved here from `CLAUDE.md` Part 5 on
+2026-10-01, which now keeps only what to do.
+- Problem 1 (run-all timeout): seen every time after Restart Kernel (same
+  kernel id), never with a fresh kernel; hiding the browser pane and reloading
+  the page did not matter. With nbmodel off, `restart_notebook` then run-all
+  worked once (2026-10-01).
+- Problem 10 (not stopping cleanly): the server used to stop answering while
+  its process stayed alive for minutes, the log ending at "Kernel shutdown",
+  whenever kernels were still running at shutdown (a game in a notebook
+  kernel, or a kernel with no notebook). `shutdown` now ends sessions and
+  kernels first, and the server then exits within a second or two.
+- Problem 13 (`.mcp.json`): an `.mcp.json` with the stdio helper
+  `jupyter-mcp-server` connected once, and after the session was restarted
+  while Jupyter was down, failed for good ("connection timed out after
+  30000ms"); a session reads `.mcp.json` only when it starts. An HTTP entry
+  never connected. Neither offered the run-all tool natively.
 
 ### A cell stays `[*]` forever while the kernel is idle
 
@@ -622,52 +581,20 @@ so everything was done in PowerShell on purpose.
 ### The canvas shows as text instead of a picture
 
 `[any platform, verified, 2026-09-22]` The cell output is text like
-`Image(value=b'\xff\xd8...`, and `ipywidgets.IntSlider()` prints
-`IntSlider(value=0)`, or `app.get_logging_widget()` prints
-`Output(layout=Layout(...))`. The game runs fine underneath (`app.is_running`
-is `True`, VR worked); only the page does not draw the widget.
+`Image(value=b'\xff\xd8...` (or `IntSlider(value=0)`, `Output(layout=...)`),
+while the game runs fine underneath. Cause: the notebook, or that cell, is
+not trusted, and Jupyter does not render widgets for untrusted content. The
+check is per cell: a cell that came from a never-trusted notebook can keep
+failing after it is copied into a trusted one. The server log says `Notebook
+<name>.ipynb is not trusted`, repeatedly. Fix: trust the notebook; cells
+already shown as text then render without being run again.
 
-Cause, confirmed: the notebook (or the specific cell) is not trusted. Jupyter
-does not render rich/interactive outputs (including ipywidgets' widget-view
-mimetype) for untrusted content, and this is a per-cell check, not only a
-whole-document one: a cell whose content/output lineage traces back to a
-notebook that was never trusted can keep failing even after it is copied,
-pasted, or moved into a different, trusted notebook, while a cell freshly
-typed or copied from an always-trusted notebook works right next to it in the
-very same document. This produced a long chain of false leads before it was
-found (below), because none of them are the actual cause:
-
-- Deleting `.jupyter_ystore.db` / `collaboration_sessions.json` (see "Sessions,
-  stopping and state files"): no effect on trust.
-- Cell position (which of several near-simultaneous `app.run()` calls comes
-  first): no effect; moving the untrusted cell to a different position moved
-  the failure with it.
-- The browser: reproduced identically in two unrelated browser profiles.
-- The specific cell's own stored metadata, output metadata, and `model_id`:
-  verified byte-for-byte identical to working cells (the widget model is
-  genuinely live and correct; the page simply refuses to render it).
-- `jupyter_server_nbmodel` disabling JupyterLab's normal cell executor: this
-  was the earlier, wrong theory below, now retired. A working environment with
-  that executor still disabled (the default) rendered every widget correctly
-  once the notebook was trusted.
-
-Server log line to watch for, printed repeatedly while this is happening:
-`Notebook <name>.ipynb is not trusted`. It was there from the very first
-Windows 11 session that hit this symptom and was not connected to the cause
-until much later.
-
-Fix: trust the notebook (JupyterLab shows a banner/menu action for this, or it
-happens automatically once the person opens and saves it normally). Once
-trusted, cells that were already rendering as text render correctly without
-re-running them.
-
-Retired theory, superseded by the above: `[Windows 11, guess, 2026-09-22]`
-disabling `jupyter_server_nbmodel`'s frontend (a `page_config.json` override,
-see "Which plugins are switched off") appeared to fix this on one environment,
-but was never isolated from a concurrent notebook-trust change, and a later,
-controlled test (fresh environment, executor still disabled, trust fixed
-instead) rendered every widget with no `page_config.json` override at all.
-Left here so a future session does not try it again expecting it to matter.
+False leads, each tested and ruled out: deleting the state files, the cell's
+position, the browser (two profiles), the cell's metadata and `model_id`
+(identical to working cells), and nbmodel disabling JupyterLab's cell
+executor. That last one was an earlier theory: a `page_config.json` override
+seemed to fix it once, but a controlled test later rendered every widget
+without it once the notebook was trusted. Don't try it again for this.
 
 ### Run-all says "Timeout waiting for result", but the notebook ran
 
@@ -719,60 +646,31 @@ background output showed JupyterLab loading from `envs\<name>`. Not tried:
 `conda.bat run -n <name> --no-capture-output`, and `conda-hook.ps1`. Do not use
 `conda init` (PowerShell profile scripts are blocked by default).
 
-### `CLAUDE_SETUP.md` with Miniforge already installed
+### `CLAUDE_SETUP.md` on Windows 11
 
-`[Windows 11, verified, 2026-09-23, Miniforge 26.7.2 with Python 3.14 in
-base]` One full run, with the code from a local `git archive` tarball
-(`download` given a `file://` URL) instead of GitHub:
-- `conda create -y -p <miniforge>\envs\jupylet --override-channels -c
-  conda-forge python=3.13 moderngl glcontext` worked, about a minute, and the
-  environment is listed by name (`conda env list`), so `conda activate
-  jupylet` works even though it was created with `-p`.
-- `<env python> -m pip install -e <code>` worked without activating the
-  environment, a few minutes.
-- The helper's `download`, `overrides`, `jupylet ... trust_notebooks` /
-  `is_trusted` and `prompt` all gave the expected answers.
-- The handover into `CLAUDE.md` Part 1 worked: `find-env` listed the new
-  environment first, and the game canvas showed as a 512x512 picture.
+`[Windows 11, verified, 2026-09-23, Miniforge 26.7.2]` Three full runs:
+- With Miniforge already there, and the code from a local `git archive`
+  (`download` with a `file://` URL): `conda create -p ...` took about a
+  minute, and the environment is still listed by name, so `conda activate
+  jupylet` works; `pip install -e` worked without activating it; every helper
+  command gave its expected answer; `find-env` listed the new environment
+  first, and the canvas showed as a picture.
+- With no Miniforge but Miniconda and an old Jupylet in `jp13` (the typical
+  returning user): the installer, with its answers given up front, installed
+  Miniforge in about 45 seconds, with no administrator password and no
+  window, and created "Miniforge Prompt" (the `prompt` check needs it). Step
+  3 found Miniconda both ways, and nothing of it was touched.
+- A fresh session (Sonnet) from the `claude` branch on GitHub, through
+  `CLAUDE.md` to a clean stop. What it got wrong was what it said, and the
+  pages now address each point: it repeated an instruction to the person
+  ("go straight to step 9"), described internals yet said nothing before a
+  minute-long wait, added "I'll wait for you" after the waiter, skipped
+  deleting the state files after stopping, did not tell apart the three
+  things called `jupylet2` (environment, folder, "workspace"), and ran
+  `sleep 5` before `wait`.
 
-A later run verified the rest, on a computer with no Miniforge but with
-Miniconda (`<home>\miniconda3`) and an old Jupylet in its environment `jp13`,
-the typical returning user: `[Windows 11, verified, 2026-09-23, Miniforge
-26.7.2]`
-- The installer, run with its answers given up front (`/S
-  /InstallationType=JustMe /RegisterPython=0 /AddToPath=0 /D=...`), installed
-  Miniforge in about 45 seconds, with no
-  administrator password and no window, and created the Start-menu
-  "Miniforge Prompt": the helper's `prompt` check said `ok` (it needs the
-  shortcut, and runs the Prompt's own activation).
-- Step 3 found Miniconda through both the installed-programs entry and the
-  usual folder, listed its environments with Miniconda's own conda, and
-  found the old Jupylet in `jp13`. Nothing of Miniconda's was touched.
-
-Not tried yet: updating an old Miniforge (macOS only), the whole flow on
-macOS, and a user name with spaces or non-English letters.
-
-A second run the same day, by a fresh session (Sonnet), with the code from
-the `claude` branch on GitHub, went from setup through `CLAUDE.md` Part 1 to
-a clean stop. Since both `jupylet` (environment) and `<home>\jupylet`
-(folder) existed, the environment and the folder were both named `jupylet2`,
-each by its own rule. `find-env` listed the new environment first. Stopping
-ended all five processes by themselves this time, the background task
-exiting with code 0 (compare the lingering-process entry below). What it got
-wrong was what it said, and the pages now address each point:
-- It repeated an instruction to the person: "Signed in - go straight to
-  step 9, attach to the notebook." Step 8 had no line to say on `open`.
-- It described internals ("Same list.", "Found the five processes... ending
-  sessions and kernels"), yet said nothing before the minute-long
-  environment setup.
-- It said a separate "I'll wait for you to sign in" after starting the
-  waiter; the token message should carry "ask me if you get stuck" instead.
-- It skipped deleting the two state files after stopping: that was a loose
-  paragraph after the numbered steps, now step 5.
-- `jupylet2` meant three things without being told apart: the environment,
-  the folder, and, when the app asked permission for the folder, a
-  "workspace".
-- It ran `sleep 5` with the Bash tool before `wait`.
+Not tried yet: updating an old Miniforge (macOS only), and a user name with
+spaces or non-English letters.
 
 ### PowerShell quoting
 
@@ -803,73 +701,42 @@ token (`Get-CimInstance Win32_Process`): the launcher `cmd`, `jupyter`,
 
 ### Sessions, stopping and state files
 
-`[Windows 11, verified, 2026-09-22]` After `attach`, `/api/sessions` lists the
-notebook twice with the same kernel (the page's session and the MCP server's).
-Normal; ending both is part of stopping. `claude.py shutdown` was not run:
-`_pids` uses `ps` and the force-stop uses `SIGKILL`, and Windows has neither, so
-it would say `stopped` without checking. The stopping steps in `CLAUDE.md`
-(Part 6) end sessions and kernels over HTTP, ask the server to shut down, then
-check the token's processes and the port. A clean stop ended the background task
-with exit code 0.
+`[Windows 11, verified, 2026-09-22]` After `attach`, `/api/sessions` lists
+the notebook twice with the same kernel (the page's and the MCP server's):
+normal, and ending both is part of stopping. Jupyter's own state in the
+examples folder, `.jupyter_ystore.db` and `.jupyter\collaboration_sessions.json`,
+is recreated on the next start: delete it after stopping, when no Jupyter
+runs. `%APPDATA%\jupyter\file_id_manager.db` and old runtime files were left
+alone.
 
-Jupyter's own state in the examples folder: `.jupyter_ystore.db` and
-`.jupyter\collaboration_sessions.json`. They are recreated on the next start.
-Delete them after stopping, when no Jupyter runs. `%APPDATA%\jupyter\file_id_manager.db`
-and the old runtime files were left alone. `claude.py cleanup` only uses `glob`
-and `shutil` and looks portable, but it was not run on Windows.
+Until 2026-10-01, `claude.py shutdown` could not be used on Windows (it used
+`ps` and `SIGKILL`), so `CLAUDE.md` Part 6 had a manual procedure: end
+sessions and kernels over HTTP, ask for `/api/shutdown`, then check the
+token's processes. Since then `shutdown` looks for the processes with
+PowerShell on Windows; not tested there yet.
 
-### The stop script says "port closed: True" but the process is still alive
+### The port closes but the processes stay
 
-`[Windows 11, seen in two of three runs, 2026-09-22 and 2026-09-23]` (In
-the third run all five processes exited by themselves.) The stop script
-(`CLAUDE.md` Part 6, "Stopping on Windows 11") ended sessions and kernels,
-requested `/api/shutdown`,
-and printed `port closed: True` (`connect_ex` really did stop returning `0`).
-The background task's log ended at `[I ...] YDocExtension] Deleting all rooms.`
-with nothing after it — no further extension-shutdown lines, no process exit.
-15+ seconds later, `Get-CimInstance` still listed all five of the launcher's
-processes (`cmd.exe`, `jupyter.exe`, two `python.exe`, `jupyter-lab.exe`) alive
-under the session's token, and the background task had not reported completion.
-This is the same shape as `CLAUDE.md` Problem 10 (port stops answering, process
-lingers), but that problem's fix (`claude.py shutdown`'s own force-stop) is
-`ps`/`SIGKILL`-based and explicitly not used on Windows, and the Windows
-stopping steps in Part 6 have no force-kill step of their own — they only say
-to tell the person and stop if a process is left. Not tried: waiting longer
-(a minute or more) before concluding it is truly stuck.
+`[Windows 11, seen in two of three runs, 2026-09-22 and 2026-09-23]` After
+the shutdown request, the port closed and the log ended at `YDocExtension]
+Deleting all rooms.`, but all five of the launcher's processes (`cmd.exe`,
+`jupyter.exe`, two `python.exe`, `jupyter-lab.exe`) stayed alive, 15 seconds
+and more later. (In the third run they exited by themselves.) Not tried:
+waiting a minute or more.
 
-First try: told the person a process was left and stopped there, as Part 6
-literally says. The person (an adult, in this case the project's own author)
-pointed out the flaw: `CLAUDE.md`'s "tell the person and stop" line was
-written assuming the person can do something about it, but most people this
-tool is for - kids, beginners - have no way to find or end a stuck process
-themselves, and "check your taskbar" leaves them stuck with a problem and no
-real next step, which is exactly what rule 3 says never to do. So a stuck
-Windows process after the normal stop is a case the session should resolve
-itself, the same way it already resolves a stuck kernel (`replace-kernel`)
-without waiting on the person - not a case to hand back to them. This was a
-disagreement with `CLAUDE.md` as then written; since 2026-09-23 the fix
-below is in `CLAUDE.md` itself (Part 6, "Stopping on Windows 11", step 4),
-so follow it there.
-
-Do instead, the next time the Windows stop script reports `port closed: True`
-(or otherwise finishes) but `Get-CimInstance` still lists processes carrying
-the session's token a few seconds later: `[Windows 11, verified, 2026-09-22]`
-list every process whose command line still carries the session's token with
-`Get-CimInstance Win32_Process | Select ProcessId, Name, CommandLine`, check
-each one's command line by eye against the exact launch command actually used
-(confirm it is this session's own launcher and its children, never a process
-found only by name), then `Stop-Process -Id <id> -Force` on each matching PID
-by id (never by name - matching by name risks an unrelated process). All five
-of the launcher's processes (`cmd.exe`, `jupyter.exe`, two `python.exe`,
-`jupyter-lab.exe`) ended at once this way; the port closed (`connect_ex` back
-to `10061`) immediately after. The background task the launcher ran in then
-reported `failed` (exit code 255) instead of a clean exit - expected and fine
-since it was killed rather than asked to exit; do not mistake that `failed`
-status for something having gone wrong. The Claude Code Desktop app's own
-PowerShell process did not appear in the token-matched list, so this targeted
-approach never risked it. Still tell the person afterward, plainly and
-without jargon, that a leftover program had to be closed and that it is done
-- just do not stop and wait on them to act first.
+First the session told the person a process was left and stopped there, as
+the page then said. The author pointed out the flaw: a kid has no way to find
+or end a stuck process, so that left them with a problem and no next step.
+A stuck process after the normal stop is for the session to resolve, the way
+it resolves a stuck kernel. What worked `[verified, 2026-09-22]`: list the
+processes whose command line carries the session's token, check each command
+line by eye against the launch command, and end each by its id (never by
+name). All five ended at once and the port stayed closed. The background
+task then reported `failed` (exit code 255): expected, since it was ended
+rather than asked to exit. The app's own PowerShell process was never in the
+list. Afterwards tell the person plainly that a leftover program had to be
+closed and that it is done. This is `CLAUDE.md` Part 6, "Stopping on Windows
+11", and what `shutdown` now does by itself.
 
 ### Other small facts
 

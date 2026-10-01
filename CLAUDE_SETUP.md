@@ -28,8 +28,8 @@ there is no `<branch>`, and the steps change only in this:
   script, since later steps use it.
 - Step 10: the session already works from `<code>`: skip moving it
   (`change_directory`) and its message. Then go back to `CLAUDE.md`'s step
-  2, not Part 1: they asked for Jupylet to try its examples, so go on to
-  open a notebook without asking again.
+  2, not Part 1: they asked for Jupylet to try its examples, so their yes
+  to setting it up already covers opening a notebook.
 
 **Claude tools for an existing install.** `CLAUDE.md` (its Problem 17) sends
 you here when Jupylet is installed and set up, but without its `[claude]`
@@ -75,7 +75,7 @@ no list of what it installs, no tool or command names.
 - Be calm and friendly, like a patient guide. Use short sentences and plain
   words. A relaxed, human tone is good, loose words like "same-ish"
   included, as long as the meaning is clear: dry and formal is not the goal.
-  No exclamation marks, no emoji, no blaming the person or the software.
+  No emoji, no blaming the person or the software.
 - A guide who also teaches. Installing takes several steps and a few long
   minutes, so keep them with you: as you go, say in a sentence or two what
   you are doing on their computer and why, and what came of it. Use it to
@@ -371,8 +371,11 @@ instead; the two can stay side by side, and I won't touch Miniconda."
 
 ## Step 5. A new Miniforge environment for Jupylet
 
-Jupylet always goes into a new environment, never one that already exists
-(not even `base`), and an existing Jupylet is never upgraded or changed.
+In this full setup, Jupylet always goes into a new environment, never one
+that already exists (not even `base`), and an existing Jupylet is never
+upgraded or changed. (Adding the Claude tools to an existing install is a
+separate case, with its own question: "Claude tools for an existing
+install", above.)
 First choose the name: `jupylet`, or if any environment step 3 found already
 has that name, `jupylet2`, and so on. Call it `<env>`. Then ask, for example:
 
@@ -529,9 +532,9 @@ Notebook), and go on anyway.
 
 Run what they will use later, the way they will use it: a new Terminal
 window on macOS, the Miniforge Prompt on Windows. It matters: without it,
-the person cannot start Jupylet on their own. Run it without announcing it;
-when it passes, say nothing, since the next thing the person sees is the
-notebook.
+the person cannot start Jupylet on their own. When it passes, it needs no
+comment: the next thing the person sees is the notebook, and nothing should
+come between.
 
 `"<base python>" "<helper>" prompt "<miniforge>"`
 

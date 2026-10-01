@@ -3,25 +3,22 @@
 This file is written only for Claude, the AI assistant in the Claude app. It
 describes how Claude opens a Jupylet notebook together with a person, runs
 its examples with them, and handles problems along the way. A person does not
-need to read it.
-
-From here on, "you" means Claude, and "the person" means whoever Claude is
-helping.
+need to read it. From here on, "you" means Claude, and "the person" means
+whoever Claude is helping.
 
 ## About this file
 
-This file is the same for everyone who uses Jupylet: never edit it. Anything
-you would normally write into a project's `CLAUDE.md` goes into
-`CLAUDE.0.md` instead, next to it (create it if it isn't there), for
-example which environment or folder to use on this computer. If
-`CLAUDE.0.md` exists, read it now, before anything else.
-What you learn that would help with anyone, on any computer, goes in
-`EXPERIENCE.md` (see "About EXPERIENCE.md" below).
+This file is the same for everyone who uses Jupylet: never edit it. Notes
+about this one computer (which environment or folder to use) go in
+`CLAUDE.0.md`, next to it; create it if it isn't there, and if it exists,
+read it now, before anything else. Lessons that would help with anyone go in
+`EXPERIENCE.md` (below).
 
-Part 1 is a procedure: do the steps in order, exactly as written. Every
-command in this file was tested by hand. If a step does not give the
-expected result, look up the "Problem" it names in Part 5. If that does not
-fix it, tell the person plainly what failed and stop. Don't improvise.
+Part 1 is a procedure: do the steps in order, as written. Its commands were
+tested by hand, except where a passage says it is not tested yet. If a step
+does not give the expected result, look up the Problem it names in Part 5.
+If that does not fix it, tell the person plainly what failed and stop. Don't
+improvise.
 
 ## The rules
 
@@ -56,43 +53,28 @@ Read them before anything else.
 
 ## About EXPERIENCE.md: your writable memory
 
-Think of this file as a ROM: the basic operating instructions, fixed, tested,
-the same for everyone, and never edited by a session. `EXPERIENCE.md`, next to
-it, is writable memory: what earlier sessions learned by doing this work on real
-computers, on macOS and on Windows 11, and by working with people. You start
-every session without remembering the earlier ones; that file is the only way
-they can pass on what they learned. It is expected to keep growing on each
-person's computer, as you learn from your own mistakes and from the problems
-you meet there, the way a person's know-how grows with practice. That is
-intended: do not keep it short.
+This file is fixed and tested, the same for everyone. `EXPERIENCE.md`, next
+to it, is what earlier sessions learned on real computers, on macOS and
+Windows 11, and from working with people: the only way they can pass it on.
+It is meant to keep growing on each person's computer; don't keep it short.
 
-How to use it:
-
-- **Read it at the start**, right after this file and `CLAUDE.0.md`: its "Read
-  this first" list, its section on working with people, and the whole section
-  for the platform you are on. Skim the other headings. When something goes
-  wrong, search it for the words of the problem before you try anything else;
-  the answer may already be there.
-- **Trust it less than this file.** Each entry says on which platform and
-  versions it was seen and how sure it is (verified, seen once, code reading,
-  guess), and things change. Where it disagrees with this file, follow this
-  file and write the disagreement into `EXPERIENCE.md`.
-- **Write to it while you work**, not only at the end. When you make a mistake
-  or hit a problem, write down what happened, why, and how to avoid or fix it
-  next time. Also write down a step that failed, a fix that worked, a guess you
-  confirmed or disproved, and what worked, or didn't, in how you explained
-  and helped. Put the entry where it belongs and tag it, as the rules at the
-  top of `EXPERIENCE.md` say. Improve an entry when you learn more. Move an entry that
-  turned out wrong to "Retired" with the reason. Never delete what is true
-  just to save space.
-- **Keep it out of the lesson.** Writing to it is your own housekeeping:
-  don't interrupt the person to mention it. If they ask what you're writing,
-  tell them plainly: notes for yourself on what worked and what didn't, with
-  nothing personal in them.
-- **Only what helps with anyone.** If the person tells you their name, use
-  it, as anyone would, and note it in `CLAUDE.0.md` so the next session can
-  too. Never put names, tokens, user names, or paths that contain a user
-  name, in `EXPERIENCE.md`: it is for lessons that help with anyone.
+- **Read it at the start**, right after this file and `CLAUDE.0.md`: its
+  "Read this first" list, its section on working with people, and the
+  section for your platform; skim the other headings. When something goes
+  wrong, search it for the words of the problem first.
+- **Trust it less than this file.** Each entry says where it was seen and how
+  sure it is. Where it disagrees with this file, follow this file and write
+  the disagreement into `EXPERIENCE.md`.
+- **Write to it while you work**, tagged as its own rules say: a mistake and
+  how to avoid it, a step that failed, a fix that worked, a guess confirmed or
+  disproved, what helped a person or didn't. Improve entries; move a wrong one
+  to "Retired" with the reason; never delete what is true to save space.
+- **Keep it out of the lesson.** It is your own housekeeping; if the person
+  asks what you are writing, tell them plainly: notes for yourself on what
+  worked and what didn't, with nothing personal in them.
+- **Only what helps with anyone:** never names, tokens, user names, or paths
+  that contain a user name. If the person tells you their name, use it, and
+  note it in `CLAUDE.0.md` so the next session can too.
 
 ## How to talk to the person
 
@@ -205,42 +187,41 @@ other steps have small differences.
 Words in `<angle brackets>` are values you fill in. `<folder>` is the folder
 this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 
-### Step 1. Look, then ask
+### Step 1. Answer what they asked
 
-Before your first reply, look silently: read `<version>` and run the first
-`find-env` command of step 2. Your first words answer what the person asked,
-with what you found. Jupylet is for games, music, sound and graphics alike:
-don't call it games, unless they do; follow what they want to make.
+Your first reply answers the person's own question, as a person would.
+Words for you, not to say: Jupylet is for music, sound and graphics as much
+as for games, so don't call it games unless they do, and don't add a line
+about what it is for.
 
-**Its first line says `this folder`:** Jupylet is set up. Ask to open a
-notebook, in a few plain words, for example:
-
-> Jupylet is set up here, so we can try its examples together. May I open a
-> Jupyter notebook for us? Jupyter is the program where you write and run
-> your code, and a notebook is a page in it where you type code in small
-> boxes, called cells, and run each one to see what it does. It runs only on
-> this computer, and you'll see it right next to our chat.
-
-(If Jupyter and notebooks were already explained in this conversation, for
-example while installing, leave that sentence out.)
-
-If the person has already asked for the notebook in this conversation
-("yes, start it"), don't ask again, but if Jupyter and notebooks were not
-explained yet, say that sentence now, as you start.
-
-Continue only after a clear yes.
-
-**Anything else** (no lines, or none says `this folder`): Jupylet is not
-set up for this folder. Offer to set it up. If they said they just
-downloaded it, that is all there is to it, for example:
+**They say they downloaded Jupylet, or ask what to do next:** the next step
+is to install it. Offer that, for example:
 
 > Hi! The next step is to install Jupylet, so you can try its examples and
 > start creating with it. Shall I set it up for you? I'll go one small step
 > at a time and ask before each change.
 
-If nothing they said tells whether they installed it, add one sentence, for
-example "If you already installed it yourself, tell me and I'll look for
-it." Then go on with step 2, at "Otherwise".
+After a clear yes, go on with step 2. If step 2 then finds it already set
+up for this folder, say so in one line, for example "Looks like Jupylet is
+already set up for this folder, so there's nothing to install. Let's go
+straight to the examples.", and go on from there: their yes to setting it
+up was a yes to trying it.
+
+**They ask to open a notebook, or to try something:** ask, in a few plain
+words, for example:
+
+> May I open a Jupyter notebook for us? Jupyter is the program where you
+> write and run your code, and a notebook is a page in it where you type
+> code in small boxes, called cells, and run each one to see what it does.
+> It runs only on this computer, and you'll see it right next to our chat.
+
+(If Jupyter and notebooks were already explained in this conversation, for
+example while installing, leave that sentence out.) If the person has
+already asked for the notebook in this conversation ("yes, start it"),
+don't ask again, but if Jupyter and notebooks were not explained yet, say
+that sentence now, as you start.
+
+Continue only after a clear yes.
 
 ### Step 2. Find the environment
 
@@ -278,9 +259,9 @@ and a venv inside `<folder>` "the venv in the Jupylet folder".
 Call that environment's path `<env>` and its python `<python>`
 (`<env>/bin/python`).
 
-- If it is the only line that says `this folder`, use it. Tell the person in
-  one plain line, for example "Found Jupylet, in its environment
-  `jupylet`." Do not ask; there is nothing to choose between.
+- If it is the only line that says `this folder`, use it: there is nothing
+  to choose between, and nothing new to tell, unless step 1 offered to
+  install (then its "already set up" line).
 - If several lines say `this folder`, name those environments and propose
   the first, for example:
 
@@ -293,9 +274,14 @@ Call that environment's path `<env>` and its python `<python>`
   clear yes; if they name a different one, use that.
 
 **Otherwise** (no lines, or none says `this folder`): Jupylet is not set up
-for this folder, whatever the other lines say, and step 1 offered to set it
-up. Another environment's Jupylet runs another copy's code, which may not
-match the examples here, even with the same version number.
+for this folder, whatever the other lines say. Another environment's
+Jupylet runs another copy's code, which may not match the examples here,
+even with the same version number. If step 1 already offered to set it up
+and they said yes, go on as for "Yes, set it up". Otherwise offer it now,
+for example "Jupylet isn't set up for this folder yet. Shall I set it up
+for you? I'll go one small step at a time and ask before each change.",
+adding "If you already installed it yourself, tell me and I'll look for
+it." unless they already said they did not. Then:
 
 - **Yes, set it up:** read `<folder>/CLAUDE_SETUP.md` and follow it as its
   "Code already here" section says, with `<code>` = `<folder>`. When it
@@ -328,44 +314,32 @@ a folder under `envs`, it is Miniforge's `base` environment, which has no
 separate name: leave out `conda activate <name> &&` in step 5 instead (a
 new shell already starts in it). For a conda environment outside Miniforge
 (another conda installation), use its full path as `<name>`: `conda
-activate` accepts a path too. A venv is activated differently: see step 5. (The venv and other-conda cases were
-added on 2026-10-01 and are not tested yet with a real venv; see
-`EXPERIENCE.md` before trusting them.)
+activate` accepts a path too. A venv is activated differently: see step 5.
+Not tested yet: a real venv, and another conda installation.
 
-Then check that the environment also has jupyterlab:
+Then three checks:
 
-`<python> -c "import jupyterlab"`
+- JupyterLab: `<python> -c "import jupyterlab"`. Expected: no error. If it
+  fails: Problem 14.
+- Jupylet's `[claude]` extra, the tools you use to work in the notebook with
+  the person: `<python> -c "import jupyter_mcp_server"`. Expected: no error.
+  If it fails: Problem 17.
+- The example notebooks are trusted (a Jupyter safety check; an untrusted
+  notebook does not show its canvas, where it draws):
+  `<python> -m jupylet is_trusted <folder>/examples`. Expected: every line
+  says `trusted`. If any line says `NOT TRUSTED`, explain and ask, for
+  example:
 
-Expected: no error. If it fails: Problem 14.
+  > These notebooks aren't trusted on this computer yet, so the canvas, the
+  > area in the notebook where the examples draw, won't show up until they
+  > are. May I trust them?
 
-Then check that it also has jupylet's `[claude]` extra, the tools you use to
-work in the notebook with the person:
-
-`<python> -c "import jupyter_mcp_server"`
-
-Expected: no error. If it fails: Problem 17.
-
-Then check that the example notebooks are trusted (a Jupyter safety check; an
-untrusted notebook does not show its canvas, where it draws):
-
-`<python> -m jupylet is_trusted <folder>/examples`
-
-Expected: every line says `trusted`. If any line says `NOT TRUSTED`, explain
-and ask, for example:
-
-> These notebooks aren't trusted on this computer yet, so the canvas, the
-> area in the notebook where the examples draw, won't show up until they
-> are. May I trust them?
-
-After a clear yes:
-
-`<python> -m jupylet trust_notebooks <folder>/examples`
-
-Then run the check again to confirm every line says `trusted`, and tell the
-person in one plain line, for example "The example notebooks are trusted
-now." Never describe the check itself (lines, output, step numbers) to them.
-If the person declines to trust them, tell them plainly that the
-canvas may not show up, and go on anyway.
+  After a clear yes: `<python> -m jupylet trust_notebooks <folder>/examples`.
+  Run the check again to confirm every line says `trusted`, and tell the
+  person in one plain line, for example "The example notebooks are trusted
+  now." Never describe the check itself (lines, output, step numbers) to
+  them. If they decline, tell them plainly that the canvas may not show up,
+  and go on anyway.
 
 ### Step 3. Make a token
 
@@ -395,10 +369,11 @@ before starting Jupyter:
 The `[claude]` extra brings nbmodel along. With it, Jupyter runs cells on the
 server, and a notebook that keeps sending messages (a panel, a live loop, a
 thread that prints) leaves a cell hanging at `[*]` for good after a few
-minutes. Turning it off is part of starting Jupyter, not a separate change:
-don't ask.
+minutes. Turning it off is part of starting Jupyter, like checking the
+port, so it needs no question of its own.
 
-Expected: `off` or `not installed`: say nothing. `turned off`: it was on,
+Expected: `off` or `not installed`: nothing changed, so nothing to mention.
+`turned off`: it was on,
 and is now off, saved in the environment; tell the person in one plain line,
 for example "I switched off a Jupyter setting that can make notebooks freeze
 after a few minutes." If it prints `still on: ...`, tell the person plainly
@@ -526,14 +501,19 @@ Every tool is called the same way, from any folder:
 - When you ask them to type or run something, wait as in "Waiting for the
   person".
 
-Tested and working: `list_kernels`, `use_notebook`, `read_notebook` (after
-`use_notebook`, and it still needs `notebook_name`), `read_cell`, `execute_code` (runs code in the kernel, not
-saved in the notebook; pass `kernel_id`), `delete_cell`,
-`notebook_run-all-cells`.
+Tested on macOS, with nbmodel off (step 4): `use_notebook` (through
+`attach`), `list_kernels`, `list_notebooks`, `list_files`, `read_notebook`
+(it needs `notebook_name`, even after `attach`), `read_cell`, `insert_cell`,
+`edit_cell_source`, `overwrite_cell_source`, `move_cell`, `delete_cell`,
+`clear_cell_output`, `execute_code` (runs code in the kernel, not saved in
+the notebook; pass `kernel_id`), `restart_notebook`,
+`notebook_run-all-cells`, `notebook_get-selected-cell`. Changes show up in
+the page within a second.
 
-Not working: `execute_cell` and `insert_execute_code_cell` (Problem 8).
-Not tested: `insert_cell`, `edit_cell_source`, `overwrite_cell_source`,
-`move_cell`.
+Not usable: `execute_cell` and `insert_execute_code_cell` (Problem 8).
+
+Running one cell (`notebook_run-cell`) needs an option that only the Windows
+start command in Part 6 has so far. On macOS, use run-all.
 
 If the person presses Restart Kernel, or run-all times out, replace the
 kernel (Problem 1).
@@ -575,8 +555,7 @@ notebook is saved.", and one after, for example "All closed. Just ask when
 you want to open it again." Keep processes, sessions, kernels and ports out
 of it: they mean nothing to a beginner.
 
-On Windows 11, use "Stopping on Windows 11" in Part 6 instead of steps 1
-and 2.
+On Windows 11, also see "Stopping on Windows 11" in Part 6.
 
 1. Close the browser page with `tabs_close`, first: a page left open while
    Jupyter stops shows an error pop-up that can worry a beginner.
@@ -612,16 +591,15 @@ code are not touched."
 
 ## Part 5: Problems and solutions
 
-What we ran into while building this, and what to do. Each problem has a
-number that the steps above refer to.
+What to do when a step does not give the expected result. The steps above
+refer to these numbers. How each was found is in `EXPERIENCE.md`.
 
 **1. Run-all times out.**
 Symptom: "Error executing tool: Timeout waiting for result" after 30
 seconds, and nothing ran (the game objects don't exist).
-Cause: unknown. It happened every time after the kernel was restarted in
-place (the Restart Kernel button; same kernel id), and never with a fresh
-kernel. Kids will press that button. Hiding the browser pane and reloading
-the page did not matter.
+Cause: unknown. It happened after the kernel was restarted in place (the
+Restart Kernel button, which kids will press), never with a fresh kernel, and
+not in one test with nbmodel off (step 4).
 Do: replace the kernel:
 `<python> -m jupylet.claude replace-kernel 8888 <token> 11-spaceship.ipynb`
 It shuts the old kernel down, starts a new one, waits until it is ready
@@ -634,9 +612,8 @@ Do: wait ten seconds and try once more. (`replace-kernel` waits for this
 itself.)
 
 **3. "Unknown tool: notebook_run-all-cells".**
-Cause: the server only knows the run-all tool after it was asked for its tool
-list. Do: nothing. `jupylet.claude call` asks first, every time. Only your own
-raw calls would hit this.
+The server knows run-all only after it was asked for its tool list.
+`jupylet.claude call` asks first, so only your own raw calls hit this.
 
 **4. `!pip` or `!python` in a cell uses the wrong Python.**
 Cause: Jupyter was started without activating the environment (for example by
@@ -661,12 +638,10 @@ Cause: the page is not signed in. It always happens after the cookie secret
 was deleted (Part 4) or with a new token.
 Do: step 8. The sign-in otherwise survives restarts.
 
-**8. Running a single cell hangs.**
-Symptom: `execute_cell` and `insert_execute_code_cell` run until they time out
-(minutes), even for `1+1`. Cause: unknown.
-Do: use run-all, or `execute_code` for a quick check. Don't use those two.
-With nbmodel off (step 4), both fail at once with "jupyter_server_nbmodel
-extension not found": expected.
+**8. `execute_cell` or `insert_execute_code_cell` fails or hangs.**
+They need nbmodel: with it off (step 4) they fail at once ("extension not
+found"); with it on, they hung for minutes. Don't use them: use run-all, or
+`execute_code` for a quick check.
 
 **9. Run-all with a failing cell.**
 Symptom: it stops at the failing cell and reports a vague "500 Internal
@@ -675,16 +650,11 @@ Do: read the cell outputs (`read_cell`, `read_notebook`) to find the real
 error.
 
 **10. Jupyter does not stop cleanly.**
-Symptom: before, the server stopped answering but its process stayed alive
-for minutes, with the log ending at "Kernel shutdown". That happened when the
-server was shut down while kernels were still running (a game in a notebook
-kernel, or a kernel with no notebook). `shutdown` now ends every session and
-kernel first, and then the server exits by itself within a second or two.
-Do: nothing, in the normal case. `shutdown` also stops the process itself if
-it lingers (the one with your token in its command; normal stop first, then
-force) and prints `stopped after ending its process`. If it prints `a kernel
-is still running: not shutting the server down`, or `still running`, tell the
-person plainly and stop; don't kill anything yourself.
+`shutdown` ends every session and kernel first, then the server, and if the
+process lingers, it stops it itself (`stopped after ending its process`). If
+it prints `a kernel is still running: not shutting the server down`, or
+`still running`, tell the person plainly and stop; don't kill anything
+yourself.
 
 **11. Port 8888 is already in use, or a second Jupyter is running.**
 Cause: another Jupyter is open, from an earlier session or the person's own
@@ -700,19 +670,14 @@ menus were clicked through the browser pane, with the notebook open. Cause
 not proven. Do: change the notebook only through the tools (Part 2). If it
 happens, tell the person; their last saved copy is in git or on disk.
 
-**13. Claude Code's own MCP connection to Jupyter does not work reliably.**
-We tried an `.mcp.json` with the stdio helper `jupyter-mcp-server`, and
-with Jupyter's own HTTP endpoint. The stdio one connected once; after the
-session was restarted while Jupyter was down, it failed for good with
-"connection timed out after 30000ms", and a session only reads `.mcp.json`
-when it starts. The HTTP entry never connected. Neither gives the run-all
-tool natively.
-Do: don't create an `.mcp.json`. `jupylet/claude.py` calls Jupyter's own
-endpoint (`http://localhost:8888/mcp`) directly, and that always worked.
+**13. Claude Code's own MCP connection to Jupyter.**
+Don't create an `.mcp.json`: it never worked reliably. `jupylet/claude.py`
+calls Jupyter's own endpoint (`http://localhost:8888/mcp`) directly, and
+that always worked.
 
 **14. jupylet or JupyterLab is not installed (step 2 fails).**
 Explain in plain words what is missing, and offer to set Jupylet up for this
-folder, as in step 2's "No, or not sure" (`CLAUDE_SETUP.md`, "Code already
+folder, as in step 2's "Yes, set it up" (`CLAUDE_SETUP.md`, "Code already
 here"), which installs both into a new environment.
 
 **15. Jupyter does not become ready (step 6).**
@@ -762,7 +727,7 @@ What went wrong there, and why, is in `EXPERIENCE.md` under Windows 11.
 
 Parts 1 to 5 apply unchanged, except where this part says otherwise. Use the
 PowerShell tool for every command here. Do not use the Bash tool or
-`$SHELL -ic` (Git may not be installed), and never `claude.py shutdown`.
+`$SHELL -ic` (Git may not be installed).
 
 ### Step 2 on Windows 11: find the environment
 
@@ -858,7 +823,7 @@ Tested and working: `use_notebook` (through `attach`), `read_notebook`,
 `read_cell`, `execute_code`, `insert_cell`, `overwrite_cell_source`,
 `notebook_run-all-cells`, `notebook_get-selected-cell`,
 `notebook_move-cursor-down`, `notebook_move-cursor-up`, `notebook_run-cell`.
-`execute_cell` and `insert_execute_code_cell` time out (Problem 8). Not tried:
+`execute_cell` and `insert_execute_code_cell` are not usable (Problem 8). Not tried:
 `delete_cell`, `edit_cell_source`, `move_cell`, `clear_cell_output`,
 `restart_notebook`, `list_kernels`, `notebook_run-cell-and-select-next`,
 `notebook_run-cell-and-insert-below`.
@@ -871,159 +836,33 @@ person's notebook within seconds: remove your test cells, or tell the person
 
 Running one cell (needs the flag from step 5). `execute_code` runs code in the
 kernel but puts nothing in a cell. To run a particular cell the way a person
-would, select it and run the selection: `notebook_get-selected-cell` (answers
-with `cellIndex` and `source`), `notebook_move-cursor-down` and
-`notebook_move-cursor-up` (one cell per call), `notebook_run-cell` (answers
-`True` at once; then `read_cell` shows the execution count and the output).
-After a run-all the selection is on the last cell, so the script must be able
-to move up as well as down. Check the selected cell's `source` before running:
-the wrong cell can restart the game. It moves the person's cursor. Save this
-into a `.py` file in the scratchpad, set the constants on the line that names
-the notebook, the cell index and the exact source that cell should have, and
-run it with `& "<python>" <file> <token>` (33 moves took under two seconds):
+would, with the current folder set to `<folder>`:
 
-```python
-import ast
-import json
-import re
-import sys
-import time
-import urllib.request
+`& "<python>" -m jupylet.claude run-cell 8888 <token> <cell index> "<start of its source>"`
 
-PORT, TOKEN = 8888, sys.argv[1]
-NOTEBOOK, TARGET, TARGET_SRC = '11-spaceship', 33, '3+3'
-
-
-def rpc(body, timeout=45):
-    req = urllib.request.Request(
-        'http://localhost:%s/mcp' % PORT,
-        data=json.dumps(body).encode(),
-        headers={
-            'Authorization': 'Bearer ' + TOKEN,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json, text/event-stream',
-        },
-    )
-    raw = urllib.request.urlopen(req, timeout=timeout).read().decode()
-    return json.loads(re.search(r'\{.*\}', raw, re.S).group(0))
-
-
-rpc({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'})
-
-
-def call(name, args=None):
-    out = rpc({'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call',
-               'params': {'name': name, 'arguments': args or {}}})
-
-    if 'error' in out:
-        return 'ERROR: ' + out['error']['message']
-
-    return '\n'.join(c['text'] for c in out['result']['content'])
-
-
-def selected():
-    return ast.literal_eval(call('notebook_get-selected-cell'))
-
-
-sel = selected()
-print('selection starts at cell', sel['cellIndex'])
-
-while sel['cellIndex'] != TARGET:
-    step = 1 if sel['cellIndex'] < TARGET else -1
-    call('notebook_move-cursor-down' if step == 1 else 'notebook_move-cursor-up')
-    new = selected()
-
-    if new['cellIndex'] != sel['cellIndex'] + step:
-        sys.exit('unexpected move: %r -> %r' % (sel['cellIndex'], new['cellIndex']))
-
-    sel = new
-
-if sel['cellIndex'] != TARGET or sel.get('source', '').strip() != TARGET_SRC:
-    sys.exit('NOT running: the selected cell is cell %r, not the one you meant' % sel['cellIndex'])
-
-print('RUN-CELL:', call('notebook_run-cell'))
-time.sleep(2)
-print(call('read_cell', {
-    'cell_index': TARGET,
-    'include_outputs': True,
-    'notebook_name': NOTEBOOK,
-}))
-```
+It moves the page's selection to the cell, one cell at a time, checks that
+its source starts with what you gave, and only then runs it (the wrong cell
+could restart the game); it answers `True`, or why it did not run. It moves
+the person's cursor. Then `read_cell` shows the execution count and the
+output. (This command replaced a longer script on 2026-10-01, and is not
+tested on Windows yet; the script is in git history if it fails.)
 
 ### Stopping on Windows 11
 
-Do not use steps 1 and 2 of Part 3: `claude.py shutdown` looks for the
-process with `ps`, which Windows does not have, so it would say `stopped`
-without checking, and its force-stop uses signals Windows lacks. Instead:
+Part 3 applies: `shutdown` finds your Jupyter's processes on Windows too (the
+ones whose command line carries your token: the launcher `cmd`, `jupyter`,
+`jupyter-lab` and two `python`; all are yours). This replaced a manual
+procedure on 2026-10-01 and is not tested on Windows yet. Run it with the
+current folder set to `<folder>`. Then:
 
-1. Close the browser page with `tabs_close`, first (see Part 3, step 1).
-2. Find your processes: the ones whose command line contains your token,
-   `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' }`.
-   Several carry it; all are yours (`EXPERIENCE.md`, old servers).
-3. End every session and kernel and then ask the server to shut down. Save
-   this as a `.py` file in the scratchpad, put the folder in the second line,
-   and run it with `& "<python>" <file> <token>`. Expected output: `sessions
-   and kernels ended`, `shutdown requested`, `port closed: True`:
-
-```python
-import sys
-import urllib.error
-import urllib.request
-
-sys.path.insert(0, r'<folder>')
-
-import jupylet.claude as c
-
-port, tok = 8888, sys.argv[1]
-
-if not c._answers(port):
-    raise SystemExit('not running')
-
-for s in c._api(port, tok, '/api/sessions'):
-    try:
-        c._api(port, tok, '/api/sessions/' + s['id'], 'DELETE')
-    except urllib.error.HTTPError:
-        pass
-
-for k in c._api(port, tok, '/api/kernels'):
-    try:
-        c._api(port, tok, '/api/kernels/' + k['id'], 'DELETE')
-    except urllib.error.HTTPError:
-        pass
-
-if not c._wait_until(lambda: not c._api(port, tok, '/api/kernels'), 30):
-    raise SystemExit('a kernel is still running: not shutting the server down')
-
-print('sessions and kernels ended')
-
-req = urllib.request.Request(
-    'http://localhost:%s/api/shutdown' % port,
-    method='POST',
-    headers={'Authorization': 'token ' + tok},
-)
-urllib.request.urlopen(req, timeout=30).read()
-
-print('shutdown requested')
-print('port closed:', c._wait_until(lambda: not c._answers(port), 30))
-```
-
-4. Check: no process carries your token any more, the port answers nothing
-   (`connect_ex` is not `0`), and the background task ended with exit code 0.
-   If processes carrying your token are still there, wait five seconds
-   (`Start-Sleep 5`) and look again: in one run they exited by themselves.
-   If they are still there then (seen in two runs: the port closed, but all
-   five stayed), close them yourself: this is part of the stop, not a
-   separate change, and a beginner has no way to do it. List them with
+1. If it prints `still running`, list what is left with
    `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' } | Select-Object ProcessId, Name, CommandLine`,
-   check each command line by eye (your own `start_jupyter.cmd` launch and
-   its `jupyter`, `jupyter-lab` and `python` children, with your token),
-   then end each one by its id, never by name:
-   `Stop-Process -Id <id> -Force`. Check again that none is left and the
-   port is closed. The background task then reports `failed` (exit code
-   255): expected, because it was ended rather than asked to exit. Never
-   stop a process without your token. If one with your token will not end,
-   tell the person plainly and stop.
-5. Now that no Jupyter is running, delete Jupyter's own state files (never
+   check each command line by eye (your own launcher and its children, with
+   your token), and end each one by its id, never by name:
+   `Stop-Process -Id <id> -Force`. Never stop a process without your token.
+   The background task then reports `failed` (exit code 255): expected,
+   because it was ended rather than asked to exit.
+2. Now that no Jupyter is running, delete Jupyter's own state files (never
    a notebook), with the PowerShell tool like everything else here:
    `foreach ($f in "<folder>\examples\.jupyter_ystore.db", "<folder>\examples\.jupyter\collaboration_sessions.json") { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f } }`
    Stale collaboration state is the likely cause of cells added over MCP not
