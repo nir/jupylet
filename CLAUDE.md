@@ -154,7 +154,7 @@ Let a command wait in the background instead, and end your turn:
 6. Before you ask them something else, or stop (Part 3), stop a waiting
    command that is still running (`TaskStop`).
 
-The two waiting commands:
+The waiting commands:
 
 - For the notebook to open after signing in (step 8):
   `<python> -m jupylet.claude wait-open <port> <token> 11-spaceship.ipynb <seconds>`
@@ -167,6 +167,19 @@ The two waiting commands:
   `<since>` to the next `watch`, so nothing that happens in between is
   missed. Leave `<since>` out the first time, and after you ran something in
   the kernel yourself (run-all, `execute_code`): it then means "from now".
+- For the notebook to change and settle, whatever the cause (they typed or
+  ran something, or a run-all finished):
+  `<python> -m jupylet.claude wait-change <port> <token> 11-spaceship.ipynb <seconds>`
+  prints `changed` once the cells (code or execution counts) differ from
+  when it started, the kernel is idle and nothing moved for about two
+  seconds, or `timeout`. It compares from the moment it starts, so start it
+  before whatever you expect to change it. It polls quietly, so a long wait
+  costs nothing until it ends. Not tested yet, and not known whether it sees
+  what is being typed before it is saved.
+
+Short waits for something you did yourself (a few seconds) can also be a
+plain background `Start-Sleep` / `sleep`: you are woken when it ends, then
+look and decide whether to wait again. Never a sleep in the foreground.
 
 Look before you speak. Before you start `watch`, read the notebook (Part 2:
 `read_notebook` with
@@ -419,8 +432,9 @@ Then three checks:
   example:
 
   > These notebooks aren't trusted on this computer yet, so the canvas, the
-  > area in the notebook where the examples draw, won't show up until they
-  > are. May I trust them?
+  > window inside the notebook where your code's graphics and animations
+  > show up, won't appear and the examples won't work properly. May I trust
+  > them?
 
   After a clear yes: `<python> -m jupylet trust_notebooks <folder>/examples`.
   Run the check again to confirm every line says `trusted`, and tell the
@@ -506,17 +520,17 @@ the sign-in check from step 8: it works whether or not the pane is visible to
 them, so you can tell them everything they need in one message instead of
 two. Then call `tabs_context`.
 
-- Pane hidden, sign-in check says `200`: tell the person: "Please click the
-  globe icon in the upper right corner of the app, so you can see the
-  notebook." Say it now, before steps 9 and 10, so they see the notebook
-  start running; don't wait for them to do it.
-- Pane hidden, sign-in check says `403`: first start the waiting command
-  from step 8, then tell them both at once, for example:
+- If the pane is hidden and the sign-in check says `200`, tell the person:
+  "Please click the globe icon in the upper right corner of the app, so you
+  can see the notebook." Say it now, before steps 9 and 10, so they see the
+  notebook start running; don't wait for them to do it.
+- If the pane is hidden and the sign-in check says `403`, start the waiting
+  command from step 8 first, then tell them both at once, for example:
   "Please click the globe icon in the upper right corner of the app, so you
   can see the notebook. It will ask for a special token - please paste this
   in: `<token>`. The token shows Jupyter that it's really you, so nobody
   else can open your notebook. Ask me if you get stuck."
-- Pane already visible: go straight to step 8.
+- If the pane is already visible, go straight to step 8.
 
 ### Step 8. Sign in
 
@@ -565,20 +579,48 @@ visible happening.) Say the first-time part only if Jupylet was installed
 in this session; otherwise it has most likely run here before, so say only, for
 example, "Running the notebook now, it takes a few seconds."
 
+First start `wait-change` (see "Waiting for the person") in the background,
+with 90 seconds, so that it is watching before anything runs. Then:
+
 `<python> -m jupylet.claude call <port> <token> notebook_run-all-cells`
 
 Expected: `True` after a second or two; the cells may still be running. If
 it says "Timeout waiting for result": Problem 1. If it says "Not Found":
-Problem 2. Wait until the example is running (`read_notebook`: every code
-cell has an execution count, and `read_cell` of the last one shows no
+Problem 2. Otherwise end your turn: you are woken when the run is done
+(`changed`; after `timeout`, look anyway, and start it again if cells are
+still running). Check that the example is running (`read_notebook`: every
+code cell has an execution count, and `read_cell` of the last one shows no
 error), then tell the person, for example "The spaceship example should be
 showing at the bottom of the notebook now. I ran every cell, top to bottom,
 and the last one started it. Click the canvas, the area where it's drawn,
 then steer the spaceship with the arrow keys."
 
+The notebook sits in a narrow pane next to the chat, and the canvas may be cut
+off at the edges. Where the `set_sidebar_collapsed` tool is available (the
+Claude desktop app; load it with `ToolSearch` if it is deferred), end that
+message with one question, for example:
+
+> The notebook is a bit cramped. Want me to tuck the list of chats on the
+> left out of the way, so there's more room for it?
+
+After a clear yes, call it with `collapsed` true, and explain how to bring the
+sidebar back (they will not find it otherwise), for example:
+
+> Done. You can bring it back any time by clicking the small panel icon in the
+> top-left corner of the app, just right of the three lines: the same click
+> hides it again. And if you want the notebook even bigger, the arrows icon at
+> the top of the notebook panel makes it fill the window, and shrinks it back
+> the same way.
+
+If the tool is not there or changes nothing, give the same two pointers
+instead, as something they can do themselves. After a no, leave it alone and
+don't ask again. Never expand it again yourself, not even when stopping
+(Part 3): by then it is the person's own setting.
+
 Only once the example is running, and only if Jupylet was installed in this session (`CLAUDE_SETUP.md`) and
 setup's check of their own Terminal or Prompt passed, add one short
-paragraph, for example:
+paragraph (after their answer to the sidebar question, not in the same
+message), for example:
 
 > By the way, you can also start Jupylet on your own, without me, from the
 > Terminal. Whenever you'd like, just ask and I'll show you how.
@@ -591,6 +633,10 @@ ask how to start Jupylet on their own" in Part 2.
 Every tool is called the same way, from any folder:
 
 `<python> -m jupylet.claude call <port> <token> <tool> '<json arguments>'`
+
+Instead of the JSON itself, the last argument can be `@<file>` (read the JSON
+from a file) or `-` (read it from stdin). On Windows 11, always use one of
+these (see Part 6).
 
 `<python> -m jupylet.claude tools <port> <token>` lists the tools.
 
@@ -932,6 +978,19 @@ and `run_in_background` set, the same folder rule applying:
 they were tested.
 
 ### Working in the notebook on Windows 11
+
+Windows PowerShell 5.1 strips the double quotes from a JSON argument, so
+`call ... '{"notebook_name": "11-spaceship"}'` fails with a JSONDecodeError.
+Pass the JSON on stdin instead, in a single-quoted here-string:
+
+```
+@'
+{"notebook_name": "11-spaceship", "response_format": "detailed", "limit": 0}
+'@ | & "<python>" -m jupylet.claude call <port> <token> read_notebook -
+```
+
+or write it to a file in the scratchpad and pass `@<file>`. Tools without
+arguments (`notebook_run-all-cells`) need neither.
 
 Tested and working: `use_notebook` (through `attach`), `read_notebook`,
 `read_cell`, `execute_code`, `insert_cell`, `overwrite_cell_source`,

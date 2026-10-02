@@ -529,9 +529,10 @@ Jupylet. Ask, for example:
 
 > One more thing. Jupyter treats notebooks you didn't make yourself as
 > untrusted, as a safety check, and doesn't show their interactive parts.
-> In the example notebooks, that includes the canvas: the area in the
-> notebook where the examples draw. May I mark the example notebooks as
-> trusted?
+> In the example notebooks, that includes the canvas: the window inside the
+> notebook where your code's graphics and animations show up. Without
+> trust, the canvas won't appear and the examples won't work properly. May
+> I mark the example notebooks as trusted?
 
 (If a notebook was not explained yet, add half a sentence: a page where you
 write code in small boxes and run each one.)

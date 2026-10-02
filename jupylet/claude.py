@@ -36,6 +36,7 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude call <port> <token> <tool> ['<json arguments>']
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
     python -m jupylet.claude watch <port> <token> <notebook path> <seconds> [<since>]
+    python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds>
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
     python -m jupylet.claude shutdown <port> <token>
@@ -337,6 +338,48 @@ def watch(port, token, path, timeout, since=None):
         time.sleep(2)
 
     return 'timeout', since
+
+
+def wait_change(port, token, path, timeout):
+    """Wait until the notebook's content changed and things have settled.
+
+    Returns 'changed' once the cells (their code and execution counts) differ
+    from when this started, the kernel is idle and nothing moved for one poll
+    (about 2 seconds): the person stopped typing, or a run-all finished. A run
+    shows up at its first cell, so the idle check is what waits for the last.
+    Returns 'timeout' otherwise. The notebook must be attached (`attach`).
+    """
+    name = os.path.splitext(os.path.basename(path))[0]
+    args = {'notebook_name': name, 'response_format': 'detailed', 'limit': 0}
+
+    def snapshot():
+        try:
+            return call(port, token, 'read_notebook', args)
+        except (OSError, ValueError):
+            return None
+
+    first = last = snapshot()
+    t0 = time.time()
+
+    while time.time() - t0 < timeout:
+        time.sleep(2)
+        now = snapshot()
+
+        if now is None:
+            continue
+
+        settled = now == last
+        last = now
+
+        if first is None:
+            first = now
+        elif settled and now != first:
+            k = _notebook_kernel(port, token, path)
+
+            if k and k['execution_state'] == 'idle':
+                return 'changed'
+
+    return 'timeout'
 
 
 def replace_kernel(port, token, path, timeout=60):
@@ -761,13 +804,16 @@ def main(argv):
         print('\n'.join(tools(*args)))
 
     elif cmd == 'call' and len(args) in (3, 4):
-        print(call(*args[:3], json.loads(args[3]) if len(args) == 4 else None))
+        print(call(*args[:3], _json_arg(args[3]) if len(args) == 4 else None))
 
     elif cmd == 'wait-open' and len(args) == 4:
         print('open' if wait_open(*args[:3], float(args[3])) else 'timeout')
 
     elif cmd == 'watch' and len(args) in (4, 5):
         print(*watch(*args[:3], float(args[3]), *args[4:]))
+
+    elif cmd == 'wait-change' and len(args) == 4:
+        print(wait_change(*args[:3], float(args[3])))
 
     elif cmd == 'replace-kernel' and len(args) == 3:
         print(replace_kernel(*args))
@@ -795,6 +841,20 @@ def main(argv):
     else:
         print(USAGE)
         return 1
+
+
+def _json_arg(arg):
+    """JSON arguments of a tool call: the JSON itself, @file to read it from
+    a file, or - to read it from stdin. Windows PowerShell 5.1 strips the
+    double quotes from a JSON argument, so there the file or stdin is safer."""
+    if arg == '-':
+        return json.loads(sys.stdin.read().lstrip('﻿'))
+
+    if arg.startswith('@'):
+        with open(arg[1:], encoding='utf-8-sig') as f:
+            return json.load(f)
+
+    return json.loads(arg)
 
 
 if __name__ == '__main__':
