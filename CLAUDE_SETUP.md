@@ -493,11 +493,10 @@ Then check: `"<env python>" -I -c "import jupylet; print(jupylet.VERSION)"`
 
 Expected: a version number such as `0.10.0`. If not: Problem 3.
 
-Tell the person it worked, and that one small setting comes next, for
-example "Jupylet is installed. One small setting: I'm turning off a pop-up
-in Jupyter that asks whether you want news about it, so it won't interrupt
-you." Then switch off JupyterLab's "Would you like to get notified about
-official Jupyter news?" pop-up, in this environment only. Always do this:
+Two small settings come next, before you say anything: say nothing about
+them one by one, then report once, below. First switch off JupyterLab's
+"Would you like to get notified about official Jupyter news?" pop-up, in this
+environment only. Always do this:
 `setup.py` lists the settings file under `data_files`,
 but an editable install (`pip install -e`) never copies it. This copies it
 into the environment's own folder, where JupyterLab reads it:
@@ -515,11 +514,16 @@ ask:
 
 `"<env python>" -I -m jupylet.claude nbmodel-off`
 
-Expected: `turned off`; tell the person in one plain line, for example "I
-switched off a Jupyter setting that can make notebooks freeze after a few
-minutes." (`off` needs no comment.) Anything else: tell the person plainly
-that one setting could not be changed, that their notebooks may freeze after
-a few minutes, and go on.
+Expected: `turned off` (`off` means it was already off). Anything else: the
+setting could not be changed; tell the person plainly that their notebooks
+may freeze after a few minutes, and go on.
+
+Then tell the person, in one message, that it worked and what you switched
+off, for example "Jupylet is installed. I also disabled Jupyter's default news
+pop-up and a setting that can make notebooks freeze after a few minutes." Name
+only what you actually changed (leave out the pop-up if `overrides` failed,
+and the freezing setting if it was already off). Neither means much to a
+beginner; they are here so the person can see what was configured.
 
 ## Step 8. Trust the example notebooks
 

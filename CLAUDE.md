@@ -154,6 +154,11 @@ Let a command wait in the background instead, and end your turn:
 6. Before you ask them something else, or stop (Part 3), stop a waiting
    command that is still running (`TaskStop`).
 
+A waiting command only sees what happens after it starts, so one started too
+late would hang until it times out. Right after starting any of them, look
+once at whether what it waits for has already happened; if so, stop it
+(`TaskStop`) and go on.
+
 The waiting commands:
 
 - For the notebook to open after signing in (step 8):
@@ -539,7 +544,7 @@ answer from step 7:
 
 `(await fetch('/api/status', {credentials: 'same-origin'})).status`
 
-- `200`: already signed in. Go to step 9.
+- `200`: already signed in. Offer to make room (below), then step 9.
 - `403`: unless step 7 already did, start waiting for them first, as in
   "Waiting for the person", with
   `<python> -m jupylet.claude wait-open <port> <token> 11-spaceship.ipynb 90`.
@@ -553,10 +558,36 @@ answer from step 7:
 
   When the waiting command finishes, `open`: they are in. Say so and that the rest takes a moment, for example
   "You're signed in. Almost there, just getting the notebook ready...",
-  and go on with step 9 without waiting to be told. `timeout`: check in, for
+  and then the offer to make room below; once that is settled, go on with
+  step 9. `timeout`: check in, for
   example "How's the sign-in going? If you can't find where to paste the
   token, just tell me what you see.", after starting it again with a longer
   wait.
+
+When they are signed in (`200` above, or `open` below), before step 9, offer
+to make room. The notebook sits in a narrow pane next to the chat, and the
+canvas may be cut off at the edges. In the Claude desktop app you have the
+tool `mcp__ccd_window__set_sidebar_collapsed` (it may be deferred: load it
+with `ToolSearch` and `select:` plus that name). If it is there, end your
+message with one question, for example:
+
+> The notebook is a bit cramped. Want me to tuck the list of chats on the
+> left out of the way, so there's more room for it?
+
+Wait for the answer, then go on with step 9. After a clear yes, call the tool
+with `collapsed` true, and explain how to bring the sidebar back (they will
+not find it otherwise), for example:
+
+> Done. You can bring it back any time by clicking the small panel icon in the
+> top-left corner of the app, just right of the three lines: the same click
+> hides it again. And if you want the notebook even bigger, the arrows icon at
+> the top of the notebook panel makes it fill the window, and shrinks it back
+> the same way.
+
+If the tool is not there or changes nothing, give the same two pointers
+instead, as something they can do themselves. After a no, leave it alone and
+don't ask again. Never expand it again yourself, not even when stopping
+(Part 3): by then it is the person's own setting.
 
 ### Step 9. Attach to the notebook
 
@@ -586,41 +617,20 @@ with 90 seconds, so that it is watching before anything runs. Then:
 
 Expected: `True` after a second or two; the cells may still be running. If
 it says "Timeout waiting for result": Problem 1. If it says "Not Found":
-Problem 2. Otherwise end your turn: you are woken when the run is done
-(`changed`; after `timeout`, look anyway, and start it again if cells are
-still running). Check that the example is running (`read_notebook`: every
-code cell has an execution count, and `read_cell` of the last one shows no
-error), then tell the person, for example "The spaceship example should be
+Problem 2. Otherwise look once at the notebook (`read_notebook`): if every
+code cell already has an execution count and the kernel is idle, the run is
+done: stop the wait (`TaskStop`) and go on. If not, end your turn: you are
+woken when the run is done (`changed`; after `timeout`, look anyway, and
+start it again if cells are still running). Check that the example is running
+(every code cell has an execution count, and `read_cell` of the last one shows
+no error), then tell the person, for example "The spaceship example should be
 showing at the bottom of the notebook now. I ran every cell, top to bottom,
 and the last one started it. Click the canvas, the area where it's drawn,
 then steer the spaceship with the arrow keys."
 
-The notebook sits in a narrow pane next to the chat, and the canvas may be cut
-off at the edges. Where the `set_sidebar_collapsed` tool is available (the
-Claude desktop app; load it with `ToolSearch` if it is deferred), end that
-message with one question, for example:
-
-> The notebook is a bit cramped. Want me to tuck the list of chats on the
-> left out of the way, so there's more room for it?
-
-After a clear yes, call it with `collapsed` true, and explain how to bring the
-sidebar back (they will not find it otherwise), for example:
-
-> Done. You can bring it back any time by clicking the small panel icon in the
-> top-left corner of the app, just right of the three lines: the same click
-> hides it again. And if you want the notebook even bigger, the arrows icon at
-> the top of the notebook panel makes it fill the window, and shrinks it back
-> the same way.
-
-If the tool is not there or changes nothing, give the same two pointers
-instead, as something they can do themselves. After a no, leave it alone and
-don't ask again. Never expand it again yourself, not even when stopping
-(Part 3): by then it is the person's own setting.
-
 Only once the example is running, and only if Jupylet was installed in this session (`CLAUDE_SETUP.md`) and
 setup's check of their own Terminal or Prompt passed, add one short
-paragraph (after their answer to the sidebar question, not in the same
-message), for example:
+paragraph, for example:
 
 > By the way, you can also start Jupylet on your own, without me, from the
 > Terminal. Whenever you'd like, just ask and I'll show you how.
