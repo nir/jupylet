@@ -323,6 +323,14 @@ words, for example:
 > code in small boxes, called cells, and run each one to see what it does.
 > It runs only on this computer, and you'll see it right next to our chat.
 
+Right after installing Jupylet (`CLAUDE_SETUP.md`), say what the spaceship
+example is for: a quick check that everything works. For example:
+
+> Now let's check that everything works. May I open the spaceship example, a
+> small ship you steer with the arrow keys? It opens in a notebook right next
+> to our chat, and runs only on this computer. If the ship flies, Jupylet is
+> set up properly.
+
 (If Jupyter and notebooks were already explained in this conversation, for
 example while installing, leave that sentence out.) If the person has
 already asked for the notebook in this conversation ("yes, start it"),

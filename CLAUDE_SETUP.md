@@ -470,7 +470,8 @@ Expected: `ok`. It refuses a folder that exists and is not empty. If it
 prints anything else: Problem 2.
 
 Then tell the person in one line, for example "The code is in the folder
-`<code>`. Its `examples` folder has the example notebooks we'll try."
+`<code>`. Its `examples` folder has the example notebooks we'll try." (You
+just put it there, so if you reword this, don't say you found it.)
 
 ## Step 7. Install Jupylet
 
