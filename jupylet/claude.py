@@ -66,6 +66,8 @@ import time
 import urllib.error
 import urllib.request
 
+from concurrent.futures import ThreadPoolExecutor
+
 
 def _python_of(env):
     """The python executable inside an environment folder, or None."""
@@ -572,14 +574,23 @@ def running(folder=None):
 
     examples = folder and os.path.normcase(os.path.realpath(os.path.join(folder, 'examples')))
     found, seen = [], set()
+    records = []
 
     for path in glob.glob(os.path.join(runtime, 'jpserver-*.json')):
         try:
             with open(path) as f:
-                info = json.load(f)
+                records.append(json.load(f))
         except (OSError, ValueError):
             continue
 
+    # Windows keeps dozens of records from dead servers, and a refused
+    # connection there takes seconds: probe each port once, all at once.
+    ports = sorted({r['port'] for r in records if r.get('port')})
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        alive = {p for p, ok in zip(ports, pool.map(_answers, ports)) if ok}
+
+    for info in records:
         root = os.path.realpath(info.get('root_dir', ''))
         port, token = info.get('port'), info.get('token', '')
         key = os.path.normcase(root)
@@ -590,7 +601,7 @@ def running(folder=None):
         if examples and not (key == examples or key.startswith(examples + os.sep)):
             continue
 
-        if not _answers(port):
+        if port not in alive:
             continue
 
         try:

@@ -633,11 +633,13 @@ import glob
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tarfile
 import tempfile
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 ARCHIVE = 'https://github.com/nir/jupylet/archive/refs/heads/%s.tar.gz'
 
@@ -748,15 +750,36 @@ def running():
     else:
         runtime = os.path.expanduser('~/Library/Jupyter/runtime')
 
-    lines = []
+    records = []
 
     for path in glob.glob(os.path.join(runtime, 'jpserver-*.json')):
         try:
             with open(path) as f:
-                info = json.load(f)
+                records.append(json.load(f))
+        except (OSError, ValueError):
+            pass
 
+    # Windows keeps dozens of records from dead servers, and a refused
+    # connection there takes seconds: probe each port once, all at once.
+    def answers(port):
+        with socket.socket() as s:
+            s.settimeout(1)
+            return s.connect_ex(('127.0.0.1', int(port))) == 0
+
+    ports = sorted({r['port'] for r in records if r.get('port')})
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        alive = {p for p, ok in zip(ports, pool.map(answers, ports)) if ok}
+
+    lines = []
+
+    for info in records:
+        if info.get('port') not in alive:
+            continue
+
+        try:
             req = urllib.request.Request(
-                'http://localhost:%s/api/sessions' % info['port'],
+                'http://127.0.0.1:%s/api/sessions' % info['port'],
                 headers={'Authorization': 'token ' + info.get('token', '')})
             sessions = json.loads(urllib.request.urlopen(req, timeout=5).read())
         except Exception:
