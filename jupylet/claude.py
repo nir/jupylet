@@ -40,11 +40,12 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
+    python -m jupylet.claude running [<folder>]
     python -m jupylet.claude nbmodel-off
 
 `find-env` is the one command meant to run from any Python, with or
 without jupylet, such as Miniforge's `base` or a plain python3 (run this
-file by path: it never imports jupylet itself, on purpose). It prints one environment per line:
+file by path: it never imports jupylet itself, on purpose). `running` too. It prints one environment per line:
 its path, its kind (conda or venv), and where its jupylet comes from ("this
 folder", or a version and its source). With --all it also lists
 environments with any other version of jupylet. Every other command needs an
@@ -506,6 +507,105 @@ def run_cell(port, token, index, start):
     return call(port, token, 'notebook_run-cell')
 
 
+def _is_jupylet_folder(root):
+    """Whether a Jupyter serving root serves Jupylet's code folder: root, or
+    a folder up to two levels above it, has the jupylet package in it."""
+    for folder in (root, os.path.dirname(root), os.path.dirname(os.path.dirname(root))):
+        if os.path.exists(os.path.join(folder, 'jupylet', '__init__.py')):
+            return True
+
+    return False
+
+
+def _env_of(pid):
+    """The environment folder a process runs from, from its program's path,
+    or '' if it cannot be told."""
+    if sys.platform == 'win32':
+        script = '(Get-CimInstance Win32_Process -Filter "ProcessId=%d").ExecutablePath' % int(pid)
+        command = ['powershell', '-NoProfile', '-Command', script]
+    else:
+        command = ['ps', '-o', 'command=', '-p', str(int(pid))]
+
+    try:
+        out = subprocess.run(command, capture_output=True, text=True, timeout=20).stdout.strip()
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return ''
+
+    program = out.split()[0] if out and sys.platform != 'win32' else out
+
+    if not program:
+        return ''
+
+    folder = os.path.dirname(program)
+
+    # bin/python on macOS, Scripts\jupyter-lab.exe on Windows; python.exe sits
+    # in the environment folder itself on Windows.
+    if os.path.basename(folder).lower() in ('bin', 'scripts'):
+        folder = os.path.dirname(folder)
+
+    return folder
+
+
+def running(folder=None):
+    """The Jupyters running now, as (port, token, folder, is it Jupylet's,
+    the notebooks open in it, the environment it runs from).
+
+    Standard library only, so it runs before any environment is known: it
+    reads Jupyter's own records of its running servers (jpserver-*.json in
+    Jupyter's runtime folder). A server counts only if it answers on its port
+    and accepts the token in its record: Windows keeps records from servers
+    long gone, and another Jupyter may have taken their port since. With
+    folder, only those serving folder/examples or a folder inside it.
+    """
+    runtime = os.environ.get('JUPYTER_RUNTIME_DIR')
+
+    if not runtime and os.environ.get('JUPYTER_DATA_DIR'):
+        runtime = os.path.join(os.environ['JUPYTER_DATA_DIR'], 'runtime')
+
+    if not runtime:
+        if sys.platform == 'win32':
+            runtime = os.path.join(os.environ.get('APPDATA', ''), 'jupyter', 'runtime')
+        elif sys.platform == 'darwin':
+            runtime = os.path.expanduser('~/Library/Jupyter/runtime')
+        else:
+            runtime = os.path.expanduser('~/.local/share/jupyter/runtime')
+
+    examples = folder and os.path.normcase(os.path.realpath(os.path.join(folder, 'examples')))
+    found, seen = [], set()
+
+    for path in glob.glob(os.path.join(runtime, 'jpserver-*.json')):
+        try:
+            with open(path) as f:
+                info = json.load(f)
+        except (OSError, ValueError):
+            continue
+
+        root = os.path.realpath(info.get('root_dir', ''))
+        port, token = info.get('port'), info.get('token', '')
+        key = os.path.normcase(root)
+
+        if not port or (port, token) in seen:
+            continue
+
+        if examples and not (key == examples or key.startswith(examples + os.sep)):
+            continue
+
+        if not _answers(port):
+            continue
+
+        try:
+            sessions = _api(port, token, '/api/sessions')
+        except (OSError, ValueError):
+            continue
+
+        notebooks = sorted({s['path'] for s in sessions if s.get('type') == 'notebook'})
+        seen.add((port, token))
+        found.append((port, token, root, _is_jupylet_folder(root), notebooks,
+                      _env_of(info.get('pid', 0))))
+
+    return found
+
+
 def _runtime_dir():
     try:
         from jupyter_core.paths import jupyter_runtime_dir
@@ -576,6 +676,20 @@ def _nbmodel_on():
     return server, browser
 
 
+def _news_off():
+    """Turn off JupyterLab's "get notified about official Jupyter news?"
+    pop-up in this Python's environment, unless its settings file exists
+    already. Setup does it too, but Jupylet may have been installed by hand,
+    and an editable install never copies the file setup.py lists."""
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       'assets', 'jupyterlab', 'overrides.json')
+    folder = os.path.join(sys.prefix, 'share', 'jupyter', 'lab', 'settings')
+
+    if os.path.exists(src) and not os.path.exists(os.path.join(folder, 'overrides.json')):
+        os.makedirs(folder, exist_ok=True)
+        shutil.copy(src, folder)
+
+
 def nbmodel_off():
     """Make sure jupyter_server_nbmodel is off in this Python's environment.
 
@@ -586,10 +700,13 @@ def nbmodel_off():
     Without it, the page runs cells itself, as in plain JupyterLab.
 
     Both its parts are turned off, in this environment's own configuration,
-    using Jupyter's own commands. Returns 'off', 'turned off',
+    using Jupyter's own commands. It also turns off JupyterLab's news pop-up
+    there, which says nothing about nbmodel but belongs to the same moment. Returns 'off', 'turned off',
     'not installed', or 'still on: ...'.
     """
     import importlib.util
+
+    _news_off()
 
     if importlib.util.find_spec(NBMODEL) is None:
         return 'not installed'
@@ -649,6 +766,12 @@ def main(argv):
 
     elif cmd == 'shutdown' and len(args) == 2:
         print(shutdown(*args))
+
+    elif cmd == 'running' and len(args) <= 1:
+        for port, token, root, jupylet, notebooks, env in running(*args):
+            print('%s\t%s\t%s\t%s\t%s\t%s' % (
+                port, token, root, 'jupylet' if jupylet else '-',
+                ', '.join(notebooks) or '-', env or '-'))
 
     elif cmd == 'cleanup' and args in ([], ['--yes']):
         cleanup(delete=args == ['--yes'])

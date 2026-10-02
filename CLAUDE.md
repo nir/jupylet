@@ -90,6 +90,8 @@ up. So:
   their notebooks or code.
 - Try one fix at a time, and don't loop. If two attempts fail, tell the
   person honestly that this needs a grown-up, and stop.
+- Your first words answer the person. No opening about what you are about
+  to do ("I'll start by reading the notes for this computer...").
 - Steps and their numbers are for you, not the person: never say "Step N" to
   them, never repeat an instruction from this file to them ("go to step 9"),
   and never name a technical detail they have no use for (a port, an
@@ -190,6 +192,37 @@ this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 ### Step 1. Answer what they asked
 
 Your first reply answers the person's own question, as a person would.
+
+Before it, check whether Jupylet is already running in a Jupyter on this
+computer. This runs `jupylet/claude.py` by file path, under Miniforge's own
+Python (or `python3` if there is no Miniforge): it needs only the standard
+library, so it works before the environment is known.
+
+`$HOME/miniforge3/bin/python <folder>/jupylet/claude.py running`
+
+One line per running Jupyter, with six columns separated by tabs: its port,
+its token, the folder it serves, `jupylet` if that is a Jupylet folder, the
+notebooks open in it, and the environment it runs from. If a line says `jupylet`, the person
+may want help with what is running there, so ask that first, in one short
+question. If they asked about a running notebook and one is open, name it,
+for example:
+
+> I see a Jupyter session running `11-spaceship.ipynb`. Is that the one you
+> mean?
+
+Otherwise, for example:
+
+> I see Jupylet is already open in Jupyter on this computer. Would you like
+> me to help you with that, or start something new?
+
+- **That one, in this folder** (it serves `<folder>/examples`): the case "a
+  notebook already open in their own Jupyter" below. They need no
+  explanation of Jupyter.
+- **That one, in another folder:** say so, and offer to work from
+  there: "That's in another Jupylet folder, `<its folder>`. Shall I work from
+  there?" After a clear yes, call `change_directory` with that folder (without
+  `examples`), read its `CLAUDE.md`, and follow it from step 1.
+- **Something new, or not that one:** go on below, by their words.
 Words for you, not to say: Jupylet is for music, sound and graphics as much
 as for games, so don't call it games unless they do, and don't add a line
 about what it is for.
@@ -206,6 +239,63 @@ as its "Code already here" section says, with `<code>` = `<folder>`. Do this
 even if Jupylet turns out to be installed somewhere already: they asked for
 it to be installed, and setup tells them what it finds and leaves an
 existing install as it is. When setup hands back, go on with step 2.
+
+**A notebook already open in their own Jupyter** (they said so, or said yes
+to it above): if they did not say yes to it above, ask first, for example:
+
+> I see your notebook is open in Jupyter. May I connect to it, so we can work
+> in it together?
+
+After a clear yes, use the environment that Jupyter runs from (the last
+column above) as `<env>`, with no question: it is the one their notebook
+runs in. Run step 2's checks on it (from "Then three checks"). If its
+`[claude]` check passes and `nbmodel-off` (step 4) prints `off`, try that
+Jupyter, with the port and token from the check:
+`<python> -m jupylet.claude tools <port> <token>`. If it lists
+`notebook_run-all-cells`, it is connectable: just connect, with step 9, that
+port and token and their notebook, and help with what they asked. Their
+notebook is already running, so don't run it all again.
+
+Otherwise you can only work in a Jupyter started after Jupylet's Claude
+tools were installed, with nbmodel off. Go one question at a time:
+
+1. Only if the `[claude]` check failed, ask, for example:
+
+   > To work in your notebook with you, I need to install an extension for
+   > Jupyter that lets me connect to it, so I can see your code, add to it,
+   > and run it with you. May I?
+
+   Ask only this. Installing stops nothing, so saving and closing belong to
+   the next question, once it is installed.
+
+   After a clear yes, install it as `CLAUDE_SETUP.md`'s "Claude tools for an
+   existing install" says, without its own question (this one covers it),
+   then run `nbmodel-off` (step 4) right away, so it is off however Jupyter
+   is started next.
+2. Ask, for example:
+
+   > The extension only works in a Jupyter started after it was installed,
+   > so I need to stop Jupyter and start it again. Please save your notebook
+   > and let me know when I can proceed.
+
+   (If the extension was there already and only `nbmodel-off` printed
+   `turned off`, give that reason instead: a setting that keeps notebooks
+   from freezing only takes effect in a fresh start.) Don't start a second
+   Jupyter next to theirs instead: two Jupyters on the same notebook can
+   overwrite each other's changes. When they say to go on, close it as in
+   Problem 11 ("Yes"), then say only that Jupyter is closed: it was their
+   Jupyter, so you can't tell whether the notebook was saved.
+3. Ask, for example:
+
+   > I can now connect to any Jupyter you start from the environment
+   > `<name>`. But I can offer you a better integration experience by
+   > starting it here, in the Claude app, right next to our chat. Would you
+   > like to try that?
+
+   Yes: go on with step 3, using their notebook wherever these steps say
+   `11-spaceship.ipynb`. No: let them start it; then find its port and token
+   in `<python> -m jupyter server list`, and go on with step 9, skipping
+   steps 7 and 8 (their own browser shows it).
 
 **They ask to open a notebook, or to try something:** ask, in a few plain
 words, for example:
@@ -370,7 +460,9 @@ The `[claude]` extra brings nbmodel along. With it, Jupyter runs cells on the
 server, and a notebook that keeps sending messages (a panel, a live loop, a
 thread that prints) leaves a cell hanging at `[*]` for good after a few
 minutes. Turning it off is part of starting Jupyter, like checking the
-port, so it needs no question of its own.
+port, so it needs no question of its own. The same command also turns off
+JupyterLab's news pop-up in that environment, however Jupylet was installed;
+that needs no comment.
 
 Expected: `off` or `not installed`: nothing changed, so nothing to mention.
 `turned off`: it was on,
@@ -416,7 +508,8 @@ two. Then call `tabs_context`.
 
 - Pane hidden, sign-in check says `200`: tell the person: "Please click the
   globe icon in the upper right corner of the app, so you can see the
-  notebook."
+  notebook." Say it now, before steps 9 and 10, so they see the notebook
+  start running; don't wait for them to do it.
 - Pane hidden, sign-in check says `403`: first start the waiting command
   from step 8, then tell them both at once, for example:
   "Please click the globe icon in the upper right corner of the app, so you
@@ -468,7 +561,9 @@ Before you run it, tell the person, for example "Running the notebook now.
 It can take up to a minute to get going, while Jupylet gets everything
 ready for the first time; after that it starts in seconds." (The first run compiles
 Jupylet's code, and the page can sit at `[*]` for half a minute with nothing
-visible happening.)
+visible happening.) Say the first-time part only if Jupylet was installed
+in this session; otherwise it has most likely run here before, so say only, for
+example, "Running the notebook now, it takes a few seconds."
 
 `<python> -m jupylet.claude call <port> <token> notebook_run-all-cells`
 

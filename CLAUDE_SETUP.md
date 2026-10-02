@@ -36,7 +36,8 @@ you here when Jupylet is installed and set up, but without its `[claude]`
 extra, the tools you use to work in a live notebook with the person. Only this
 section applies, none of the steps below; `<python>` and `<folder>` are as in
 `CLAUDE.md`. The full setup never asks this separately: step 7 installs the
-extra as part of installing Jupylet. Ask:
+extra as part of installing Jupylet. If `CLAUDE.md`'s step 1 already asked
+(a notebook open in their own Jupyter), don't ask again. Otherwise ask:
 
 > To work in the notebook with you, I need to install Jupylet's Claude
 > tools. They let me collaborate with you on the code in your notebook: see
@@ -159,8 +160,8 @@ the person picks in step 6. Put every path in double quotes.
 
 Once Miniforge is installed, most work is done with its own Python, which
 behaves the same on both systems, and a small helper script (at the end of
-this page). Save it as `setup_helper.py` in your scratchpad folder when step 6
-first needs it; `<helper>` is its full path.
+this page). Save it as `setup_helper.py` in your scratchpad folder when step 3
+or step 6 first needs it; `<helper>` is its full path.
 
 ## Step 1. Check the system
 
@@ -256,6 +257,23 @@ where it matters.
 
    On Windows there is nothing to check here: every conda gets its own
    Prompt in the Start menu, and installing Miniforge changes none of them.
+
+6. **Is Jupylet already running in a Jupyter?** Only if check 1 found a conda
+   folder (Jupyter needs one): save the helper script now, and run it with
+   that conda's python (Miniforge's if there is one):
+   `"<its python>" "<helper>" running`
+   One line per running Jupyter, with the folder it serves, `jupylet` if
+   that is a Jupylet folder, and the notebooks open in it. If a line says `jupylet`, the person may want
+   help with what is running there rather than a new install. Before step 4,
+   ask, for example:
+
+   > I see Jupylet is already open in Jupyter on this computer. Would you
+   > like me to help you with that, or set up Jupylet anew?
+
+   Help with that: move the session to that Jupylet folder (the folder
+   without `examples`) as step 10 does, read its `CLAUDE.md` and follow it
+   from step 1, where they have already chosen help with what is running.
+   Set up anew: go on with step 4.
 
 ## Step 4. Miniforge
 
@@ -612,6 +630,7 @@ Python's standard library, so it runs with any Miniforge Python.
 
 ```python
 import glob
+import json
 import os
 import shutil
 import subprocess
@@ -718,8 +737,42 @@ def prompt(miniforge):
     return 'mismatch ' + (base or out.stderr.strip())
 
 
+def running():
+    """The live Jupyters, from Jupyter's own records of its servers: one line
+    each, with the folder it serves, 'jupylet' if that is a Jupylet folder,
+    and the notebooks open in it.
+    A server counts only if it accepts the token in its record (Windows keeps
+    records from servers long gone)."""
+    if sys.platform == 'win32':
+        runtime = os.path.join(os.environ.get('APPDATA', ''), 'jupyter', 'runtime')
+    else:
+        runtime = os.path.expanduser('~/Library/Jupyter/runtime')
+
+    lines = []
+
+    for path in glob.glob(os.path.join(runtime, 'jpserver-*.json')):
+        try:
+            with open(path) as f:
+                info = json.load(f)
+
+            req = urllib.request.Request(
+                'http://localhost:%s/api/sessions' % info['port'],
+                headers={'Authorization': 'token ' + info.get('token', '')})
+            sessions = json.loads(urllib.request.urlopen(req, timeout=5).read())
+        except Exception:
+            continue
+
+        root = os.path.realpath(info.get('root_dir', ''))
+        up = [root, os.path.dirname(root), os.path.dirname(os.path.dirname(root))]
+        mark = any(os.path.exists(os.path.join(d, 'jupylet', '__init__.py')) for d in up)
+        books = sorted({x['path'] for x in sessions if x.get('type') == 'notebook'})
+        lines.append('%s\t%s\t%s' % (root, 'jupylet' if mark else '-', ', '.join(books) or '-'))
+
+    return '\n'.join(sorted(set(lines))) or None
+
+
 COMMANDS = {'download': download, 'overrides': overrides,
-            'jupylet': jupylet, 'prompt': prompt}
+            'jupylet': jupylet, 'prompt': prompt, 'running': running}
 
 if __name__ == '__main__':
     result = COMMANDS[sys.argv[1]](*sys.argv[2:])
