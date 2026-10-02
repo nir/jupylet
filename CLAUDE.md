@@ -610,13 +610,16 @@ there is no kernel: Problem 6.
 
 ### Step 10. Run all cells
 
-Before you run it, tell the person, for example "Running the notebook now.
-It can take up to a minute to get going, while Jupylet gets everything
-ready for the first time; after that it starts in seconds." (The first run compiles
-Jupylet's code, and the page can sit at `[*]` for half a minute with nothing
-visible happening.) Say the first-time part only if Jupylet was installed
-in this session; otherwise it has most likely run here before, so say only, for
-example, "Running the notebook now, it takes a few seconds."
+Before you run it, tell the person how long it takes. Only the very first
+run after Jupylet was installed (in this session, `CLAUDE_SETUP.md`) is slow:
+it compiles Jupylet's code, and the page can sit at `[*]` for half a minute
+with nothing visible happening. Then say, for example, "Running the notebook
+now. It can take up to a minute to get going, while Jupylet gets everything
+ready for the first time; after that it starts in seconds."
+
+In every other case (a restart, a new Jupyter, a notebook run before) it is
+quick, and there is no reason to give: say only, for example, "Running the
+notebook now, it takes a few seconds."
 
 First start `wait-change` (see "Waiting for the person") in the background,
 with 90 seconds, so that it is watching before anything runs. Then:
