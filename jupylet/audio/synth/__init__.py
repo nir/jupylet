@@ -31,7 +31,7 @@ from ..sound import GatedSound, Envelope, Oscillator, Noise
 from .. import note, DEFAULT_AMP
 
 from .hammond_organ import Hammond, Chorus, drawbars
-from .tb303_bassline import TB303
+from .tb303_bassline import TB303, get_tb303_panel
 
 
 logger = logging.getLogger(__name__)

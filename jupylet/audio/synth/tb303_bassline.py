@@ -731,3 +731,41 @@ class TB303(GatedSound, StepSequencer):
         volume = note_volume + accent_volume
 
         return out * volume[:, None]
+
+
+def get_tb303_panel(tb303, **kwargs):
+    """A front panel for a TB303: its waveform switch and six knobs, laid
+    out like the controls on the real instrument, as widgets in a notebook.
+
+    The controls change the synth as soon as they are moved, so they can
+    shape the sound while it plays. For example:
+
+    ::
+
+        tb303 = TB303()
+
+        panel = get_tb303_panel(tb303)
+        panel
+
+    Args:
+        tb303 (TB303): The synth the panel controls.
+        **kwargs: Passed on to Panel, such as refresh_interval.
+
+    Returns:
+        Panel: The panel, to display in a notebook cell.
+    """
+    # Imported here, so the synth itself does not depend on the widgets.
+    from ..panel import Panel, Slider, Switch
+
+    return Panel(tb303, [
+        Switch('WAVEFORM', 'waveform', [
+            ('SAW', 'sawtooth'),
+            ('SQUARE', 'square'),
+        ]),
+        Slider('TUNING', 'tuning'),
+        Slider('CUT OFF FREQ', 'cutoff'),
+        Slider('RESONANCE', 'resonance'),
+        Slider('ENV MOD', 'env_mod'),
+        Slider('DECAY', 'decay'),
+        Slider('ACCENT', 'accent'),
+    ], **kwargs)
