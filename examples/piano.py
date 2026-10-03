@@ -47,6 +47,12 @@ app = App(width=512, height=420, quality=100)#, log_level=logging.INFO)
 
 
 #
+# The TB-303 synth that the keyboard, MIDI and the live loop below play.
+#
+tb303 = TB303()
+
+
+#
 # Default oscilloscope shader:
 # The code in the following cell is of a simple shadertoy shader that 
 # displays an audio oscilloscope. Shadertoy (http://shadertoy.com/) are 

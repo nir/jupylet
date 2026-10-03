@@ -131,6 +131,57 @@ class BaseFilter(Sound):
 
 
 #
+# The chaser
+#
+# The simplest filter, from the examples/18-filters.ipynb notebook: a 1-pole
+# lowpass filter, also known as a one-pole, a lag, or a leaky integrator. Its
+# output chases its input, moving a fraction g of the way toward it at each
+# sample.
+#
+
+
+def chaser(x, g, z=0.):
+    """Filter a block of samples with a chaser, a 1-pole lowpass filter.
+
+    At each sample, the output moves a fraction g of the way toward the
+    input: z += g * (x[i] - z). So it follows the input slowly, rising and
+    falling with a time constant of about 1 / g samples. For a time constant
+    in seconds, use g = 1 / FS / seconds.
+
+    It is also handy for smoothing control signals, like a capacitor, for
+    example the accent sweep of a TB-303.
+
+    Args:
+        x (ndarray): A block of samples, of shape (frames,).
+        g (float): The fraction to move at each sample, from 0 (never moves)
+            to 1 (follows the input exactly).
+        z (float): The output at the end of the previous block, to continue
+            from.
+
+    Returns:
+        tuple: The filtered block, and its last value, to pass as z for the
+            next block.
+    """
+    return _chaser(x, float(g), float(z))
+
+
+@numba.njit(fastmath=True, cache=True)
+def _chaser(x, g, z):
+
+    out = np.empty(len(x))
+
+    for i in range(len(x)):
+        z += g * (x[i] - z)
+        out[i] = z
+
+    return out, z
+
+
+# Warmup: compile the loop now rather than while playing.
+chaser(np.zeros(16), 0.1)
+
+
+#
 # The Butterworth filter
 #
 # A Butterworth lowpass or highpass of a given order is a chain of 2-pole

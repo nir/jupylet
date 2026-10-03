@@ -1,5 +1,5 @@
 """
-    jupylet/audio/synth.py
+    jupylet/audio/synth/hammond_organ.py
     
     Copyright (c) 2022, Nir Aides - nir.8bit@gmail.com
 
@@ -27,60 +27,16 @@
 
 import logging
 
-from .sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color
-from .sound import PhaseModulator
-from .effects import SchroederReverb, Overdrive
-from .filters import ButterFilter
+from ..sound import Sound, GatedSound, Envelope, Oscillator, Noise, noise_color
+from ..sound import PhaseModulator
+from ..effects import SchroederReverb, Overdrive
 
-from ..audio import note, DEFAULT_AMP
+from .. import DEFAULT_AMP
 
 import numpy as np
 
 
 logger = logging.getLogger(__name__)
-
-
-class Synth(GatedSound):
-    
-    def __init__(self, amp=DEFAULT_AMP, pan=0., duration=None):
-        
-        super().__init__(amp=amp, pan=pan, duration=duration)
-
-        self.env0 = Envelope(0.03, 0.3, 0.7, 1., linear=False)
-        self.osc0 = Oscillator('sine', 4)
-        self.osc1 = Oscillator('tri')
-                
-    def forward(self):
-
-        self.osc1.freq = self.freq
-
-        g0 = self.gate()        
-        e0 = self.env0(g0)
-                
-        o0 = self.osc0()        
-        o1 = self.osc1(key_modulation=o0/2)
-        
-        return o1 * e0
-
-
-class Drums(GatedSound):
-    
-    def __init__(self, amp=DEFAULT_AMP, pan=0.):
-        
-        super().__init__(amp=amp, pan=pan)
-
-        self.env0 = Envelope(0.002, 0.15, 0., 0., linear=False)
-        self.noise = Noise()
-                
-    def forward(self):
-        
-        color = (self.key - note.C1) / (note.B7 - note.C1) * 12 - 6
-        
-        g0 = self.gate()        
-        e0 = self.env0(g0)
-        a0 = self.noise(color)        
-        
-        return a0 * e0
 
 
 drawbars = [16, 5+1/3, 8, 4, 2+2/3, 2, 1+3/5, 1+1/3, 1]
@@ -233,57 +189,3 @@ class Hammond(GatedSound):
         
         return a2
                
-
-class TB303(GatedSound):
-    
-    def __init__(
-        self, 
-        shape='sawtooth',
-        resonance=1,
-        cutoff=0,
-        decay=2,
-        amp=DEFAULT_AMP, 
-        pan=0., 
-        duration=None
-    ):
-        
-        super().__init__(amp=amp, pan=pan, duration=duration)
-                        
-        self.shape = shape
-        self.resonance = resonance
-        self.cutoff = cutoff
-        self.decay = decay
-
-        self.env0 = Envelope(0.01, 0., 1., 0.01)
-        self.env1 = Envelope(0., decay, 0., 0., linear=False)
-        
-        self.osc0 = Oscillator(shape)
-        
-        self.filter = ButterFilter(mode='lowpass', order=4)
-        
-    def forward(self):
-        
-        g0 = self.gate()
-        
-        e0 = self.env0(g0)
-        e1 = self.env1(g0, decay=self.decay) * 12 * 8
-                
-        a0 = self.osc0(shape=self.shape, freq=self.freq) 
-        
-        #
-        # The resonance of this synth goes from 0 up, as it did with the
-        # filter it had before, and is mapped to the filter's 0 to 1 so that
-        # the peak at the cutoff has the same height as before.
-        #
-        a1 = self.filter(
-            a0, 
-            key_modulation=e1+self.cutoff, 
-            resonance=self.resonance / (1 + self.resonance),
-            freq=self.freq,
-        )
-        
-        return a1 * e0
-
-
-tb303 = TB303()
-

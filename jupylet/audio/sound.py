@@ -1094,6 +1094,74 @@ class Envelope(Sound):
         return curve
 
 
+class DecayEnvelope(Sound):
+    """An envelope that jumps to 1 when its gate opens, then decays.
+
+    It decays exponentially whether the gate is open or not: closing the
+    gate does not affect it, and only a new opening of the gate restarts
+    it. That is how the envelopes of the Roland TB-303 behave, each a
+    capacitor charged at the start of a note, which then discharges
+    through a resistor. So it has no sustain and no release.
+
+    Playing a new note resets it, so the note restarts it even if the
+    gate never closed in between. A legato note does not.
+
+    Args:
+        tau (float): The decay's time constant, in seconds: the time it
+            takes to fall to 1/e, about 37%. For a capacitor C discharging
+            through a resistor R, it is R * C. To fall to 10% takes ln(10),
+            about 2.3, times as long.
+    """
+    def __init__(self, tau=1.):
+
+        super().__init__()
+
+        self.tau = tau
+
+        # The envelope's last value, and the gate's.
+        self._level = 0.
+        self._lgate = 0.
+
+    def reset(self, shared=False):
+
+        super().reset(shared)
+
+        self._level = 0.
+        self._lgate = 0.
+
+    def forward(self, gate):
+
+        gate = _per_sample(gate, self.frames)
+
+        a0, self._lgate, self._level = _decay_envelope(
+            gate,
+            float(self._lgate),
+            float(self._level),
+            float(self.tau),
+        )
+
+        return a0[:, None]
+
+
+@numba.njit(cache=True)
+def _decay_envelope(gate, last_gate, level, tau):
+
+    out = np.empty(len(gate))
+    d = math.exp(-1 / FS / tau)
+
+    for i in range(len(gate)):
+
+        # Jump to 1 when the gate opens.
+        if gate[i] > 0 and last_gate <= 0:
+            level = 1.
+
+        out[i] = level
+        level *= d
+        last_gate = gate[i]
+
+    return out, last_gate, level
+
+
 #
 # Waveform generators.
 #
@@ -1414,6 +1482,7 @@ def get_square_wave(freq, phase=0, frames=8192, duty=0.5, **kwargs):
 
 
 # Warmup: compile the loops now rather than while playing.
+_decay_envelope(np.ones(64), 0., 0., 1.)
 get_sine_wave(MIDDLE_C, frames=64)
 get_triangle_wave(MIDDLE_C, frames=64)
 get_sawtooth_wave(MIDDLE_C, frames=64)
