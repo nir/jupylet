@@ -500,16 +500,23 @@ that the notebook may freeze after a few minutes, and go on.
 
 ### Step 5. Start Jupyter
 
-Run this with the Bash tool, with `run_in_background` set (leave out
-`conda activate <name> &&` for `base`):
+Start Jupyter detached, from `<folder>` (leave out `conda activate <name> &&`
+for `base`):
 
-`$SHELL -ic "conda activate <name> && cd <folder>/examples && jupyter lab --no-browser --port <port> --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
+`<python> -m jupylet.claude detach <scratchpad>/jupyter.log $SHELL -ic "conda activate <name> && cd <folder>/examples && jupyter lab --no-browser --port <port> --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
 
 For a venv, activate it with its own script instead of `conda activate`:
 
-`$SHELL -ic "source <env>/bin/activate && cd <folder>/examples && jupyter lab --no-browser --port <port> --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
+`<python> -m jupylet.claude detach <scratchpad>/jupyter.log $SHELL -ic "source <env>/bin/activate && cd <folder>/examples && jupyter lab --no-browser --port <port> --ServerApp.port_retries=0 --IdentityProvider.token=<token>"`
 
-Never use the Terminal panel for this (Problem 5). Starting takes a few
+`<scratchpad>` is your scratchpad folder. `detach` prints a process id and
+returns at once; Jupyter's own output goes to `jupyter.log`. Never start
+Jupyter as a background task (`run_in_background`): Claude Code ends a
+background task when it reaches its time limit, or when the session ends,
+and Jupyter would end with it, stopping whatever the notebooks are running,
+which may be a computation meant to run for hours. A detached Jupyter runs
+until it is stopped (Part 3). Never use the Terminal panel for this either
+(Problem 5). Starting takes a few
 seconds; say so once, and use the wait to explain, for example "Starting
 Jupyter now, one second. It runs here on your computer, and the browser panel
 next to our chat connects to it, so you can work with it there.", so the wait
@@ -793,8 +800,7 @@ environment activated.
 **5. The Terminal panel opens and shares the screen with the browser.**
 Cause: running a command with the terminal tool opens that panel, and it
 leaves an idle tab behind every time. It confuses novices.
-Do: start Jupyter as a background Bash process (step 5). Never use the
-terminal tool.
+Do: start Jupyter detached, as in step 5. Never use the terminal tool.
 
 **6. There is no kernel for the notebook.**
 Cause: the notebook only gets a kernel once it is open in the browser page.
@@ -862,7 +868,7 @@ folder, as in step 2's "Yes, set it up" (`CLAUDE_SETUP.md`, "Code already
 here"), which installs both into a new environment.
 
 **15. Jupyter does not become ready (step 6).**
-Do: read the background task's output file. If the port is taken, see
+Do: read `<scratchpad>/jupyter.log` (step 5). If the port is taken, see
 Problem 11. If it says `No module named`, see Problem 14. Otherwise tell the
 person plainly and stop.
 
@@ -973,12 +979,18 @@ jupyter lab --no-browser --port %2 --ServerApp.port_retries=0 --IdentityProvider
 For a venv, replace the `call ...activate.bat <name>` line with
 `call <env>\Scripts\activate.bat` (not tried yet).
 
-Run it with the PowerShell tool, with `run_in_background` set:
+Start it detached, as in step 5, with the PowerShell tool and the current
+folder set to `<folder>`:
 
-`cmd /c "<scratchpad>\start_jupyter.cmd <token> <port>"`
+`& "<python>" -m jupylet.claude detach <scratchpad>\jupyter.log cmd /c <scratchpad>\start_jupyter.cmd <token> <port>`
+
+(Not tested on Windows yet: `detach` there starts it with no window, in its
+own process group, and out of the task's job if the job allows that. If
+Jupyter still stops when a background task or the session ends, tell the
+person plainly, and write it in `EXPERIENCE.md`.)
 
 The long last argument makes the MCP server offer the "run one cell" tools
-(below); without it only run-all is offered. The background task's output
+(below); without it only run-all is offered. `jupyter.log`
 should say `JupyterLab extension loaded from ...\envs\<name>\...`: that shows
 the environment was activated.
 
@@ -1054,8 +1066,6 @@ current folder set to `<folder>`. Then:
    check each command line by eye (your own launcher and its children, with
    your token), and end each one by its id, never by name:
    `Stop-Process -Id <id> -Force`. Never stop a process without your token.
-   The background task then reports `failed` (exit code 255): expected,
-   because it was ended rather than asked to exit.
 2. Now that no Jupyter is running, delete Jupyter's own state files (never
    a notebook), with the PowerShell tool like everything else here:
    `foreach ($f in "<folder>\examples\.jupyter_ystore.db", "<folder>\examples\.jupyter\collaboration_sessions.json") { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f } }`

@@ -558,7 +558,7 @@ disk with its own last save, finds the server's newer write, and asks
 nothing, and saving by hand is not needed at all. Unknown: whether turning
 off the page's own autosave setting makes the dialog go away.
 
-### Rewinding the conversation stops Jupyter
+### Rewinding the conversation, or a time limit, stops Jupyter
 
 `[macOS, seen once, Opus 5.5, 2026-09-25]` Jupyter runs as a background
 Bash task of the Claude session. When the person rewound to an earlier
@@ -569,6 +569,16 @@ stopped. The notebook was saved, but the kernel's variables were lost. Fix:
 ask, then start Jupyter again (step 5) with the same token, so the page's
 sign-in still works, and `attach`. Worth telling a person before they
 rewind while a kernel holds work they care about.
+
+`[macOS, verified, Opus 5.5, 2026-10-02]` It also ended on its own: Claude
+Code stopped the background task running Jupyter when it reached its time
+limit ("stopped after reaching its background time limit"), and both
+kernels shut down with it. The `timeout` parameter is capped at 10 minutes,
+so a longer one is no fix. Since then, step 5 starts Jupyter detached
+(`jupylet.claude detach`, in its own session). Tested: a process started
+that way from a background task kept running after the task was stopped
+with `TaskStop`. Not tested yet: rewinding, or quitting the app, with a
+detached Jupyter, and `detach` on Windows.
 
 ## Windows 11
 

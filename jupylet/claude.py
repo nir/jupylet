@@ -29,6 +29,7 @@ Helpers for Claude Code sessions that work with a person in a live Jupyter
 notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
 
     python -m jupylet.claude find-env [--all] <version>
+    python -m jupylet.claude detach <log file> <command> [<argument> ...]
     python -m jupylet.claude wait <port> <token>
     python -m jupylet.claude attach <port> <token> <notebook path>
     python -m jupylet.claude kernel <port> <token> <notebook path>
@@ -227,6 +228,49 @@ def wait(port, token, timeout=60):
         time.sleep(2)
 
     return False
+
+
+def detach(log, command):
+    """Start a command detached, with its output going to the file log, and
+    return its process id.
+
+    A background task of Claude Code is ended when it reaches its time limit,
+    or when the session ends, and a Jupyter started as one ends with it,
+    with whatever its notebooks are running. A detached process belongs to
+    no task, and runs until it is stopped.
+    """
+    if sys.platform != 'win32':
+        kwargs = dict(start_new_session=True)
+
+    else:
+        #
+        # No window, its own process group, and out of the job that the
+        # task's processes may be in, so that ending the job does not end
+        # it. Not every job allows that, so try once more without it.
+        #
+        flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+        kwargs = dict(creationflags=flags | subprocess.CREATE_BREAKAWAY_FROM_JOB)
+
+    with open(log, 'a') as out:
+
+        def start():
+            return subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=out,
+                stderr=subprocess.STDOUT,
+                **kwargs,
+            )
+
+        try:
+            return start().pid
+
+        except PermissionError:
+            if sys.platform != 'win32':
+                raise
+
+            kwargs = dict(creationflags=flags)
+            return start().pid
 
 
 def tools(port, token):
@@ -788,6 +832,9 @@ def main(argv):
     if cmd == 'find-env' and len(args) in (1, 2) and args[:-1] in ([], ['--all']):
         for env, python, kind, source in find_env(args[-1], any_version=args[0] == '--all'):
             print('%s\t%s\t%s' % (env, kind, source))
+
+    elif cmd == 'detach' and len(args) >= 2:
+        print(detach(args[0], args[1:]))
 
     elif cmd == 'wait' and len(args) == 2:
         ok = wait(*args)
