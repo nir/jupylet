@@ -193,6 +193,7 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 * A replica of the historical Atari 1978 Breakout, created entirely by AI. Check out [examples/31-breakout.ipynb](https://github.com/nir/jupylet/blob/master/examples/31-breakout.ipynb).
 * The default tempo is now 120 beats per minute, the common default of music software, instead of 240. Music that relied on the old default plays at half speed; call `set_bpm(240)` to restore it.
 * A new example notebook, [examples/18-filters.ipynb](https://github.com/nir/jupylet/blob/master/examples/18-filters.ipynb), builds the classic Moog ladder filter from scratch, one small step at a time.
+* A replica of the Roland TB-303 Bass Line synthesizer, modeled from its schematic and other sources, with a front panel of knobs that code can sweep in time with the music. Check out the demo, [examples/19-synthing.ipynb](https://github.com/nir/jupylet/blob/master/examples/19-synthing.ipynb).
 
 <br>
 <p float="left">
