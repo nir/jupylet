@@ -71,21 +71,27 @@ class Control:
         self.target = None
         self.control = None
 
+        # The value the panel last sent to the control.
+        self.sent = None
+
     def widget(self, target):
         """Create the widget, bound to the given sound object."""
 
         self.target = target
-        self.control = self.create_control(getattr(target, self.attribute))
+        self.sent = getattr(target, self.attribute)
+        self.control = self.create_control(self.sent)
 
-        self.control.observe(
-            lambda change: setattr(self.target, self.attribute, change['new']),
-            names='value'
-        )
+        self.control.observe(self._on_change, names='value')
 
         return ipywidgets.VBox(
             [ipywidgets.Label(self.label), self.control],
             layout=ipywidgets.Layout(align_items='center', width=self.width),
         )
+
+    def _on_change(self, change):
+        """Set the attribute to the control's new value."""
+
+        setattr(self.target, self.attribute, change['new'])
 
     def refresh(self):
         """Update the control to the attribute's current value."""
@@ -93,6 +99,7 @@ class Control:
         if self.control is not None:
             value = getattr(self.target, self.attribute)
             if self.control.value != value:
+                self.sent = value
                 self.control.value = value
 
 
@@ -128,6 +135,36 @@ class Slider(Control):
             readout_format='.2f',
             layout=ipywidgets.Layout(height='180px'),
         )
+
+    def _on_change(self, change):
+        """Called whenever the slider's value changes, in one of three ways:
+
+        1. A hand moves the slider in the page.
+        2. The panel's refresh sets the slider to the attribute's value, say
+           0.5372. ipywidgets calls this method at once, inside refresh(),
+           with that exact value.
+        3. Later, as a separate call: the page can only show the slider in
+           whole steps, so it shows 0.54, and sends that back to Python.
+           When it arrives, the slider's value changes again, from 0.5372 to
+           0.54, and this method is called a second time.
+
+        Only the first should set the attribute. In the second, the
+        attribute already has that value, so there is nothing to set. The
+        third arrives late: by then a sweep may have moved the attribute on,
+        say to 0.5521, and setting it to 0.54 would move it back. The sweep
+        would then find a value it did not set, take it for a hand on the
+        knob, and stop.
+
+        The second and third both give a value within half a step of what
+        the panel sent, and a hand always moves the slider a whole step or
+        more, so a change that close to what the panel sent is ignored. It
+        is compared with what the panel sent, not with the attribute, since
+        the attribute may have moved on by the time the third arrives.
+        """
+        if abs(change['new'] - self.sent) <= self.step / 2:
+            return
+
+        super()._on_change(change)
 
 
 class Switch(Control):

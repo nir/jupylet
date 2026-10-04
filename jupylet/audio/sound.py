@@ -526,6 +526,15 @@ class Sound(object):
 
         if not self._done or self._a0 is None or len(self._a0) != self.frames:
             try:
+                #
+                # A sound can define pre_forward() to update its own state
+                # before each block is computed, such as a step sequencer
+                # sweeping a knob.
+                #
+                pre_forward = getattr(self, 'pre_forward', None)
+                if pre_forward is not None:
+                    pre_forward()
+
                 self._a0 = self.forward(*args, **kwargs)
             except:
                 self._error = trimmed_traceback()
