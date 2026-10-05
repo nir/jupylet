@@ -510,10 +510,10 @@ def wait_change(port, token, path, timeout):
     """Wait until the notebook's content changed, and things settled.
 
     Reads the notebook every 2 seconds. Its cells (their code and execution
-    counts) must differ from when it started, the kernel must be idle, and
-    nothing may have moved for one read: the person stopped typing, or a
-    run-all finished. A run shows up at its first cell, so the idle check is
-    what waits for the last.
+    counts) must differ from when it started, or the kernel must have been
+    seen busy since; the kernel must be idle, and nothing may have moved for one
+    read: the person stopped typing, or a run-all finished. A run shows up at
+    its first cell, so the idle check is what waits for the last.
 
     Args:
         port (int): Jupyter's port.
@@ -526,8 +526,16 @@ def wait_change(port, token, path, timeout):
         str: 'changed', or 'timeout'.
 
     Notes:
-        Not tested yet, and not known whether it sees what is being typed
-        before it is saved.
+        Not known whether it sees what is being typed before it is saved.
+        A run that leaves the same counts and is over between two reads goes
+        unseen, and ends in 'timeout': look at the notebook then anyway.
+
+    History:
+        2026-10-05, macOS: after setup's first run-all it waited until its
+        timeout: the shipped notebook has counts 1 to 14 saved, and a fresh
+        kernel's run-all gives the same counts, so the cells never differed.
+        The kernel's last_activity could not tell either: while the game ran,
+        it read "just now" every time.
     """
     name = os.path.splitext(os.path.basename(path))[0]
     args = {'notebook_name': name, 'response_format': 'detailed', 'limit': 0}
@@ -538,12 +546,16 @@ def wait_change(port, token, path, timeout):
         except (OSError, ValueError):
             return None
 
+    busy = False
     first = last = snapshot()
     t0 = time.time()
 
     while time.time() - t0 < timeout:
         time.sleep(2)
         now = snapshot()
+
+        k = _notebook_kernel(port, token, path)
+        busy = busy or bool(k and k['execution_state'] != 'idle')
 
         if now is None:
             continue
@@ -553,11 +565,13 @@ def wait_change(port, token, path, timeout):
 
         if first is None:
             first = now
-        elif settled and now != first:
-            k = _notebook_kernel(port, token, path)
+            continue
 
-            if k and k['execution_state'] == 'idle':
-                return 'changed'
+        if not settled or not k or k['execution_state'] != 'idle':
+            continue
+
+        if now != first or busy:
+            return 'changed'
 
     return 'timeout'
 
