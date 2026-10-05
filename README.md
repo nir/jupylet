@@ -197,7 +197,9 @@ sound visualizer Shadertoy as CC BY 4.0 license.
 
 <br>
 <p float="left">
-    <img alt="spaceship vr" height="200" src="https://github.com/user-attachments/assets/056d5402-2a01-41a8-8409-b4ba89e62db5" />       <img alt="breakout" height="200" src="https://github.com/user-attachments/assets/4fb3bdec-7461-47a4-a530-ff2735006762" />
+    <img alt="spaceship vr" height="200" src="https://github.com/user-attachments/assets/056d5402-2a01-41a8-8409-b4ba89e62db5" />       
+    <img alt="breakout" height="200" src="https://github.com/user-attachments/assets/4fb3bdec-7461-47a4-a530-ff2735006762" />
+    <img alt="tb-303" height="200" src="https://github.com/user-attachments/assets/49ff249e-e4d2-42f2-91dd-3e5a901e9fff" />
 </p>
 
 ## What's New in Version 0.9.4
