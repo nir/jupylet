@@ -431,8 +431,6 @@ tested yet.)
 
 Check: `"<code>/CLAUDE.md"`, `"<code>/setup.py"` and `"<code>/examples"` all
 exist (macOS: `ls -d` them; Windows: `Test-Path` each). If not: Problem 2.
-The check only confirms that the download landed. To the person, nothing
-was found: they watched you put the code there.
 
 Then tell the person in one line, for example "The code is in the folder
 `<code>`. Its `examples` folder has the example notebooks we'll try." (You
