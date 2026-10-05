@@ -267,7 +267,7 @@ to it above): if they did not say yes to it above, ask first, for example:
 After a clear yes, use the environment that Jupyter runs from (the last
 column above) as `<env>`, with no question: it is the one their notebook
 runs in. Run step 2's checks on it (from "Then three checks"). If its
-`[claude]` check passes and `nbmodel-off` (step 4) prints `off`, try that
+`[claude]` check passes and `prepare` (step 4) prints `off`, try that
 Jupyter, with the port and token from the check:
 `<python> -m jupylet.claude tools <port> <token>`. If it lists
 `notebook_run-all-cells`, it is connectable: just connect, with step 9, that
@@ -286,9 +286,9 @@ tools were installed, with nbmodel off. Go one question at a time:
    Ask only this. Installing stops nothing, so saving and closing belong to
    the next question, once it is installed.
 
-   After a clear yes, install it as `CLAUDE_SETUP.md`'s "Claude tools for an
-   existing install" says, without its own question (this one covers it),
-   then run `nbmodel-off` (step 4) right away, so it is off however Jupyter
+   After a clear yes, install it as Problem 17 says, without its own
+   question (this one covers it),
+   then run `prepare` (step 4) right away, so it is off however Jupyter
    is started next.
 2. Ask, for example:
 
@@ -296,7 +296,7 @@ tools were installed, with nbmodel off. Go one question at a time:
    > so I need to stop Jupyter and start it again. Please save your notebook
    > and let me know when I can proceed.
 
-   (If the extension was there already and only `nbmodel-off` printed
+   (If the extension was there already and only `prepare` printed
    `turned off`, give that reason instead: a setting that keeps notebooks
    from freezing only takes effect in a fresh start.) Don't start a second
    Jupyter next to theirs instead: two Jupyters on the same notebook can
@@ -467,7 +467,7 @@ Eight characters, so a kid can paste or type it. That is safe only because
 Jupyter accepts connections from this computer alone (step 5 never passes
 `--ip`): never make it reachable from the network with a token this short.
 
-### Step 4. Choose a port, and check that nbmodel is off
+### Step 4. Choose a port, and prepare the environment
 
 Jupyter listens on a port, a number on this computer. Use 8888 if it is
 free:
@@ -478,21 +478,20 @@ A number other than `0`: it is free, and `<port>` is 8888. This is part of
 starting Jupyter in step 5, with nothing for the person to act on. If it
 prints `0`: Problem 11, which gives you `<port>`.
 
-Then make sure `jupyter_server_nbmodel` is off. Do this every time, right
-before starting Jupyter:
+Then prepare the environment, every time, right before starting Jupyter:
 
-`<python> -m jupylet.claude nbmodel-off`
+`<python> -m jupylet.claude prepare`
 
-The `[claude]` extra brings nbmodel along. With it, Jupyter runs cells on the
-server, and a notebook that keeps sending messages (a panel, a live loop, a
-thread that prints) leaves a cell hanging at `[*]` for good after a few
-minutes. Turning it off is part of starting Jupyter, like checking the
-port, so it needs no question of its own. The same command also turns off
-JupyterLab's news pop-up in that environment, however Jupylet was installed;
-that needs no comment.
+It turns off `jupyter_server_nbmodel`, which the `[claude]` extra brings
+along and which makes cells hang at `[*]` after a few minutes. It also keeps
+a notebook's live copy for as long as Jupyter runs, so the page stays in
+sync with your changes, and turns off JupyterLab's news pop-up. Each is set
+once, saved in the environment; the docstrings of `prepare()` and what it
+calls in `jupylet/claude.py` explain why. It is part of starting Jupyter,
+like checking the port, so it needs no question of its own.
 
-Expected: `off` or `not installed`: nothing changed, so nothing to mention.
-`turned off`: it was on,
+It prints nbmodel's state. Expected: `off` or `not installed`: nothing
+changed, so nothing to mention. `turned off`: it was on,
 and is now off, saved in the environment; tell the person in one plain line,
 for example "I switched off a Jupyter setting that can make notebooks freeze
 after a few minutes." If it prints `still on: ...`, tell the person plainly
@@ -511,11 +510,10 @@ For a venv, activate it with its own script instead of `conda activate`:
 
 `<scratchpad>` is your scratchpad folder. `detach` prints a process id and
 returns at once; Jupyter's own output goes to `jupyter.log`. Never start
-Jupyter as a background task (`run_in_background`): Claude Code ends a
-background task when it reaches its time limit, or when the session ends,
-and Jupyter would end with it, stopping whatever the notebooks are running,
-which may be a computation meant to run for hours. A detached Jupyter runs
-until it is stopped (Part 3). Never use the Terminal panel for this either
+Jupyter as a background task (`run_in_background`): it would stop with the
+task, and with it whatever the notebooks are running (`detach()` in
+`jupylet/claude.py` explains). A detached Jupyter runs until it is stopped
+(Part 3). Never use the Terminal panel for this either
 (Problem 5). Starting takes a few
 seconds; say so once, and use the wait to explain, for example "Starting
 Jupyter now, one second. It runs here on your computer, and the browser panel
@@ -756,7 +754,8 @@ code are not touched."
 2. From `<folder>`, list what would be deleted:
    `<python> -m jupylet.claude cleanup`
    It only lists Jupyter's own state files (the `.jupyter` folder in
-   `examples`, the `.jupyter_ystore.db` files, and the cookie secret and
+   `examples`, `.jupyter_ystore.db` files left from before `prepare` set up
+   the environment, and the cookie secret and
    stale `jpserver-*` / `kernel-*` files in Jupyter's runtime folder), never
    a notebook. Check the list, then delete with
    `<python> -m jupylet.claude cleanup --yes`.
@@ -878,10 +877,25 @@ which page answers. Use one tab; close extra ones with `tabs_close`.
 
 **17. The `[claude]` extra is not installed (step 2 fails).**
 Jupylet is installed, but without the tools you work with in the notebook
-(`jupyter-mcp-server` and what it brings). Adding them is an install: read
-`<folder>/CLAUDE_SETUP.md` and follow its section "Claude tools for an
-existing install", which asks the person first. It hands back here: after a
-yes and a working install, run the checks in step 2 again and go on.
+(`jupyter-mcp-server` and what it brings). Adding them is an install, into
+the environment that already has Jupylet (`<env>`). If step 1 already asked
+(a notebook open in their own Jupyter), don't ask again. Otherwise ask:
+
+> To work in the notebook with you, I need to install Jupylet's Claude
+> tools. They let me collaborate with you on the code in your notebook: see
+> it, add to it, run it, and see what it does. May I install them?
+
+If step 2 said the environment's Jupylet comes from another copy, add that
+installing also points the environment at this Jupylet folder, instead of
+the other copy. After a clear yes:
+
+`"<python>" -m pip install -e "<folder>[claude]"` (Windows 11: `& "<python>" ...`)
+
+It installs Jupylet from `<folder>` (editable) with the extra. Check:
+`"<python>" -I -c "import jupyter_mcp_server"` gives no error. If the install
+or the check fails, tell the person plainly and stop. Otherwise run the
+checks in step 2 again and go on (step 4's `prepare` turns off nbmodel, which
+comes with the extra, before Jupyter starts).
 
 If they say no, tell them plainly what that means, for example:
 
@@ -957,7 +971,7 @@ Expected: no error. If it fails: Problem 17.
 
 The helper commands (`wait`, `attach`, `call`, `tools`) are plain HTTP and
 need no activation; only Jupyter itself does (step 5). Steps 3 and 4 are the
-same, with `& "<python>"` in front (for `nbmodel-off`, with the current folder
+same, with `& "<python>"` in front (for `prepare`, with the current folder
 set to `<folder>` first, as in "Steps 6 to 10 on Windows 11"). A free port prints `10061` (connection
 refused): only `0` means it is taken. The trust check and fix are also the
 same as in step 2, with `& "<python>"` in front: they resolve the notebook
@@ -1057,17 +1071,10 @@ tested on Windows yet; the script is in git history if it fails.)
 
 Part 3 applies: `shutdown` finds your Jupyter's processes on Windows too (the
 ones whose command line carries your token: the launcher `cmd`, `jupyter`,
-`jupyter-lab` and two `python`; all are yours). This replaced a manual
-procedure on 2026-10-01 and is not tested on Windows yet. Run it with the
-current folder set to `<folder>`. Then:
-
-1. If it prints `still running`, list what is left with
-   `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' } | Select-Object ProcessId, Name, CommandLine`,
-   check each command line by eye (your own launcher and its children, with
-   your token), and end each one by its id, never by name:
-   `Stop-Process -Id <id> -Force`. Never stop a process without your token.
-2. Now that no Jupyter is running, delete Jupyter's own state files (never
-   a notebook), with the PowerShell tool like everything else here:
-   `foreach ($f in "<folder>\examples\.jupyter_ystore.db", "<folder>\examples\.jupyter\collaboration_sessions.json") { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f } }`
-   Stale collaboration state is the likely cause of cells added over MCP not
-   showing in the page (`EXPERIENCE.md`).
+`jupyter-lab` and two `python`; all are yours). Not tested on Windows yet.
+Run it with the current folder set to `<folder>`. If it prints `still
+running`, list what is left with
+`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '<token>' } | Select-Object ProcessId, Name, CommandLine`,
+check each command line by eye (your own launcher and its children, with
+your token), and end each one by its id, never by name:
+`Stop-Process -Id <id> -Force`. Never stop a process without your token.

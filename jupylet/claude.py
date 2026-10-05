@@ -43,7 +43,7 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
     python -m jupylet.claude running [<folder>]
-    python -m jupylet.claude nbmodel-off
+    python -m jupylet.claude prepare
 
 `find-env` is the one command meant to run from any Python, with or
 without jupylet, such as Miniforge's `base` or a plain python3 (run this
@@ -131,23 +131,39 @@ def _source_folder(url):
 
 
 def find_env(version, root=None, folder=None, any_version=False):
-    """Every environment that can run the jupylet in folder, best first.
+    """Find every environment that can run the jupylet in folder, best first.
 
-    An environment qualifies when its jupylet is installed (editable) from
-    folder itself, whatever version it reports, or when it has exactly this
-    version from anywhere else, or, with any_version, any jupylet at all.
-    They come in that order; within each kind, the most recently changed
-    environment comes first.
+    Looks in Miniforge's own folder and its envs, in every environment listed in
+    ~/.conda/environments.txt, and in a venv in folder (.venv or venv). In each,
+    it runs a short probe with that environment's python. Uses only the
+    standard library, so it runs by file path under any Python, on macOS and
+    Windows.
 
-    root is Miniforge's own folder, ~/miniforge3 by default. folder is the
-    jupylet folder this file is in, by default. Only the standard library
-    and a subprocess call per candidate, so it runs by file path under any
-    Python (Miniforge's base Python, or a plain python3), the same on macOS
-    and Windows.
+    Args:
+        version (str): The version of the jupylet in folder.
+        root (str): Miniforge's folder; ~/miniforge3 by default.
+        folder (str): The jupylet folder; the one this file is in by default.
+        any_version (bool): Also list environments with any other version.
 
-    Returns a list of (env path, python path, kind, source) tuples: kind is
-    'conda' or 'venv', and source is 'this folder', or the version and where
-    it came from.
+    Returns:
+        list: (env path, python path, kind, source) tuples. kind is 'conda' or
+            'venv'. source is 'this folder' for an editable install from
+            folder, or '<version> from <path>', or '<version> from a package
+            index'. 'this folder' comes first, then the same version, then,
+            with any_version, other versions; within each, the most recently
+            changed environment first.
+
+    Notes:
+        The source is decided by where pip installed it from (direct_url.json),
+        not by the version: two copies can report the same version and differ.
+        'this folder' does not mean the version still matches: a folder can be
+        reused, or pulled since.
+        The probe runs from inside the environment's folder, so a folder named
+        jupylet in the current folder cannot shadow the real package.
+
+    History:
+        2026-09-26, macOS: an environment had jupylet installed editable from
+        another checkout; notebooks imported it, and failed on anything new.
     """
     if root is None:
         root = os.path.expanduser(os.path.join('~', 'miniforge3'))
@@ -209,7 +225,18 @@ def _rpc(port, token, body):
 
 
 def wait(port, token, timeout=60):
-    """Wait until Jupyter answers its health check; True when it does."""
+    """Wait until Jupyter answers its health check.
+
+    Polls http://localhost:<port>/mcp/healthz every 2 seconds.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        bool: True once it answers healthy, False on timeout.
+    """
     t0 = time.time()
 
     while time.time() - t0 < timeout:
@@ -231,13 +258,33 @@ def wait(port, token, timeout=60):
 
 
 def detach(log, command):
-    """Start a command detached, with its output going to the file log, and
-    return its process id.
+    """Start a command detached, with its output going to a log file.
 
-    A background task of Claude Code is ended when it reaches its time limit,
-    or when the session ends, and a Jupyter started as one ends with it,
-    with whatever its notebooks are running. A detached process belongs to
-    no task, and runs until it is stopped.
+    On macOS and Linux it runs in its own session. On Windows it runs with no
+    window, in its own process group, and out of the job that Claude Code's
+    task may be in, if that job allows it.
+
+    Args:
+        log (str): The file the command's output is appended to.
+        command (list): The command and its arguments.
+
+    Returns:
+        int: The process id.
+
+    Notes:
+        A background task of Claude Code ends when it reaches its time limit
+        (10 minutes at most), when the session ends, or when the person rewinds
+        the conversation, and a Jupyter started as one ends with it, with
+        whatever its notebooks were running. A detached process belongs to no
+        task, and runs until it is stopped.
+        Not tested yet: rewinding or quitting the app with a detached Jupyter,
+        and detaching on Windows.
+
+    History:
+        2026-09-25, macOS: rewinding the conversation ended the background task
+        running Jupyter, and its kernel.
+        2026-10-02, macOS: the background task reached its time limit, and both
+        kernels ended with it. Jupyter has been started detached since.
     """
     if sys.platform != 'win32':
         kwargs = dict(start_new_session=True)
@@ -274,15 +321,32 @@ def detach(log, command):
 
 
 def tools(port, token):
-    """Names of the tools Jupyter offers."""
+    """List the tools Jupyter offers.
+
+    Returns:
+        list: The tools' names.
+    """
     out = _rpc(port, token, {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'})
     return [t['name'] for t in out['result']['tools']]
 
 
 def call(port, token, tool, args=None):
-    """Call one Jupyter tool and return its text answer."""
-    # The server only knows the notebook_* tools (e.g. run-all) once it has
-    # been asked for its tool list, otherwise: "Unknown tool".
+    """Call one of Jupyter's tools.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        tool (str): The tool's name, such as 'read_cell'.
+        args (dict): The tool's arguments.
+
+    Returns:
+        str: The tool's text answer, or 'ERROR: <message>'.
+
+    Notes:
+        It asks for the tool list first, every time: the server only knows the
+        page's tools, such as notebook_run-all-cells, once it has been asked for
+        its list, and answers "Unknown tool" otherwise (CLAUDE.md, Problem 3).
+    """
     tools(port, token)
 
     out = _rpc(port, token, {
@@ -311,9 +375,19 @@ def _api(port, token, path, method='GET', body=None):
 
 
 def kernel(port, token, path, timeout=60):
-    """Id of the idle kernel of an open notebook, waiting for it; else None.
+    """Find the kernel of a notebook open in the browser, once it is idle.
 
-    The notebook only has a kernel once it is open in the browser.
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        str: The kernel's id, or None on timeout.
+
+    Notes:
+        A notebook only gets a kernel once it is open in the browser.
     """
     t0 = time.time()
 
@@ -326,7 +400,20 @@ def kernel(port, token, path, timeout=60):
 
 
 def attach(port, token, path):
-    """Attach the Jupyter tools to an open notebook and its kernel."""
+    """Attach the Jupyter tools to a notebook open in the browser.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+
+    Returns:
+        str: The answer of use_notebook; it contains "Successfully activate
+            notebook" when it worked.
+
+    Raises:
+        SystemExit: If the notebook has no kernel within a minute.
+    """
     k = kernel(port, token, path)
 
     if not k:
@@ -350,10 +437,26 @@ def _notebook_kernel(port, token, path):
 
 
 def wait_open(port, token, path, timeout):
-    """True once the notebook is open in a signed-in browser page.
+    """Wait until the notebook is open in a signed-in browser page.
 
-    The server cannot see the browser's sign-in, but the page only opens the
-    notebook, and so only starts its kernel session, after signing in.
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        bool: True once it is open, False on timeout.
+
+    Notes:
+        The server cannot see the browser's sign-in, but the page only opens the
+        notebook, and so only starts its session, after signing in. It looks
+        the session up on every check, so it keeps working after
+        replace_kernel().
+
+    History:
+        2026-09-22, Windows 11: with the page signed out, on the login page, no
+        session appeared.
     """
     return _wait_until(lambda: _notebook_kernel(port, token, path) is not None, timeout)
 
@@ -361,10 +464,29 @@ def wait_open(port, token, path, timeout):
 def watch(port, token, path, timeout, since=None):
     """Wait until the notebook's kernel did something after `since`.
 
-    Returns ('ran', time) once the kernel was active after `since` and is idle
-    again, or ('timeout', since). Pass the returned time to the next watch so
-    nothing in between is missed. Any kernel request counts (a Tab completion
-    too), not only running a cell.
+    Polls the kernel's last_activity in /api/sessions every 2 seconds.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+        timeout (float): Seconds to wait at most.
+        since (str): The time returned by the previous watch; now if None.
+
+    Returns:
+        tuple: ('ran', <time>) once the kernel was active after since and is
+            idle again, or ('timeout', since). Pass the time on to the next
+            watch, so nothing in between is missed.
+
+    Notes:
+        Any kernel request moves last_activity, a Tab completion too, so 'ran'
+        means something happened, not that a cell ran. To find which cell ran,
+        compare execution counts before and after; the highest count misleads,
+        since cells keep the counts of earlier kernels.
+
+    History:
+        2026-09-22, Windows 11: over idle minutes with the page open, nothing
+        moved last_activity by itself; two cells showed 16 next to a fresh 1.
     """
     if since is None:
         k = _notebook_kernel(port, token, path)
@@ -385,13 +507,27 @@ def watch(port, token, path, timeout, since=None):
 
 
 def wait_change(port, token, path, timeout):
-    """Wait until the notebook's content changed and things have settled.
+    """Wait until the notebook's content changed, and things settled.
 
-    Returns 'changed' once the cells (their code and execution counts) differ
-    from when this started, the kernel is idle and nothing moved for one poll
-    (about 2 seconds): the person stopped typing, or a run-all finished. A run
-    shows up at its first cell, so the idle check is what waits for the last.
-    Returns 'timeout' otherwise. The notebook must be attached (`attach`).
+    Reads the notebook every 2 seconds. Its cells (their code and execution
+    counts) must differ from when it started, the kernel must be idle, and
+    nothing may have moved for one read: the person stopped typing, or a
+    run-all finished. A run shows up at its first cell, so the idle check is
+    what waits for the last.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder; it must
+            be attached (attach()).
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        str: 'changed', or 'timeout'.
+
+    Notes:
+        Not tested yet, and not known whether it sees what is being typed
+        before it is saved.
     """
     name = os.path.splitext(os.path.basename(path))[0]
     args = {'notebook_name': name, 'response_format': 'detailed', 'limit': 0}
@@ -427,12 +563,36 @@ def wait_change(port, token, path, timeout):
 
 
 def replace_kernel(port, token, path, timeout=60):
-    """Shut the notebook's kernel down and start a new one; return its id.
+    """Shut the notebook's kernel down, and start a new one in its place.
 
-    run-all times out after the kernel was restarted in place (same id), and
-    works with a new kernel. Returns once the new kernel is idle and the
-    browser page is attached to it (about 10 seconds): run-all fails with
-    "Not Found" before that.
+    Returns once the new kernel is idle, and the browser page is attached to it
+    (about 10 seconds).
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+        timeout (float): Seconds to wait at most for the new kernel.
+
+    Returns:
+        str: The new kernel's id.
+
+    Raises:
+        SystemExit: If the notebook is not open in the browser.
+
+    Notes:
+        It ends whatever the old kernel was running, a game or a sound
+        included: look first whether run-all really failed.
+        run-all timed out after the kernel was restarted in place (the Restart
+        Kernel button, which keeps the id), and worked with a new kernel. The
+        cause is unknown. Before the page is attached, run-all fails with
+        "Not Found".
+
+    History:
+        2026-09, macOS: run-all timed out after Restart Kernel; not seen in one
+        test with nbmodel off.
+        2026-09-22, Windows 11: a run-all that timed out had run every cell
+        anyway, as their new execution counts showed.
     """
     sessions = [s for s in _api(port, token, '/api/sessions') if s['path'] == path]
 
@@ -481,12 +641,29 @@ def _wait_until(check, timeout):
 
 
 def _pids(token):
-    """Ids of the processes started with this Jupyter token.
+    """Find the processes of the Jupyter started with this token.
 
     On macOS and Linux, the processes whose command has the token option. On
-    Windows, every process whose command line has the token: the launcher
-    `cmd` passes it on as a plain argument, and all of them belong to that
-    Jupyter (CLAUDE.md, Part 6).
+    Windows, every process whose command line has the token: the launcher cmd
+    passes it on as a plain argument, and all of them belong to that Jupyter
+    (CLAUDE.md, Part 6). This process, and those that started it, never count.
+
+    Args:
+        token (str): Jupyter's token.
+
+    Returns:
+        list: Process ids.
+
+    Notes:
+        Processes are found by the token, never by a process id from Jupyter's
+        records, which can be stale.
+
+    History:
+        2026-09-22, Windows 11: Jupyter's records named two dozen servers long
+        gone, and a recorded process id had come to belong to the Claude app.
+        2026-10-03, macOS: shutdown ended the shell running it, whose longer
+        command had the token in it; since then, this process and those that
+        started it are left out (_ancestors()).
     """
     if sys.platform == 'win32':
         script = (
@@ -507,18 +684,75 @@ def _pids(token):
     pids = [int(line.split(None, 1)[0]) for line in out.splitlines()
             if line.strip() and match(line)]
 
-    return [p for p in pids if p != os.getpid()]
+    #
+    # Leave out this process and those that started it: a shell running a
+    # longer command can have the token in its command line too, and must
+    # not be ended with Jupyter.
+    #
+    ancestors = _ancestors()
+
+    return [p for p in pids if p not in ancestors]
+
+
+def _ancestors():
+    """Find this process, and every process that started it.
+
+    Returns:
+        set: Process ids, up to the first process of the system.
+    """
+
+    if sys.platform == 'win32':
+        script = (
+            "Get-CimInstance Win32_Process | ForEach-Object "
+            "{ '{0} {1}' -f $_.ProcessId, $_.ParentProcessId }"
+        )
+        command = ['powershell', '-NoProfile', '-Command', script]
+    else:
+        command = ['ps', '-axo', 'pid=,ppid=']
+
+    try:
+        out = subprocess.run(command, capture_output=True, text=True).stdout
+    except OSError:
+        return {os.getpid()}
+
+    parents = dict(map(int, line.split()) for line in out.splitlines() if len(line.split()) == 2)
+
+    pid, ancestors = os.getpid(), set()
+
+    while pid and pid not in ancestors:
+        ancestors.add(pid)
+        pid = parents.get(pid)
+
+    return ancestors
 
 
 def shutdown(port, token, timeout=30):
-    """Shut down the Jupyter server that was started with this token.
+    """Shut down the Jupyter server started with this token, and its kernels.
 
-    Only for the server you started yourself: it ends every kernel on it.
-    In this order: every notebook session, every remaining kernel (there can
-    be kernels without a notebook), then the server, then, only if needed, the
-    process itself. Shutting down takes a while (about 10 seconds is normal),
-    and the process can outlive it. Returns 'stopped', 'not running',
-    'stopped after ending its process', or 'still running'.
+    Ends every notebook session and every kernel (there can be kernels without
+    a notebook), asks the server to shut down, and waits for its port to close
+    and its processes to exit. If any process lingers, it ends it: first
+    politely, then by force. Only for the server you started yourself. About 10
+    seconds is normal.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        timeout (float): Seconds to wait at each stage.
+
+    Returns:
+        str: 'stopped', 'not running', 'stopped after ending its process',
+            'a kernel is still running: not shutting the server down', or
+            'still running'.
+
+    Notes:
+        The processes can outlive the shutdown request; ending them here
+        spares the person a problem they cannot solve.
+
+    History:
+        2026-09-22 and 2026-09-23, Windows 11: in two of three runs, the port
+        closed but all five of the launcher's processes stayed alive; ending
+        each by its id worked at once.
     """
     if not _answers(port):
         return 'not running'
@@ -568,11 +802,30 @@ def shutdown(port, token, timeout=30):
 def run_cell(port, token, index, start):
     """Run one cell the way a person would: select it in the page, then run it.
 
-    Moves the page's selection (the person's cursor) to the cell at index, one
-    cell at a time, and runs it only if its source starts with start, since
-    the wrong cell could restart what the person is running. Needs the
-    run-cell tools allowed in the start command (CLAUDE.md, Part 6). Returns
-    the answer of notebook_run-cell, or why it did not run.
+    Moves the page's selection (the person's cursor) to the cell, one cell at a
+    time, and runs it only if its source starts with start. Needs the run-cell
+    tools allowed in the start command (CLAUDE.md, Part 6).
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        index (int): The cell's index.
+        start (str): How the cell's source starts.
+
+    Returns:
+        str: The answer of notebook_run-cell ('True' when it ran), or
+            'not run: ...', with the reason.
+
+    Notes:
+        The wrong cell could restart what the person is running, and indices
+        shift whenever the person adds or deletes a cell, so the source is
+        checked before running.
+
+    History:
+        2026-09-22, Windows 11: 33 moves took about 1.6 seconds.
+        2026-09-25, macOS: edits made by indices read a few minutes earlier
+        replaced three cells the person had just added.
+        2026-10-01: replaced a longer script; not tested on Windows since.
     """
     import ast
 
@@ -597,8 +850,12 @@ def run_cell(port, token, index, start):
 
 
 def _is_jupylet_folder(root):
-    """Whether a Jupyter serving root serves Jupylet's code folder: root, or
-    a folder up to two levels above it, has the jupylet package in it."""
+    """Tell whether a Jupyter serving root serves Jupylet's code folder.
+
+    Returns:
+        bool: True if root, or a folder up to two levels above it, has the
+            jupylet package in it.
+    """
     for folder in (root, os.path.dirname(root), os.path.dirname(os.path.dirname(root))):
         if os.path.exists(os.path.join(folder, 'jupylet', '__init__.py')):
             return True
@@ -607,8 +864,11 @@ def _is_jupylet_folder(root):
 
 
 def _env_of(pid):
-    """The environment folder a process runs from, from its program's path,
-    or '' if it cannot be told."""
+    """Find the environment folder a process runs from, by its program's path.
+
+    Returns:
+        str: The folder, or '' if it cannot be told.
+    """
     if sys.platform == 'win32':
         script = '(Get-CimInstance Win32_Process -Filter "ProcessId=%d").ExecutablePath' % int(pid)
         command = ['powershell', '-NoProfile', '-Command', script]
@@ -636,15 +896,25 @@ def _env_of(pid):
 
 
 def running(folder=None):
-    """The Jupyters running now, as (port, token, folder, is it Jupylet's,
-    the notebooks open in it, the environment it runs from).
+    """List the Jupyters running now.
 
-    Standard library only, so it runs before any environment is known: it
-    reads Jupyter's own records of its running servers (jpserver-*.json in
+    Reads Jupyter's own records of its running servers (jpserver-*.json in
     Jupyter's runtime folder). A server counts only if it answers on its port
-    and accepts the token in its record: Windows keeps records from servers
-    long gone, and another Jupyter may have taken their port since. With
-    folder, only those serving folder/examples or a folder inside it.
+    and accepts the token in its record. Uses only the standard library, so it
+    runs before any environment is known.
+
+    Args:
+        folder (str): If given, only the Jupyters serving folder/examples, or a
+            folder inside it.
+
+    Returns:
+        list: (port, token, folder served, whether it is Jupylet's, the
+            notebooks open in it, the environment it runs from) tuples.
+
+    Notes:
+        Records can outlive their servers, and another Jupyter may have taken
+        their port since, hence both checks. Ports are probed all at once:
+        a refused connection takes seconds on Windows.
     """
     runtime = os.environ.get('JUPYTER_RUNTIME_DIR')
 
@@ -713,7 +983,20 @@ def _runtime_dir():
 
 
 def state_files(root='.'):
-    """Files Jupyter created to keep track of things, never notebooks."""
+    """List the files Jupyter created to keep track of things, never notebooks.
+
+    Args:
+        root (str): The Jupylet folder.
+
+    Returns:
+        list: Paths: the .jupyter folders, any .jupyter_ystore.db, and the
+            cookie secret and jpserver-* and kernel-* files in Jupyter's
+            runtime folder.
+
+    Notes:
+        .jupyter_ystore.db is only left from before prepare() set up the
+        environment (see _collaboration_config()).
+    """
     root = os.path.abspath(root)
     paths = [
         os.path.join(root, '.jupyter'),
@@ -733,10 +1016,18 @@ def state_files(root='.'):
 
 
 def cleanup(root='.', delete=False):
-    """List (or, with delete=True, remove) Jupyter's state files.
+    """List Jupyter's state files, or delete them.
 
-    Only for use after Jupyter was shut down: it deletes the cookie secret,
-    which signs the browser out, and the runtime files of running servers.
+    Only after Jupyter was shut down: it deletes the cookie secret, which signs
+    the browser out, and the runtime files of running servers.
+
+    Args:
+        root (str): The Jupylet folder.
+        delete (bool): Delete them, rather than only list them.
+
+    Prints:
+        'would delete <path>' or 'deleted <path>' per file, or 'nothing to
+        clean up'.
     """
     paths = state_files(root)
 
@@ -788,23 +1079,116 @@ def _news_off():
         shutil.copy(src, folder)
 
 
-def nbmodel_off():
+def _collaboration_config():
+    """Keep a notebook's live copy for as long as Jupyter runs.
+
+    Writes two settings into this Python's environment, in
+    etc/jupyter/jupyter_server_config.json, keeping whatever else is there,
+    unless both are set there already:
+
+    - YDocExtension.document_cleanup_delay = null: Jupyter keeps a notebook's
+      live copy, the one the page and the tools share, for as long as it runs.
+    - YDocExtension.ystore_class = TempFileYStore: the log of edits it could be
+      rebuilt from lives in a temporary folder, only for that run.
+
+    Notes:
+        By default, Jupyter drops the live copy a minute after the last
+        connection closes, and rebuilds it from .jupyter_ystore.db, which
+        survives restarts. A page still open from before then stops taking the
+        tools' changes: a cell inserted or edited through them is in
+        read_notebook and in the saved file, but the page shows fewer cells, or
+        that cell as one empty line, even after a reload.
+        Settings in the jupyter_server_config.d folder have no effect: Jupyter
+        reads that folder only to turn extensions on and off.
+        To check: `jupyter lab --show-config` lists both under YDocExtension,
+        Jupyter's log says the notebook was "loaded from file", and no
+        .jupyter_ystore.db appears.
+
+    History:
+        2026-09-22, Windows 11; 2026-09-28, macOS: cells added over MCP did not
+        show in the page; fixed by moving the state files aside and restarting.
+        2026-10-02 and 2026-10-04, macOS: twice more; the log showed the cause
+        ("Deleting Y document from memory", then "loaded from the ystore
+        SQLiteYStore" when the page came back, after the computer slept).
+    """
+    #
+    # Jupyter reads general settings from this file, in each environment's
+    # own folder. The jupyter_server_config.d folder beside it is read only
+    # for turning extensions on and off.
+    #
+    path = os.path.join(sys.prefix, 'etc', 'jupyter', 'jupyter_server_config.json')
+
+    config = {}
+
+    if os.path.exists(path):
+        with open(path) as f:
+            config = json.load(f)
+
+    ydoc = config.setdefault('YDocExtension', {})
+
+    if 'ystore_class' in ydoc and 'document_cleanup_delay' in ydoc:
+        return
+
+    ydoc.setdefault('ystore_class', 'jupyter_server_ydoc.stores.TempFileYStore')
+    ydoc.setdefault('document_cleanup_delay', None)
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    with open(path, 'w') as f:
+        json.dump(config, f, indent=2)
+
+
+def prepare():
+    """Prepare this Python's environment to run Jupylet with Claude.
+
+    Run before each start of Jupyter. Each part is set once, saved in the
+    environment, and only checked after that:
+
+    - Turn off jupyter_server_nbmodel (_nbmodel_off()).
+    - Keep a notebook's live copy for as long as Jupyter runs
+      (_collaboration_config()).
+    - Turn off JupyterLab's news pop-up (_news_off()).
+
+    Returns:
+        str: nbmodel's state: 'off', 'turned off', 'not installed', or
+            'still on: ...'.
+    """
+    _news_off()
+    _collaboration_config()
+
+    return _nbmodel_off()
+
+
+def _nbmodel_off():
     """Make sure jupyter_server_nbmodel is off in this Python's environment.
 
-    jupyter-mcp-server requires it, but with it Jupyter runs cells on the
-    server, and the server reads the kernel's messages only while a cell
-    runs. A panel or a thread that keeps sending messages then fills that
-    unread queue, and a few minutes later a cell hangs at [*] for good.
-    Without it, the page runs cells itself, as in plain JupyterLab.
+    Turns off both its parts, the server's and the browser's, in this
+    environment's own configuration, with Jupyter's own commands.
 
-    Both its parts are turned off, in this environment's own configuration,
-    using Jupyter's own commands. It also turns off JupyterLab's news pop-up
-    there, which says nothing about nbmodel but belongs to the same moment. Returns 'off', 'turned off',
-    'not installed', or 'still on: ...'.
+    Returns:
+        str: 'off', 'turned off', 'not installed', or 'still on: ...', naming
+            the part still on.
+
+    Notes:
+        jupyter-mcp-server requires nbmodel, but with it Jupyter runs cells on
+        the server, through one kernel client that reads the kernel's messages
+        only while a cell runs. A panel or a thread that keeps sending messages
+        fills that unread queue past its limit of 1000 messages, newer ones are
+        dropped, and among them a cell's 'idle' message, which the server waits
+        for with no timeout: the cell hangs at [*] for good. Output a thread
+        prints after its cell finished never shows either.
+        Without nbmodel, the page runs cells itself, as in plain JupyterLab, and
+        every tool still works except execute_cell and insert_execute_code_cell,
+        which hung anyway.
+
+    History:
+        2026-09-25, macOS: a cell hung at [*], seen 4 times, after a live loop
+        or a self-refreshing widget had run for a while.
+        2026-10-01, macOS: seen again with a Panel refreshing while a live loop
+        turned a knob (about 8 messages a second); every tool used was verified
+        to work with nbmodel off.
     """
     import importlib.util
-
-    _news_off()
 
     if importlib.util.find_spec(NBMODEL) is None:
         return 'not installed'
@@ -880,8 +1264,8 @@ def main(argv):
     elif cmd == 'cleanup' and args in ([], ['--yes']):
         cleanup(delete=args == ['--yes'])
 
-    elif cmd == 'nbmodel-off' and not args:
-        result = nbmodel_off()
+    elif cmd == 'prepare' and not args:
+        result = prepare()
         print(result)
         return 1 if result.startswith('still on') else 0
 
@@ -891,9 +1275,19 @@ def main(argv):
 
 
 def _json_arg(arg):
-    """JSON arguments of a tool call: the JSON itself, @file to read it from
-    a file, or - to read it from stdin. Windows PowerShell 5.1 strips the
-    double quotes from a JSON argument, so there the file or stdin is safer."""
+    """Read a tool call's JSON arguments, given on the command line.
+
+    Args:
+        arg (str): The JSON itself, '@<file>' to read it from a file, or '-' to
+            read it from stdin.
+
+    Returns:
+        dict: The arguments.
+
+    Notes:
+        Windows PowerShell 5.1 strips the double quotes from a JSON argument,
+        so there the file or stdin is the safe way.
+    """
     if arg == '-':
         return json.loads(sys.stdin.read().lstrip('﻿'))
 

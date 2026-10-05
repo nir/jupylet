@@ -66,8 +66,8 @@ Retired, Unreviewed.
    old runtime files or process ids, and never touch anything that is not yours.
 3. Before running or deleting something in the person's notebook, check that
    the target is what you think it is, and stop if it is not.
-4. `execute_cell` needs nbmodel, which `CLAUDE.md` step 4 turns off. Use
-   run-all, or `claude.py run-cell` (`CLAUDE.md`, Part 6).
+4. `execute_cell` needs nbmodel, which `prepare` (`CLAUDE.md` step 4) turns
+   off. Use run-all, or `claude.py run-cell` (`CLAUDE.md`, Part 6).
 5. Canvas shown as `Image(value=...)` text: check notebook/cell trust
    first (see "The canvas shows as text instead of a picture"). It is not
    about state files, position, the browser, or the executor.
@@ -238,6 +238,15 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   "Execution timed out", no execution count), and `CLAUDE.md` Problem 8 says
   the same on the Mac. `execute_code` is a different path and works, but it
   puts nothing in a cell.
+- **Auto mode blocks running code copied out of a web page.**
+  `[macOS, seen once, 2026-10-05, Claude Code auto mode]` Setup used to
+  ship a helper script inside `CLAUDE_SETUP.md`, to save into the scratchpad
+  and run. A fresh session following the page from GitHub had that save
+  denied by the auto mode classifier ("Code from External"), and the denial
+  told it to stop and explain, so the person got a security report instead
+  of an install. Auto mode is the default, so every person would hit it. The
+  helper is gone: setup now uses plain commands only. Never bring back a
+  step that saves code from a page to run it.
 - **Page commands as tools.** The page registers about 433 JupyterLab commands
   with the server (the console says "Registered 433 tools"). The server offers
   only those on `allowed_jupyter_mcp_tools` (default: `notebook_run-all-cells`
@@ -255,8 +264,9 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   the static config (`jupyterlab/commands.py`), so for a plugin that an
   extension disabled it silently does nothing.
 - **One shared notebook.** The page and the MCP tools edit the same shared
-  document (`.jupyter_ystore.db` and the collaboration room). If the page's cell
-  count differs from `read_notebook`'s, suspect stale state.
+  document, Jupyter's live copy of the notebook. If the page's cell count
+  differs from `read_notebook`'s, see "Cells added over MCP do not appear in
+  the page".
 - **A healthy session looks like this:** `wait` says `ready`; the sign-in check
   says 200; `attach` says "Successfully activate notebook"; `read_notebook`
   and the page show the same number of cells; run-all answers `True`; the canvas
@@ -275,7 +285,7 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   why `README.md`'s trust step has to run from inside `examples/`, never from
   the parent folder right after `download`/`git clone`, and why
   `CLAUDE_SETUP.md` step 8 runs `python -m jupylet` from inside
-  `<code>/examples` (through its helper script). It is not specific to `is_trusted`/`trust_notebooks`/
+  `<code>/examples`. It is not specific to `is_trusted`/`trust_notebooks`/
   `download`: any future `python -m jupylet <command>` needs the same care
   about where it is documented to be run from.
 - **`read_cell` returns the outputs too, even with `include_outputs` false.**
@@ -444,55 +454,18 @@ them but could not test them there:
 
 ### A cell stays `[*]` forever while the kernel is idle
 
-`[macOS, seen 4 times, fix verified once, Opus 5.5, 2026-09-25]` After a
-live loop or a self-refreshing widget had been running for a while with no
-cell run, the next cell (always the "stop" cell) hung at `[*]`, with the
-cells after it queued. The kernel had run it (it is in `In`) and was idle.
-`GET /api/kernels/<id>/execute` showed the request `running`, and
-`DELETE .../requests/<rid>` did not help. Likely cause (a strong guess, no
-clean repro yet): `jupyter_server_nbmodel` keeps one kernel client open and
-reads IOPub only while a cell runs. Background output piles up in its
-ZeroMQ receive queue (1000 messages by default), newer messages are
-dropped, and so is that cell's `idle` status, which `execute_interactive`
-waits for with no timeout.
-Fix without losing variables: have the kernel send the missing `idle`. The
-request id is `<session>_<server pid>_<n>`. Tasks and `call_later` handles
-started from notebook cells carry their cell's header in
-`kernel._shell_parent` (`task.get_context()[var]`, `handle._context[var]`),
-which gives the session, the pid and a recent `n`. Then, with
-`execute_code`, call `kernel.session.send(kernel.iopub_socket, "status",
-{"execution_state": "idle"}, parent={"header": h}, ident=kernel._topic("status"))`
-for a range of `n`. The executor finished the cell at once, because the
-reply had been waiting on the shell channel. Mistake made once: do not send
-`idle` for numbers past the stuck one. The executor keeps those, so every
-later cell up to that number finishes early and shows no output (the log
-says `outputs=0`). To fix it, use up the numbers by posting `{"code": "pass"}`
-to `POST /api/kernels/<id>/execute` once per number; after that, output came
-back (verified).
-Otherwise `replace-kernel` fixes it (variables are lost).
-
-`[macOS, verified, Opus 5.5, 2026-10-01, JupyterLab 4.6.4,
-jupyter_server_nbmodel 0.2.9]` Seen again with a jupylet `Panel` displayed:
-its 0.5s refresh, while a live loop moved a knob, gave about 8 IOPub messages
-a second (slider `update`, the page's `echo_update`, busy/idle). Related
-symptom: with nbmodel, output a thread prints after its cell finished never
-shows in the page (plain JupyterLab without nbmodel shows it).
-Without nbmodel, everything we use still works (verified): start Jupyter with
-`JUPYTER_CONFIG_PATH=<dir>`, where `<dir>/jupyter_server_config.json` has
-`{"ServerApp": {"jpserver_extensions": {"jupyter_server_nbmodel": false}}}`
-and `<dir>/labconfig/page_config.json` has
-`{"disabledExtensions": {"@datalayer/jupyter-server-nbmodel": true}}`. The
-page's `serverSideExecution` is then `false`, and the collaboration
-extension's cell executor falls back to running cells in the page. Worked:
-`attach`, `read_notebook`, `read_cell`, `insert_cell`, `edit_cell_source`,
-`overwrite_cell_source`, `move_cell`, `delete_cell`, `clear_cell_output`,
-`execute_code`, `restart_notebook`, run-all (also right after
-`restart_notebook`), thread output live in the page, and one cell with
-`notebook_run-cell` (needs `allowed_jupyter_mcp_tools`, as on Windows).
-Lost: only `execute_cell` and `insert_execute_code_cell` (error "extension
-not found"), which hang anyway (`CLAUDE.md` Problem 8). Watch: run-all goes
-to whichever page the tools pick; a page loaded before the restart still uses
-the server executor and gets 404s, so reload or close old pages.
+`[macOS, verified, Opus 5.5, 2026-09-25 to 2026-10-01]` Caused by
+`jupyter_server_nbmodel`, which `[claude]` brings along; `prepare` turns it
+off, and `_nbmodel_off()` in `jupylet/claude.py` explains the cause. If it
+happens anyway (`prepare` printed `still on`), there is a rescue that keeps
+the kernel's variables: send the stuck cell's missing `idle` from the kernel,
+with `execute_code`: `kernel.session.send(kernel.iopub_socket, "status",
+{"execution_state": "idle"}, parent={"header": h}, ident=kernel._topic("status"))`,
+where `h` is that cell's header (a request id `<session>_<server pid>_<n>`;
+tasks started from cells keep it in `kernel._shell_parent`). Send it only for
+the stuck number, not for later ones, or the cells up to that number finish
+early, with no output. Otherwise `replace-kernel` fixes it, and loses the
+variables.
 
 ### Overwriting a cell by index hit the person's new cells
 
@@ -502,11 +475,15 @@ of `overwrite_cell_source` calls, using indices read a few minutes earlier,
 replaced three cells the person had just inserted. The script printed each
 cell's first line but did not stop when it didn't match. Before each
 overwrite, read the cell and check its content (or its `id` in the saved
-`.ipynb`), and stop if it isn't the expected cell. Recovery: the
-collaboration store `examples/.jupyter_ystore.db` (SQLite, table `yupdates`,
-per-notebook `path`) holds every edit. Open it read-only, replay the updates
-in `rowid` order into a `pycrdt.Doc` (`doc.get('cells', type=Array)`), and
-keep each cell's source as it changes: this recovered the overwritten text.
+`.ipynb`), and stop if it isn't the expected cell. Recovery: Jupyter's log
+of edits holds every edit. It was then `examples/.jupyter_ystore.db` (SQLite,
+table `yupdates`, per-notebook `path`): opened read-only, its updates
+replayed in `rowid` order into a `pycrdt.Doc` (`doc.get('cells',
+type=Array)`), keeping each cell's source as it changes, recovered the
+overwritten text. Since `prepare` set up the environment (2026-10-04), the
+log is a file in a temporary folder (`TempFileYStore`, in the system's
+temporary directory), kept only while that Jupyter runs: recover before
+stopping it. Replaying that file is not tried yet.
 
 ### Rewriting a section: address cells by id, move them, and check the saved file
 
@@ -560,25 +537,13 @@ off the page's own autosave setting makes the dialog go away.
 
 ### Rewinding the conversation, or a time limit, stops Jupyter
 
-`[macOS, seen once, Opus 5.5, 2026-09-25]` Jupyter runs as a background
-Bash task of the Claude session. When the person rewound to an earlier
-question in the Claude app, the session restarted and its background tasks
-ended, so Jupyter shut down cleanly with its kernel ("Shutting down 1
-kernel" at the end of its log). The next message then reported the task as
-stopped. The notebook was saved, but the kernel's variables were lost. Fix:
-ask, then start Jupyter again (step 5) with the same token, so the page's
-sign-in still works, and `attach`. Worth telling a person before they
-rewind while a kernel holds work they care about.
-
-`[macOS, verified, Opus 5.5, 2026-10-02]` It also ended on its own: Claude
-Code stopped the background task running Jupyter when it reached its time
-limit ("stopped after reaching its background time limit"), and both
-kernels shut down with it. The `timeout` parameter is capped at 10 minutes,
-so a longer one is no fix. Since then, step 5 starts Jupyter detached
-(`jupylet.claude detach`, in its own session). Tested: a process started
-that way from a background task kept running after the task was stopped
-with `TaskStop`. Not tested yet: rewinding, or quitting the app, with a
-detached Jupyter, and `detach` on Windows.
+`[macOS, verified, Opus 5.5, 2026-09-25 and 2026-10-02]` A Jupyter started as
+a background task stopped with the task: once when the person rewound the
+conversation, once at the task's time limit, both times ending the kernels.
+Step 5 now starts Jupyter detached; `detach()` in `jupylet/claude.py`
+explains, and says what is not tested yet. If Jupyter is gone anyway, ask,
+then start it again with the same token, so the page's sign-in still works,
+and `attach`.
 
 ## Windows 11
 
@@ -618,34 +583,23 @@ Replace the kernel only if nothing ran, because that destroys a running game.
 
 ### Cells added over MCP do not appear in the page
 
-`[Windows 11, seen once; cause not proven, 2026-09-22]` `insert_cell` said it
-worked and `read_notebook` showed one more cell, but the page kept the old
-count for good. Compare `read_notebook` with the page's count (in the page:
-`document.querySelectorAll('.jp-Notebook .jp-Cell').length`).
+`[macOS and Windows 11, seen 5 times, cause verified, Opus 5.5, 2026-09-22 to
+2026-10-04]` A cell inserted or edited through the tools was in
+`read_notebook` and in the saved file, but the page showed fewer cells, or
+that cell as one empty line, even after a reload. Caused by Jupyter
+rebuilding its live copy of the notebook from an old log of edits, after the
+page had been away or Jupyter had restarted; `prepare` sets Jupyter so that
+it does not, and `_collaboration_config()` in `jupylet/claude.py` explains,
+and says how to check the settings. Not tested yet: a computer sleep with
+the settings on.
 
-It happened on a server that started with a `.jupyter_ystore.db` left from
-earlier sessions (the log said the file was "out-of-sync with the ystore"). On a
-fresh server, after deleting the state files, inserted cells appeared in the
-page within seconds, before and after running the notebook. So stale state is
-the likely cause, but the failing notebook was a different one
-(`12-spaceship-3d`), so that is a guess. `overwrite_cell_source` also showed up
-in the page at once on the fresh server.
-
-Do: stop adding cells, tell the person, stop Jupyter, delete the state files,
-start again. Inserted cells are saved into the notebook file within seconds; the
-old copy in the page did not overwrite the file.
-
-`[macOS, seen once, Opus 5.5, 2026-09-28, JupyterLab 4.6, jupyter-collaboration
-3.0.4]` Seen again, worse: a notebook whose room held over 22,000 edits showed
-only its first 140 of 163 cells in the page, and kept doing so after a page
-reload, closing and reopening the tab, restarting the kernel, and "reload from
-disk". `read_notebook`, the file on disk, and the room replayed read-only
-with `pycrdt` (as above) all had 163. The person saw code "gone" that the tools
-said was there: count the page's cells before telling a person something is in
-the notebook (scroll the windowed list; `data-windowed-list-index` of the last
-cell + 1, since off-screen cells are not in the page). Stopping Jupyter, moving
-`.jupyter_ystore.db` and `collaboration_sessions.json` aside (kept, not
-deleted), and starting again fixed it: the page loaded all 163 from the file.
+If it happens anyway, check the page's own copy, not only `read_cell`:
+count its cells (scroll the windowed list; `data-windowed-list-index` of the
+last cell + 1, since off-screen cells are not in the page), or scroll to the
+cell and read its `innerText` and height. Then close the page, `shutdown`,
+move `.jupyter_ystore.db` and `.jupyter/collaboration_sessions.json` from
+`examples` aside (kept, not deleted), and start again with the same token.
+The page's stale copy never overwrote the file.
 
 ### Starting Jupyter
 
@@ -713,40 +667,18 @@ token (`Get-CimInstance Win32_Process`): the launcher `cmd`, `jupyter`,
 
 `[Windows 11, verified, 2026-09-22]` After `attach`, `/api/sessions` lists
 the notebook twice with the same kernel (the page's and the MCP server's):
-normal, and ending both is part of stopping. Jupyter's own state in the
-examples folder, `.jupyter_ystore.db` and `.jupyter\collaboration_sessions.json`,
-is recreated on the next start: delete it after stopping, when no Jupyter
-runs. `%APPDATA%\jupyter\file_id_manager.db` and old runtime files were left
-alone.
-
-Until 2026-10-01, `claude.py shutdown` could not be used on Windows (it used
-`ps` and `SIGKILL`), so `CLAUDE.md` Part 6 had a manual procedure: end
-sessions and kernels over HTTP, ask for `/api/shutdown`, then check the
-token's processes. Since then `shutdown` looks for the processes with
-PowerShell on Windows; not tested there yet.
+normal, and ending both is part of stopping. `%APPDATA%\jupyter\file_id_manager.db`
+and old runtime files were left alone.
 
 ### The port closes but the processes stay
 
 `[Windows 11, seen in two of three runs, 2026-09-22 and 2026-09-23]` After
-the shutdown request, the port closed and the log ended at `YDocExtension]
-Deleting all rooms.`, but all five of the launcher's processes (`cmd.exe`,
-`jupyter.exe`, two `python.exe`, `jupyter-lab.exe`) stayed alive, 15 seconds
-and more later. (In the third run they exited by themselves.) Not tried:
-waiting a minute or more.
-
-First the session told the person a process was left and stopped there, as
-the page then said. The author pointed out the flaw: a kid has no way to find
-or end a stuck process, so that left them with a problem and no next step.
-A stuck process after the normal stop is for the session to resolve, the way
-it resolves a stuck kernel. What worked `[verified, 2026-09-22]`: list the
-processes whose command line carries the session's token, check each command
-line by eye against the launch command, and end each by its id (never by
-name). All five ended at once and the port stayed closed. The background
-task then reported `failed` (exit code 255): expected, since it was ended
-rather than asked to exit. The app's own PowerShell process was never in the
-list. Afterwards tell the person plainly that a leftover program had to be
-closed and that it is done. This is `CLAUDE.md` Part 6, "Stopping on Windows
-11", and what `shutdown` now does by itself.
+the shutdown request, the port closed, but all five of the launcher's
+processes stayed alive. Ending each by its id, after checking its command
+line carried the token, worked at once; `shutdown` now does that itself.
+A kid has no way to find or end a stuck process, so resolving it is the
+session's job: then tell the person plainly that a leftover program had to
+be closed, and that it is done.
 
 ### Other small facts
 
@@ -774,6 +706,22 @@ Keep them: they show what has already been tried.
   "the canvas shows as text instead of a picture": kept inline under that
   entry (Windows 11 section) rather than moved here, since the correct cause
   belongs right next to it. See that entry for the retraction.
+- `[Windows 11 and macOS, 2026-09-22 to 2026-10-02]` Two guesses at why cells
+  added over MCP did not show in the page: "stale state from earlier
+  sessions" (half right: the log of edits, but kept within one run of Jupyter
+  too) and "a large one-cell edit" (wrong: it only happened to come after the
+  page had been away). The cause and the fix are under "Cells added over MCP
+  do not appear in the page". Retired 2026-10-04.
+- `[Windows 11, 2026-09-22]` Deleting `.jupyter_ystore.db` and
+  `collaboration_sessions.json` after every stop. Since `prepare` sets up the
+  environment, Jupyter keeps no `.jupyter_ystore.db`. Retired 2026-10-04.
+- `[Windows 11, 2026-09-22 to 2026-10-01]` The manual stopping procedure
+  (sessions, kernels, `/api/shutdown`, then the token's processes), replaced
+  by `claude.py shutdown`, which does the same on Windows. Retired
+  2026-10-01.
+- `[macOS, 2026-09-25]` The longer rescue for a cell stuck at `[*]` (using up
+  request numbers with `POST /api/kernels/<id>/execute`), condensed into that
+  entry, since `prepare` turns nbmodel off. Retired 2026-10-04.
 
 ## Unreviewed
 
