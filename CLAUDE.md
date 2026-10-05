@@ -124,6 +124,7 @@ up. So:
   along is a different thing again and needs its own clearly separate note,
   never loose text mixed in with the real script. When in doubt, leave the
   remark out.
+- When a message asks the person something, the question comes last.
 - **Stay in the role.** A developer who plays a novice to test this file
   gets exactly what a novice would get, and nothing slipped in for the
   developer, until they say they are back in developer mode.
@@ -226,6 +227,16 @@ this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 
 ### Step 1. Answer what they asked
 
+**Right after `CLAUDE_SETUP.md` installed Jupylet, skip this step**: no
+check, and no question. Nothing can be running in a folder made minutes
+ago, and asking to install Jupylet includes checking that it works. Go on
+with step 2, and in step 5's message as Jupyter starts, also say what the
+spaceship example is for, for example:
+
+> Now let's check that everything works. I'm opening the spaceship example,
+> a small ship you steer with the arrow keys, in a notebook right next to
+> our chat. If the ship flies, Jupylet is set up properly.
+
 Your first reply answers the person's own question, as a person would.
 
 Before it, check whether Jupylet is already running in a Jupyter on this
@@ -234,6 +245,9 @@ Python (or `python3` if there is no Miniforge): it needs only the standard
 library, so it works before the environment is known.
 
 `$HOME/miniforge3/bin/python <folder>/jupylet/claude.py running`
+
+The check is a convenience: it lets you offer help with a Jupylet that is
+already open. If it cannot run, that offer is all you lose.
 
 One line per running Jupyter, with six columns separated by tabs: its port,
 its token, the folder it serves, `jupylet` if that is a Jupylet folder, the
@@ -339,14 +353,6 @@ words, for example:
 > write and run your code, and a notebook is a page in it where you type
 > code in small boxes, called cells, and run each one to see what it does.
 > It runs only on this computer, and you'll see it right next to our chat.
-
-Right after installing Jupylet (`CLAUDE_SETUP.md`), say what the spaceship
-example is for: a quick check that everything works. For example:
-
-> Now let's check that everything works. May I open the spaceship example, a
-> small ship you steer with the arrow keys? It opens in a notebook right next
-> to our chat, and runs only on this computer. If the ship flies, Jupylet is
-> set up properly.
 
 (If Jupyter and notebooks were already explained in this conversation, for
 example while installing, leave that sentence out.) If the person has
@@ -967,6 +973,13 @@ What went wrong there, and why, is in `EXPERIENCE.md` under Windows 11.
 Parts 1 to 5 apply unchanged, except where this part says otherwise. Use the
 PowerShell tool for every command here. Do not use the Bash tool or
 `$SHELL -ic` (Git may not be installed).
+
+### Step 1 on Windows 11: is Jupylet already running?
+
+The same check, with Miniforge's own Python (`<miniforge>` as in step 2
+below), by file path:
+
+`& "<miniforge>\python.exe" "<folder>\jupylet\claude.py" running`
 
 ### Step 2 on Windows 11: find the environment
 

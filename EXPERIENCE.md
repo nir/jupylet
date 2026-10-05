@@ -225,6 +225,14 @@ Children need the same, put more gently (see `CLAUDE.md`).
   followed mechanically, a recipe produces its own bad text, stiff and
   formulaic, answering questions nobody asked, and it replaces the one thing
   that matters, looking through the reader's eyes, with ticking boxes.
+- **Right after an install, a needless check and a confusing message.**
+  `[Windows 11, seen once, 2026-10-05]` Handed over from `CLAUDE_SETUP.md`,
+  a session asked "May I open the spaceship example?", explained notebooks
+  again after the question, then said the app had blocked its check for a
+  running Jupyter (no command was visible), and asked the person to tell it
+  if Jupyter was open. The check was pointless in a folder made minutes
+  before. `CLAUDE.md` now skips step 1 after an install, says what the
+  check is for, and puts a question last in its message.
 - **A first lesson in the spaceship notebook that worked.** `[macOS,
   verified, Opus 5.5, 2026-10-05]` A developer playing a novice, with the
   game running. Asked to type `label.text = 'hello, Nir'` into the empty

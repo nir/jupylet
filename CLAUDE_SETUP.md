@@ -554,7 +554,8 @@ If the environment has the same or a similar name (`jupylet` and
 `jupylet3`, say), add something like "(the folder, not the environment of
 the same-ish name, `<env>`)". Then call `change_directory` with the full path
 `<code>`. Then read
-`<code>/CLAUDE.md` and follow it from Part 1. Use:
+`<code>/CLAUDE.md` and follow its Part 1 from step 2: its step 1 says why it
+is skipped right after an install. Use:
 - `<folder>` = `<code>` (write out the full path),
 - the environment: `<env>`, the one you just installed into (do not ask the
   person).
