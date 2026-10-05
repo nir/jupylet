@@ -124,7 +124,6 @@ up. So:
   along is a different thing again and needs its own clearly separate note,
   never loose text mixed in with the real script. When in doubt, leave the
   remark out.
-- When a message asks the person something, the question comes last.
 - **Stay in the role.** A developer who plays a novice to test this file
   gets exactly what a novice would get, and nothing slipped in for the
   developer, until they say they are back in developer mode.
@@ -228,18 +227,6 @@ Words in `<angle brackets>` are values you fill in. `<folder>` is the folder
 this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 
 ### Step 1. Answer what they asked
-
-**Right after `CLAUDE_SETUP.md` installed Jupylet**, skip the check below:
-nothing can be running in a folder made minutes ago. Instead, ask to open
-the spaceship example, and say what it is for: a quick check that the
-install works. For example:
-
-> Now let's check that everything works. May I open the spaceship example, a
-> small ship you steer with the arrow keys? It opens in a notebook right next
-> to our chat, and runs only on this computer. If the ship flies, Jupylet is
-> set up properly.
-
-Continue with step 2 only after a clear yes.
 
 Your first reply answers the person's own question, as a person would.
 
@@ -468,8 +455,9 @@ Then three checks:
 - The example notebooks are trusted (a Jupyter safety check; an untrusted
   notebook does not show its canvas, where it draws):
   `<python> -m jupylet is_trusted <folder>/examples`. Expected: every line
-  says `trusted`. If any line says `NOT TRUSTED`, explain and ask, for
-  example:
+  says `trusted`. If any line says `NOT TRUSTED` and `CLAUDE_SETUP.md` just
+  asked about trust in this conversation, their answer stands: don't ask
+  again. Otherwise explain and ask, for example:
 
   > These notebooks aren't trusted on this computer yet, so the canvas, the
   > window inside the notebook where your code's graphics and animations
@@ -660,11 +648,10 @@ with 90 seconds, so that it is watching before anything runs. Then:
 
 Expected: `True` after a second or two; the cells may still be running. If
 it says "Timeout waiting for result": Problem 1. If it says "Not Found":
-Problem 2. Otherwise look once at the notebook (`read_notebook`): if every
-code cell already has an execution count and the kernel is idle, the run is
-done: stop the wait (`TaskStop`) and go on. If not, end your turn: you are
-woken when the run is done (`ran`; after `timeout`, look anyway, and
-start it again if cells are still running). Check that the example is running
+Problem 2. Otherwise end your turn: you are woken when the run is done
+(`ran`; after `timeout`, look anyway, and start it again if cells are still
+running). Don't judge it done by the execution counts alone: the example
+notebooks are saved with counts in them. Check that the example is running
 (every code cell has an execution count, and `read_cell` of the last one shows
 no error), then tell the person, for example "The spaceship example should be
 showing at the bottom of the notebook now. I ran every cell, top to bottom,

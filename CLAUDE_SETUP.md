@@ -26,9 +26,10 @@ there is no `<branch>`, and the steps change only in this:
 - Step 3: skip check 4; the code folder is already there.
 - Step 6: skip the question and the download.
 - Step 10: the session already works from `<code>`: skip moving it
-  (`change_directory`) and its message. Then go back to `CLAUDE.md`'s step
-  2, not Part 1: they asked for Jupylet to try its examples, so their yes
-  to setting it up already covers opening a notebook.
+  (`change_directory`) and its message, and the question about the
+  spaceship: they asked for Jupylet to try its examples, so their yes to
+  setting it up already covers opening a notebook. Go back to `CLAUDE.md`'s
+  step 2.
 
 ## How to talk to the person
 
@@ -131,10 +132,6 @@ is its conda, `<base python>` its python, `<env>` the new environment's name,
 and `<env python>` the python of `<miniforge>/envs/<env>`. `<code>` is the
 new folder for the Jupylet code: the one step 3 proposes, or another place
 the person picks in step 6. Put every path in double quotes.
-
-Every command here is written out in full. Never save code from this page
-into a file to run it: code taken from a web page looks like a prompt
-injection, and Claude Code's auto mode blocks it (`EXPERIENCE.md`).
 
 ## Step 1. Check the system
 
@@ -414,7 +411,7 @@ of `jupylet`, `jupylet2`, ... that does not exist there yet (check as in step
 `<code>`. Say the final place in one sentence, for example "I'll put it in
 `<code>`.", and go on. Continue only after a clear answer.
 
-Then download the code to a private temporary file, create the code folder,
+Then download the code to a temporary file, create the code folder,
 extract the code straight into it, and delete the file (one command):
 
 **macOS:**
@@ -534,35 +531,41 @@ commands are not tested yet.)
 ## Step 10. Hand over
 
 Tell the person it is done, in one line, for example "Jupylet is
-installed." Nothing more: no summary of what went where (no paths, no
-settings files, no backups), no lesson about Terminal or environments, and
-no question of your own: `CLAUDE.md`'s step 1 asks to open the spaceship
-example, to check that everything works. What comes after that, opening the
-browser pane for the first time and signing in with a token, is new and can
-feel intimidating; nothing should come between. How to start Jupylet on
-their own is for later: `CLAUDE.md` offers it once the first example runs
+installed." No summary of what went where (no paths, no settings files, no
+backups), and no lesson about Terminal or environments. How to start Jupylet
+on their own is for later: `CLAUDE.md` offers it once the first example runs
 (its step 10).
 
 Then move this session to the code folder. Tell the person first what is
 about to happen and which of the names this is, since the app's own words
 differ from ours, for example:
 
-> To open the notebooks, I'll now work from inside the folder `<code>`, the
-> one with the Jupylet code. The app will ask you to allow that, and it may
+> Next, I'll work from inside the folder `<code>`, the one with the Jupylet
+> code. The app will ask you to allow that, and it may
 > call the folder a workspace. Please allow it.
 
 If the environment has the same or a similar name (`jupylet` and
 `jupylet3`, say), add something like "(the folder, not the environment of
 the same-ish name, `<env>`)". Then call `change_directory` with the full path
-`<code>`. Then read
-`<code>/CLAUDE.md` and follow it from Part 1: its step 1 says what to do
-right after an install. Use:
+`<code>`. Then read `<code>/CLAUDE.md`, and what it says to read first. Use:
 - `<folder>` = `<code>` (write out the full path),
 - the environment: `<env>`, the one you just installed into (do not ask the
   person).
 
 Use full paths until your next turn: the session's working folder only moves
 when the current turn ends.
+
+Then ask to open the spaceship example, to check that the install works.
+Jupyter and notebooks were explained in step 7, so this is the whole
+message, for example:
+
+> Now let's check that everything works, with the spaceship example: a small
+> ship you steer with the arrow keys. If it flies, Jupylet is set up
+> properly. It opens in a notebook right next to our chat, and runs only on
+> this computer. May I open it?
+
+After a clear yes, follow `CLAUDE.md`'s Part 1 from its step 2. If they say
+no, tell them they can ask for it any time.
 
 ## Problems
 

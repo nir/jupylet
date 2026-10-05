@@ -233,15 +233,16 @@ Children need the same, put more gently (see `CLAUDE.md`).
   say when a lesson happens, so it went on to "type `label.text = ...`"
   with a name copied from this file. The same run also said "I've located
   the code" right after downloading it, as a macOS run did earlier that day.
-  Fixed: step 1 asks again, and that section says the spaceship after an
-  install is a check, not a lesson. "Located" is not fixed yet.
+  Fixed: setup's step 10 now asks to open the spaceship, as the last thing
+  it says, and that section says the spaceship after an install is a check,
+  not a lesson. "Located" is not fixed yet.
 - **A first lesson in the spaceship notebook that worked.** `[macOS,
   verified, Opus 5.5, 2026-10-05]` A developer playing a novice, with the
   game running. Asked to type `label.text = 'hello, space'` into the empty
   cell below the game, they ran `label.tex = ...` (nothing happened, no
   error), then fixed it; then `label.color = 'yello'` (a long red
   traceback), then fixed that too. What helped: one tiny visible change at a
-  time; after the silent typo, why Python did not complain; after the
+  time; after the typo with no error, why Python did not complain; after the
   traceback, "read the last line first", and that nothing broke; then an
   open invitation to experiment. What went wrong first: Claude said the
   spaceship was flying when the person had closed the notebook (look before
@@ -259,15 +260,6 @@ jupyter-mcp-server 2.2.2, jupyter_server_nbmodel 0.2.9, JupyterLab 4.6.3]`
   "Execution timed out", no execution count), and `CLAUDE.md` Problem 8 says
   the same on the Mac. `execute_code` is a different path and works, but it
   puts nothing in a cell.
-- **Auto mode blocks running code copied out of a web page.**
-  `[macOS, seen once, 2026-10-05, Claude Code auto mode]` Setup used to
-  ship a helper script inside `CLAUDE_SETUP.md`, to save into the scratchpad
-  and run. A fresh session following the page from GitHub had that save
-  denied by the auto mode classifier ("Code from External"), and the denial
-  told it to stop and explain, so the person got a security report instead
-  of an install. Auto mode is the default, so every person would hit it. The
-  helper is gone: setup now uses plain commands only. Never bring back a
-  step that saves code from a page to run it.
 - **Page commands as tools.** The page registers about 433 JupyterLab commands
   with the server (the console says "Registered 433 tools"). The server offers
   only those on `allowed_jupyter_mcp_tools` (default: `notebook_run-all-cells`
