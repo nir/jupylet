@@ -233,9 +233,19 @@ Children need the same, put more gently (see `CLAUDE.md`).
   if Jupyter was open. The check was pointless in a folder made minutes
   before. `CLAUDE.md` now skips step 1 after an install, says what the
   check is for, and puts a question last in its message.
+- **After an install: the spaceship opened unasked, then a lesson nobody
+  asked for.** `[Windows 11, seen once, 2026-10-05]` Two edits of mine the
+  same day caused it. Step 1 told the session to open the spaceship after an
+  install with no question, so it started Jupyter and the notebook without
+  saying why. And the new "Guiding them as they write code" section did not
+  say when a lesson happens, so it went on to "type `label.text = ...`"
+  with a name copied from this file. The same run also said "I've located
+  the code" right after downloading it, as a macOS run did earlier that day.
+  Fixed: step 1 asks again, that section says the spaceship after an
+  install is a check, not a lesson, and step 6 of setup explains its check.
 - **A first lesson in the spaceship notebook that worked.** `[macOS,
   verified, Opus 5.5, 2026-10-05]` A developer playing a novice, with the
-  game running. Asked to type `label.text = 'hello, Nir'` into the empty
+  game running. Asked to type `label.text = 'hello, space'` into the empty
   cell below the game, they ran `label.tex = ...` (nothing happened, no
   error), then fixed it; then `label.color = 'yello'` (a long red
   traceback), then fixed that too. What helped: one tiny visible change at a

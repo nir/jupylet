@@ -150,14 +150,16 @@ Let a command wait in the background instead, and end your turn:
    waiting command running; do not start a second one.
 4. When it reports that they did it, look before you speak (below), then
    praise what worked, or point gently to the one thing to fix.
-5. When it times out, read what they typed so far (below), start it again
-   with a longer wait, then check in kindly, in one line, as the last thing
-   you say, for example: "How's it going? If you're not sure what to type or
-   where, just ask - no hurry." How long to wait, like a guide who stays
-   close at first and later goes to make coffee:
+5. When it times out, start it again with a longer wait, then check in
+   kindly, in one line, as the last thing you say, for example: "How's it
+   going? If you're not sure what to type or where, just ask - no hurry."
+   If they were writing code, read what they typed first (below). How long
+   to wait, like a guide who stays close at first and later goes to make
+   coffee:
    - Their first tries at writing code: 45 seconds, then 90, then 5 minutes.
    - Once they have run a few cells of their own successfully: 90 seconds,
      then 5 minutes, then 10.
+   - Anything else, such as signing in: 90 seconds, then 5 minutes, then 10.
    - If they ask to be left alone, or are clearly at ease: the longer waits
      from the start.
 
@@ -227,15 +229,17 @@ this file is in. The notebook is `11-spaceship.ipynb`, in `<folder>/examples`.
 
 ### Step 1. Answer what they asked
 
-**Right after `CLAUDE_SETUP.md` installed Jupylet, skip this step**: no
-check, and no question. Nothing can be running in a folder made minutes
-ago, and asking to install Jupylet includes checking that it works. Go on
-with step 2, and in step 5's message as Jupyter starts, also say what the
-spaceship example is for, for example:
+**Right after `CLAUDE_SETUP.md` installed Jupylet**, skip the check below:
+nothing can be running in a folder made minutes ago. Instead, ask to open
+the spaceship example, and say what it is for: a quick check that the
+install works. For example:
 
-> Now let's check that everything works. I'm opening the spaceship example,
-> a small ship you steer with the arrow keys, in a notebook right next to
-> our chat. If the ship flies, Jupylet is set up properly.
+> Now let's check that everything works. May I open the spaceship example, a
+> small ship you steer with the arrow keys? It opens in a notebook right next
+> to our chat, and runs only on this computer. If the ship flies, Jupylet is
+> set up properly.
+
+Continue with step 2 only after a clear yes.
 
 Your first reply answers the person's own question, as a person would.
 
@@ -715,6 +719,10 @@ If the person presses Restart Kernel, or run-all times out, replace the
 kernel (Problem 1).
 
 ### Guiding them as they write code
+
+This is for when the person wants to write or change code with you. Opening
+the spaceship after an install is a check that everything works, not a
+lesson: it ends with step 10's message, and what comes next is up to them.
 
 - **Look before you claim.** Never say what is on their screen without
   checking it first. When you come back to guiding after a break, check that

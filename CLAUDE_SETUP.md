@@ -431,6 +431,8 @@ tested yet.)
 
 Check: `"<code>/CLAUDE.md"`, `"<code>/setup.py"` and `"<code>/examples"` all
 exist (macOS: `ls -d` them; Windows: `Test-Path` each). If not: Problem 2.
+The check only confirms that the download landed. To the person, nothing
+was found: they watched you put the code there.
 
 Then tell the person in one line, for example "The code is in the folder
 `<code>`. Its `examples` folder has the example notebooks we'll try." (You
@@ -534,11 +536,12 @@ commands are not tested yet.)
 ## Step 10. Hand over
 
 Tell the person it is done, in one line, for example "Jupylet is
-installed. Now let's try it out." Nothing more: no summary of what went
-where (no paths, no settings files, no backups), no lesson about Terminal
-or environments, and no question whether to go on. What comes next, opening
-the browser pane for the first time and signing in with a token, is new and
-can feel intimidating; nothing should come between. How to start Jupylet on
+installed." Nothing more: no summary of what went where (no paths, no
+settings files, no backups), no lesson about Terminal or environments, and
+no question of your own: `CLAUDE.md`'s step 1 asks to open the spaceship
+example, to check that everything works. What comes after that, opening the
+browser pane for the first time and signing in with a token, is new and can
+feel intimidating; nothing should come between. How to start Jupylet on
 their own is for later: `CLAUDE.md` offers it once the first example runs
 (its step 10).
 
@@ -554,8 +557,8 @@ If the environment has the same or a similar name (`jupylet` and
 `jupylet3`, say), add something like "(the folder, not the environment of
 the same-ish name, `<env>`)". Then call `change_directory` with the full path
 `<code>`. Then read
-`<code>/CLAUDE.md` and follow its Part 1 from step 2: its step 1 says why it
-is skipped right after an install. Use:
+`<code>/CLAUDE.md` and follow it from Part 1: its step 1 says what to do
+right after an install. Use:
 - `<folder>` = `<code>` (write out the full path),
 - the environment: `<env>`, the one you just installed into (do not ask the
   person).
