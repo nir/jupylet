@@ -466,9 +466,10 @@ report it together with the install, below.
 It turns off `jupyter_server_nbmodel`, which `[claude]` brings along and which
 makes cells hang at `[*]` after a few minutes, turns off JupyterLab's news
 pop-up, and keeps a notebook's live copy in sync with the page. Expected:
-`turned off` (`off` means it was already off). Anything else: the setting
-could not be changed; tell the person plainly that their notebooks may freeze
-after a few minutes, and go on.
+`turned off` (`off` means it was already off). Anything else: only the
+freezing setting could not be changed (the news pop-up is off either way);
+tell the person plainly that their notebooks may freeze after a few minutes,
+and go on.
 
 Then tell the person, in one message, that it worked and what you switched
 off, for example "Jupylet is installed. I also disabled Jupyter's default news

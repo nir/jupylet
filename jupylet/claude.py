@@ -1187,6 +1187,9 @@ def _nbmodel_off():
         2026-10-01, macOS: seen again with a Panel refreshing while a live loop
         turned a knob (about 8 messages a second); every tool used was verified
         to work with nbmodel off.
+        2026-10-05, macOS: setup's prepare printed 'still on: server, browser'
+        for a new environment, because `python -m jupyter` ran base's Jupyter,
+        found first on PATH, and wrote to base's configuration instead.
     """
     import importlib.util
 
@@ -1196,11 +1199,16 @@ def _nbmodel_off():
     if _nbmodel_on() == (False, False):
         return 'off'
 
+    #
+    # Run the modules behind `jupyter server extension` and `jupyter
+    # labextension` directly: `python -m jupyter` looks its subcommands up on
+    # PATH first, and may run another environment's Jupyter.
+    #
     for command in (
-        ['server', 'extension', 'disable', '--sys-prefix', NBMODEL],
-        ['labextension', 'disable', '--level=sys_prefix', NBMODEL_LAB],
+        ['jupyter_server.extension.serverextension', 'disable', '--sys-prefix', NBMODEL],
+        ['jupyterlab.labextensions', 'disable', '--level=sys_prefix', NBMODEL_LAB],
     ):
-        subprocess.run([sys.executable, '-m', 'jupyter'] + command, capture_output=True, timeout=120)
+        subprocess.run([sys.executable, '-m'] + command, capture_output=True, timeout=120)
 
     server, browser = _nbmodel_on()
 
