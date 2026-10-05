@@ -225,6 +225,17 @@ Children need the same, put more gently (see `CLAUDE.md`).
   followed mechanically, a recipe produces its own bad text, stiff and
   formulaic, answering questions nobody asked, and it replaces the one thing
   that matters, looking through the reader's eyes, with ticking boxes.
+- **A first lesson in the spaceship notebook that worked.** `[macOS,
+  verified, Opus 5.5, 2026-10-05]` A developer playing a novice, with the
+  game running. Asked to type `label.text = 'hello, Nir'` into the empty
+  cell below the game, they ran `label.tex = ...` (nothing happened, no
+  error), then fixed it; then `label.color = 'yello'` (a long red
+  traceback), then fixed that too. What helped: one tiny visible change at a
+  time; after the silent typo, why Python did not complain; after the
+  traceback, "read the last line first", and that nothing broke; then an
+  open invitation to experiment. What went wrong first: Claude said the
+  spaceship was flying when the person had closed the notebook (look before
+  you claim), and slipped developer notes into the novice's conversation.
 
 ## Any platform: how the tools work
 
@@ -389,6 +400,20 @@ What was learned on the Mac before 2026-09-23 is in `CLAUDE.md`, Part 5.
   kernel runs, then start it again afterwards without `<since>`. With a
   developer who also asks questions between runs, the 90 s / 5 / 10 min
   back-off check-ins aren't wanted: they are actively in the conversation.
+- **While a game runs, `watch` reports `ran` at once.** `[macOS, verified,
+  Opus 5.5, 2026-10-05]` With the spaceship running, the kernel's
+  `last_activity` read "just now" on every check, so `watch` returned within
+  2 seconds with nothing done. `CLAUDE.md` now waits with `wait-change`,
+  which compares execution counts and code instead.
+- **Waiting for a novice: too soon, and a gap.** `[macOS, verified, Opus 5.5,
+  2026-10-05]` A developer playing a novice typed `label.tex = ...`. The old
+  `wait-change` returned 2 seconds after they stopped typing, and Claude
+  pointed out the typo before they had run it: too soon; a guide lets them
+  run it first. Then they fixed it and ran it in the moment between one wait
+  and the next, and the new wait never saw it. Both are fixed: typing no
+  longer ends a wait (a stuck typo is pointed out at the timeout's check-in,
+  which also saves a wake-up), and each wait passes its fingerprint
+  (`<since>`) to the next.
 
 - **`CLAUDE_SETUP.md` on a Mac with Miniconda.** `[macOS, verified, Sonnet
   5, 2026-09-23, Apple chip, Miniforge 26.7.2-0]` A full run from the

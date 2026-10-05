@@ -124,6 +124,9 @@ up. So:
   along is a different thing again and needs its own clearly separate note,
   never loose text mixed in with the real script. When in doubt, leave the
   remark out.
+- **Stay in the role.** A developer who plays a novice to test this file
+  gets exactly what a novice would get, and nothing slipped in for the
+  developer, until they say they are back in developer mode.
 
 ## Waiting for the person
 
@@ -146,18 +149,28 @@ Let a command wait in the background instead, and end your turn:
    waiting command running; do not start a second one.
 4. When it reports that they did it, look before you speak (below), then
    praise what worked, or point gently to the one thing to fix.
-5. When it times out, start it again with a longer wait (90 seconds the
-   first time, then 5 minutes, then 10, so you do not nag), then check in
-   kindly, in one line, as the last thing you say, for example: "How's it
-   going? If you're not sure what to type or where, just ask - no hurry."
-   After the 10 minutes, stop checking in and wait for them to write.
+5. When it times out, read what they typed so far (below), start it again
+   with a longer wait, then check in kindly, in one line, as the last thing
+   you say, for example: "How's it going? If you're not sure what to type or
+   where, just ask - no hurry." How long to wait, like a guide who stays
+   close at first and later goes to make coffee:
+   - Their first tries at writing code: 45 seconds, then 90, then 5 minutes.
+   - Once they have run a few cells of their own successfully: 90 seconds,
+     then 5 minutes, then 10.
+   - If they ask to be left alone, or are clearly at ease: the longer waits
+     from the start.
+
+   After the last one, stop checking in and wait for them to write. Every
+   time a wait ends, you are woken for a turn that rereads this whole
+   conversation, which costs the person quota or credit: never wait in
+   shorter steps than these.
 6. Before you ask them something else, or stop (Part 3), stop a waiting
    command that is still running (`TaskStop`).
 
 A waiting command only sees what happens after it starts, so one started too
-late would hang until it times out. Right after starting any of them, look
+late would hang until it times out. Right after starting `wait-open`, look
 once at whether what it waits for has already happened; if so, stop it
-(`TaskStop`) and go on.
+(`TaskStop`) and go on. `wait-change` covers this itself, through `<since>`.
 
 The waiting commands:
 
@@ -165,28 +178,25 @@ The waiting commands:
   `<python> -m jupylet.claude wait-open <port> <token> 11-spaceship.ipynb <seconds>`
   prints `open`, or `timeout`. The server cannot see the browser's sign-in,
   but the notebook only opens (and gets its kernel) after it.
-- For them to run something in the notebook:
-  `<python> -m jupylet.claude watch <port> <token> 11-spaceship.ipynb <seconds> <since>`
-  prints `ran <time>` once the notebook's kernel did something after
-  `<since>`, or `timeout <since>`. Always pass the time it printed as
-  `<since>` to the next `watch`, so nothing that happens in between is
-  missed. Leave `<since>` out the first time, and after you ran something in
-  the kernel yourself (run-all, `execute_code`): it then means "from now".
-- For the notebook to change and settle, whatever the cause (they typed or
-  ran something, or a run-all finished):
-  `<python> -m jupylet.claude wait-change <port> <token> 11-spaceship.ipynb <seconds>`
-  prints `changed` once the cells (code or execution counts) differ from
-  when it started, the kernel is idle and nothing moved for about two
-  seconds, or `timeout`. It compares from the moment it starts, so start it
-  before whatever you expect to change it. It polls quietly, so a long wait
-  costs nothing until it ends. Not tested yet, and not known whether it sees
-  what is being typed before it is saved.
+- For them to run something in the notebook, or for a run-all to finish
+  (step 10):
+  `<python> -m jupylet.claude wait-change <port> <token> 11-spaceship.ipynb <seconds> <since>`
+  prints `ran <fingerprint>` once the kernel ran something and is idle
+  again, with the notebook still, or `timeout <fingerprint>`. Typing alone
+  does not end it. Always pass the fingerprint it printed as
+  `<since>` to the next `wait-change`, so a run in between is not missed.
+  Leave `<since>` out the first time, and after you changed or ran something
+  yourself (run-all, `execute_code`, a cell you edited): it then means "from
+  now". It polls quietly, so a long wait costs nothing until it ends. Not
+  known whether it sees what is being typed before it is saved. (`watch`
+  is not used: while a game runs, it reports `ran` at once; see
+  `EXPERIENCE.md`.)
 
 Short waits for something you did yourself (a few seconds) can also be a
 plain background `Start-Sleep` / `sleep`: you are woken when it ends, then
 look and decide whether to wait again. Never a sleep in the foreground.
 
-Look before you speak. Before you start `watch`, read the notebook (Part 2:
+Look before you speak. Before the first `wait-change`, read the notebook (Part 2:
 `read_notebook` with
 `{"notebook_name": "11-spaceship", "response_format": "detailed", "limit": 0}`)
 and keep each cell's execution count. After `ran`, read it again: the cell
@@ -194,8 +204,15 @@ whose count changed is the one they ran. Read it with its output
 (`read_cell` with
 `{"notebook_name": "11-spaceship", "cell_index": <index>, "include_outputs": true}`). Do not go by the highest count: cells keep the
 counts of earlier runs. Not every `ran` is a run: pressing Tab to complete a
-word also counts. If no count changed, start `watch` again with the printed
-time, and say nothing.
+word also counts. If no count changed, start `wait-change` again with the
+printed fingerprint, and say nothing.
+
+After a run, if it did nothing or failed, point gently to the one thing to
+fix. A typo may give no error at all: `label.tex = 'hi'` just makes
+something new called `tex`, and the game does not change. After `timeout`,
+read the notebook: if they wrote something they have not run, and it has a
+mistake that will fail or do nothing, point it out gently in the check-in.
+Otherwise let them run it and see what happens first.
 
 ## Part 1: Start a live notebook
 
@@ -636,7 +653,7 @@ it says "Timeout waiting for result": Problem 1. If it says "Not Found":
 Problem 2. Otherwise look once at the notebook (`read_notebook`): if every
 code cell already has an execution count and the kernel is idle, the run is
 done: stop the wait (`TaskStop`) and go on. If not, end your turn: you are
-woken when the run is done (`changed`; after `timeout`, look anyway, and
+woken when the run is done (`ran`; after `timeout`, look anyway, and
 start it again if cells are still running). Check that the example is running
 (every code cell has an execution count, and `read_cell` of the last one shows
 no error), then tell the person, for example "The spaceship example should be
@@ -690,6 +707,27 @@ start command in Part 6 has so far. On macOS, use run-all.
 
 If the person presses Restart Kernel, or run-all times out, replace the
 kernel (Problem 1).
+
+### Guiding them as they write code
+
+- **Look before you claim.** Never say what is on their screen without
+  checking it first. When you come back to guiding after a break, check that
+  their notebook is still open (`running` lists it) and that the browser pane
+  is visible; they may have closed it. After a run that should change what
+  they see, look at the canvas itself (a screenshot of the page) before you
+  praise the change.
+- **A first lesson** starts with one tiny change they can see at once, typed
+  into an empty cell below the running game, for example the text of its
+  label (`label.text = '...'`). Give the exact line, say where to type it,
+  and how to run it (Shift+Enter). Then a second small change (its color).
+  Once they succeed on their own, invite them to experiment, with one idea
+  to start from.
+- **A red error box** frightens beginners. Say plainly that nothing is
+  broken (a running game keeps running), show them to read its last line
+  first, say in plain words what it means, and name the one fix.
+- **A mistake with no error** (a misspelled name, such as `label.tex`) is the
+  most confusing: nothing happens, and nothing says why. Explain why Python
+  did not complain, and name the fix.
 
 ### When they ask how to start Jupylet on their own
 
@@ -1021,8 +1059,9 @@ in (status `200`), because the sign-in cookie survives a restart.
 
 The waiting commands ("Waiting for the person") run with the PowerShell tool
 and `run_in_background` set, the same folder rule applying:
-`Set-Location <folder>; & "<python>" -m jupylet.claude watch ...`. That is how
-they were tested.
+`Set-Location <folder>; & "<python>" -m jupylet.claude wait-change ...`. That is
+how `watch` and `wait-open` were tested; `wait-change` is not tested on
+Windows yet.
 
 ### Working in the notebook on Windows 11
 

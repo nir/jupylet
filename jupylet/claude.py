@@ -37,7 +37,7 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude call <port> <token> <tool> ['<json arguments>']
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
     python -m jupylet.claude watch <port> <token> <notebook path> <seconds> [<since>]
-    python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds>
+    python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
     python -m jupylet.claude shutdown <port> <token>
@@ -56,6 +56,7 @@ environment that actually has jupylet installed.
 
 
 import glob
+import hashlib
 import json
 import os
 import re
@@ -506,14 +507,14 @@ def watch(port, token, path, timeout, since=None):
     return 'timeout', since
 
 
-def wait_change(port, token, path, timeout):
-    """Wait until the notebook's content changed, and things settled.
+def wait_change(port, token, path, timeout, since=None):
+    """Wait until the person, or a run-all, ran something in the notebook.
 
-    Reads the notebook every 2 seconds. Its cells (their code and execution
-    counts) must differ from when it started, or the kernel must have been
-    seen busy since; the kernel must be idle, and nothing may have moved for one
-    read: the person stopped typing, or a run-all finished. A run shows up at
-    its first cell, so the idle check is what waits for the last.
+    Reads the notebook every 2 seconds, and compares it with where it
+    started: `since`, or what it first reads. A run is when the execution
+    counts differ, or the kernel was seen busy. It returns once the kernel is
+    idle and nothing moved for one read, so a run-all is over before it
+    returns. Edits without a run do not end it.
 
     Args:
         port (int): Jupyter's port.
@@ -521,14 +522,23 @@ def wait_change(port, token, path, timeout):
         path (str): The notebook's path, relative to Jupyter's folder; it must
             be attached (attach()).
         timeout (float): Seconds to wait at most.
-
+        since (str): The fingerprint the previous wait_change printed; what it
+            first reads if None.
     Returns:
-        str: 'changed', or 'timeout'.
+        tuple: ('ran', <fingerprint>), or ('timeout', <the starting
+            fingerprint>). Pass the fingerprint on to
+            the next wait_change, so nothing in between is missed.
 
     Notes:
-        Not known whether it sees what is being typed before it is saved.
+        Each return wakes Claude for a turn that rereads the whole
+        conversation, which costs quota: it returns only on a run or at the
+        timeout. Claude reads what the person typed at the timeout, when it
+        checks in.
+        A Tab completion makes the kernel busy too, so 'ran' means the kernel
+        did something; compare execution counts to see whether a cell ran.
         A run that leaves the same counts and is over between two reads goes
         unseen, and ends in 'timeout': look at the notebook then anyway.
+        Not known whether it sees what is being typed before it is saved.
 
     History:
         2026-10-05, macOS: after setup's first run-all it waited until its
@@ -536,44 +546,52 @@ def wait_change(port, token, path, timeout):
         kernel's run-all gives the same counts, so the cells never differed.
         The kernel's last_activity could not tell either: while the game ran,
         it read "just now" every time.
+        2026-10-05, macOS: it returned 2 seconds after the person stopped
+        typing, and Claude pointed out a typo before they had run the cell; it
+        no longer returns on edits. A run in the gap between two waits went
+        unseen; hence `since`.
     """
     name = os.path.splitext(os.path.basename(path))[0]
     args = {'notebook_name': name, 'response_format': 'detailed', 'limit': 0}
 
     def snapshot():
         try:
-            return call(port, token, 'read_notebook', args)
+            return _fingerprint(call(port, token, 'read_notebook', args))
         except (OSError, ValueError):
             return None
 
+    start = since or None
     busy = False
-    first = last = snapshot()
+    last = None
     t0 = time.time()
 
-    while time.time() - t0 < timeout:
-        time.sleep(2)
+    while True:
         now = snapshot()
-
         k = _notebook_kernel(port, token, path)
-        busy = busy or bool(k and k['execution_state'] != 'idle')
+        idle = bool(k and k['execution_state'] == 'idle')
+        busy = busy or bool(k and not idle)
 
-        if now is None:
-            continue
+        if now is not None:
+            start = start or now
+            settled = now == last
+            last = now
+            counts = now.split('.')[0]
 
-        settled = now == last
-        last = now
+            if idle and settled and (busy or counts != start.split('.')[0]):
+                return 'ran', now
 
-        if first is None:
-            first = now
-            continue
+        if time.time() - t0 >= timeout:
+            return 'timeout', start or ''
 
-        if not settled or not k or k['execution_state'] != 'idle':
-            continue
+        time.sleep(2)
 
-        if now != first or busy:
-            return 'changed'
 
-    return 'timeout'
+def _fingerprint(text):
+    """A short fingerprint of a read_notebook text: its execution counts, a
+    dot, and the whole text, each hashed."""
+    counts = ','.join(re.findall(r'\| execution count: ([^=]*)=', text))
+    digest = lambda x: hashlib.md5(x.encode()).hexdigest()[:8]
+    return digest(counts) + '.' + digest(text)
 
 
 def replace_kernel(port, token, path, timeout=60):
@@ -1265,8 +1283,8 @@ def main(argv):
     elif cmd == 'watch' and len(args) in (4, 5):
         print(*watch(*args[:3], float(args[3]), *args[4:]))
 
-    elif cmd == 'wait-change' and len(args) == 4:
-        print(wait_change(*args[:3], float(args[3])))
+    elif cmd == 'wait-change' and len(args) in (4, 5):
+        print(*wait_change(*args[:3], float(args[3]), *args[4:]))
 
     elif cmd == 'replace-kernel' and len(args) == 3:
         print(replace_kernel(*args))
