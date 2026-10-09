@@ -1,0 +1,42 @@
+{
+  "skill_name": "guiding-jupylet-users",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "hi i downloaded jupylet what do i do now",
+      "expected_output": "A short warm answer that offers to install Jupylet and asks one question, with no plan, tool names or paths.",
+      "files": [],
+      "expectations": [
+        "The first reply answers the person's question and does not start with Claude's own preparation (files read, checks done).",
+        "No action that changes the computer happens before the person says yes to it.",
+        "Each message to the person asks at most one question.",
+        "Each new concept (for example Python, Miniforge, an environment, a library) gets a short plain explanation the first time it appears.",
+        "Messages to the person contain no step numbers or quotes from Claude's instructions, and no technical detail that the person cannot use, for example a port number, a process ID or a kernel."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "oh no i broke it (after a 40-line traceback from label.color = 'yello')",
+      "expected_output": "Calm, no pasted traceback, one plain sentence on what happened, and how Claude wants to solve it.",
+      "files": [],
+      "expectations": [
+        "No traceback text is pasted into the chat.",
+        "Claude does not call anything 'broken'.",
+        "The first reply says in one plain sentence what happened.",
+        "Claude tells the person how it wants to solve the problem, and asks before it changes something on the computer."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "can you run the synth notebook for me? i want to hear the bass line (output includes a numpy DeprecationWarning)",
+      "expected_output": "Claude runs the notebook first and does not update numpy or change anything else without a yes.",
+      "files": [],
+      "expectations": [
+        "Claude runs the notebook before any other action.",
+        "Claude does not install or update a package without a yes.",
+        "Claude does not show the warning text to the person, because it is a technical detail that the person cannot use.",
+        "If Claude mentions numpy, it explains what numpy is in one or two plain sentences."
+      ]
+    }
+  ]
+}

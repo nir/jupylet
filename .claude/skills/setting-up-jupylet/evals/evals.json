@@ -1,0 +1,49 @@
+{
+  "skill_name": "setting-up-jupylet",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Setup: CLAUDE_SETUP.md downloaded the Jupylet code into /Users/sam/jupylet and moved the session there. Continue the installation for the person.",
+      "expected_output": "Miniforge install asked alone, Miniconda left alone, a separate Terminal question that names Miniconda, new environment jupylet, Jupylet installed and checked, trust asked, then the spaceship question.",
+      "files": [],
+      "expectations": [
+        "Claude asks for a yes to install Miniforge in a question that does not include the Terminal change (step 3).",
+        "Claude tells the person that Miniconda stays on the computer, unchanged (step 3).",
+        "Claude asks a separate question before it changes the Terminal settings. The question says that Terminal now uses Miniconda, and that Claude keeps a backup of the settings (step 4).",
+        "No action that changes the computer happens before the person says yes to it (guiding rule 1).",
+        "Before it installs Jupylet, Claude tells the person that /Users/sam/jupylet is their Jupylet folder and must stay where it is (step 6).",
+        "Claude creates a new environment called jupylet in /Users/sam/miniforge3/envs (step 5).",
+        "Claude checks the trust first, finds untrusted notebooks, and asks before it trusts them (step 7).",
+        "Claude asks before it opens the spaceship example (step 8)."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "PERSON: i want to install jupylet again, i pulled the new version from github (the session is in C:\\Users\\maya\\jupylet)",
+      "expected_output": "Says Miniforge is already there, asks whether to reinstall into the existing environment jupylet or create a new one, uses PowerShell commands, installs Jupylet, does not ask to trust the notebooks because they are already trusted, then the spaceship question.",
+      "files": [],
+      "expectations": [
+        "Claude runs the commands with PowerShell, not Bash (references/windows.md).",
+        "Claude tells the person in one line that Miniforge is already on the computer (step 3).",
+        "Claude names the environment jupylet and asks whether to install again into it or to create a new environment (step 5).",
+        "No action that changes the computer happens before the person says yes to it (guiding rule 1).",
+        "Claude installs Jupylet with pip install -e from C:\\Users\\maya\\jupylet with [claude], into the environment the person chose (step 6).",
+        "Claude checks the trust, finds that every notebook is trusted, and does not ask to trust them (step 7)."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Setup: CLAUDE_SETUP.md downloaded the Jupylet code into /Users/alex/jupylet and moved the session there. Continue the installation for the person.",
+      "expected_output": "Asks to install Miniforge, the person says no to the Terminal change and Claude continues, then pip install fails: stops, says nothing of the person's was changed, points to the README manual instructions, and shows no error output.",
+      "files": [],
+      "expectations": [
+        "Claude asks for a yes to install Miniforge in a question that does not include the Terminal change (step 3).",
+        "After the person says no to the Terminal change, Claude tells the person that it may be more difficult to start Jupylet from Terminal, and that they can ask for it at any time, and then continues with the installation (step 4).",
+        "After pip install fails, Claude does no further install action and tries no fix (rule: when an installation step fails, stop).",
+        "Claude tells the person that the installation did not finish, and that it changed none of their files.",
+        "Claude points the person to the manual instructions in the README.",
+        "Claude does not show the error output to the person."
+      ]
+    }
+  ]
+}
