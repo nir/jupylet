@@ -20,6 +20,7 @@ Values in `{braces}` are blanks that you fill in.
   `{code}/jupylet/__init__.py`.
 - `{miniforge}`: the folder `miniforge3` in the home folder of the person.
 - `{env}`: the name of the environment that Jupylet goes into.
+- `{scratchpad}`: your scratchpad folder.
 
 The commands for each step are in `references/macos.md` and
 `references/windows.md`. Read the file for this computer, if one exists,

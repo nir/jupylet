@@ -116,23 +116,40 @@ the setting), or `still on: ...` (it could not change it).
 
 ## Start JupyterLab
 
-`cd "{code}" && "{python}" -m jupylet.claude detach "{scratchpad}/jupyter.log" /bin/bash -c 'source "{conda}/bin/activate" "{env}" && cd "{folder}" && exec jupyter lab --no-browser --port {port} --ServerApp.port_retries=0 --IdentityProvider.token={token} --JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up'`
+Write this file into the scratchpad as `start_jupyter.sh`, with the Write tool:
 
-The command does these steps:
+```bash
+#!/bin/bash
+# Start JupyterLab for Jupylet. $1 is the token, $2 is the port.
+source "{conda}/bin/activate" "{env}"
+cd "{folder}"
+exec jupyter lab --no-browser --port "$2" --ServerApp.port_retries=0 \
+  --IdentityProvider.token="$1" \
+  --JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up
+```
 
-1. `detach` starts the rest of the command apart from your task, so that it
-   continues after your turn, until you stop it. It prints a process id, and
-   returns at once. The output of JupyterLab goes to `jupyter.log`.
-2. `bash` activates the environment with the activation script of its conda
+Then run it:
+
+`cd "{code}" && "{python}" -m jupylet.claude detach "{scratchpad}/jupyter.log" /bin/bash "{scratchpad}/start_jupyter.sh" {token} {port}`
+
+The file does these steps:
+
+1. It activates the environment with the activation script of its conda
    installation. It does not use the Terminal settings of the person.
-3. It goes to the folder `{folder}`.
-4. It starts JupyterLab on `{port}`, with `{token}`, without a browser
-   window.
-5. The last option lets you run one cell and move between cells. Without it,
+2. It goes to the folder `{folder}`.
+3. It starts JupyterLab with the token and the port that it gets, without a
+   browser window.
+4. The last option lets you run one cell and move between cells. Without it,
    you can only run all cells.
 
-*Developer note, not an instruction: the activation with `bin/activate` and
-the last option are not tested on macOS yet.*
+`detach` starts the file apart from your task, so that it continues after
+your turn, until you stop it. It prints a process id, and returns at once.
+The output of JupyterLab goes to `jupyter.log`.
+
+Run the command as it is, alone in one call. Do not add other commands to it.
+
+*Developer note, not an instruction: the activation with `bin/activate`, the
+file, and the last option are not tested on macOS yet.*
 
 ## Wait until it is ready
 

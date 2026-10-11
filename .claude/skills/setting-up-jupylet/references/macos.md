@@ -61,14 +61,16 @@ Prints the conda that the Terminal settings start, if any.
 
 ## Install Miniforge
 
-`d="$(mktemp -d)" && curl -fL -o "$d/Miniforge3.sh" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh && bash "$d/Miniforge3.sh" -b -p "$HOME/miniforge3"; rm -rf "$d"`
+Run these two commands, each in its own call:
 
-The command does these steps:
+1. `curl -fL -o "{scratchpad}/Miniforge3.sh" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh`
 
-1. It makes a new, private temporary folder.
-2. It downloads the latest Miniforge installer for Apple chips into it.
-3. It runs the installer without questions, into `~/miniforge3`.
-4. It deletes the temporary folder.
+   It downloads the latest Miniforge installer for Apple chips into the
+   scratchpad, a temporary folder of this session.
+2. Only if the download succeeded:
+   `bash "{scratchpad}/Miniforge3.sh" -b -p "$HOME/miniforge3"`
+
+   It runs the installer without questions, into `~/miniforge3`.
 
 The installer runs only if its file name ends in `.sh`. That is why the file
 has the name `Miniforge3.sh`.

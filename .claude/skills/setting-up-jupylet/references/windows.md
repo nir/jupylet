@@ -68,15 +68,17 @@ of them.
 
 ## Install Miniforge
 
-`$f = Join-Path $env:TEMP ('miniforge-' + [guid]::NewGuid() + '.exe'); curl.exe -fL -o $f https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe; if ($LASTEXITCODE -eq 0) { Start-Process -Wait -FilePath $f -ArgumentList '/S', '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', "/D=$env:USERPROFILE\miniforge3" }; Remove-Item $f -ErrorAction SilentlyContinue`
+Run these two commands, each in its own call:
 
-The command does these steps:
+1. `curl.exe -fL -o "{scratchpad}\Miniforge3.exe" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe`
 
-1. It downloads the latest Miniforge installer to a temporary file with a
-   unique name.
-2. If the download succeeds, it runs the installer without windows or
-   questions, into `miniforge3` in the home folder.
-3. It deletes the installer file.
+   It downloads the latest Miniforge installer into the scratchpad, a
+   temporary folder of this session.
+2. Only if the download succeeded:
+   `Start-Process -Wait -FilePath "{scratchpad}\Miniforge3.exe" -ArgumentList '/S', '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', "/D=$env:USERPROFILE\miniforge3"`
+
+   It runs the installer without windows or questions, into `miniforge3` in
+   the home folder.
 
 The installer options:
 
