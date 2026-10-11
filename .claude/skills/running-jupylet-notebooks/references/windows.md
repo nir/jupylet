@@ -45,6 +45,7 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 - Check the Jupyter MCP tools
 - Make a token
 - Check a port
+- Check the environment
 - Prepare the environment
 - Start JupyterLab
 - Wait until it is ready
@@ -121,6 +122,15 @@ so a short token is enough.
 
 Tries to connect to the port. `0` means that a program uses the port. Another
 number, usually `10061`, means that the port is free.
+
+## Check the environment
+
+`Set-Location "{code}"; & "{python}" -m jupylet.claude prepare --check`
+
+Checks the Jupyter settings that "Prepare the environment" changes, and
+changes nothing. Prints `ready` if the environment has all of them, or
+`needs:` and the parts that "Prepare the environment" would change, for
+example `needs: nbmodel`.
 
 ## Prepare the environment
 

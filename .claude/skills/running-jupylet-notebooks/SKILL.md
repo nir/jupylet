@@ -325,15 +325,20 @@ Jupyter server", and then this task with the new `{folder}`.
 
    Later tasks need `{port}` too. If you do not have it later, take it from
    "Find the Jupyter servers that run".
-3. Ask for a yes to change the Jupyter settings of the environment, for
-   example: "May I change a Jupyter setting in your environment? It stops
-   notebooks from freezing after a few minutes." After a yes, run "Prepare the
-   environment". It turns off `jupyter_server_nbmodel`, a Jupyter extension
-   that can make a cell stop responding, and prints what it found:
-   - **`off`, `not installed` or `turned off`:** the extension is off.
-     Continue.
-   - **`still on: ...`, or the person said no:** tell the person that a cell
-     can stop responding after a few minutes, and continue.
+3. Run "Check the environment" from the reference file.
+   - **`ready`:** the settings are correct. Continue with step 4.
+   - **`needs: ...`:** ask for a yes to change the Jupyter settings of the
+     environment, for example: "May I change a Jupyter setting in your
+     environment? It stops notebooks from freezing after a few minutes."
+     After a yes, run "Prepare the environment". It turns off
+     `jupyter_server_nbmodel`, a Jupyter extension that can make a cell stop
+     responding, and prints what it found:
+     - **`off`, `not installed` or `turned off`:** the extension is off.
+       Continue.
+     - **`still on: ...`:** tell the person that a cell can stop responding
+       after a few minutes, and continue.
+   - **The person says no:** tell the person that a cell can stop responding
+     after a few minutes, and continue.
 4. Tell the person in one line, for example: "Starting Jupyter now, one
    second."
 5. Run "Start JupyterLab". Do not start it as a background task
