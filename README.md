@@ -74,7 +74,7 @@ chapters in the Jupylet Programmer's Reference Guide.
 
 You can let Claude Code install Jupylet for you. Open the [Claude Code Desktop app](https://code.claude.com/docs/en/desktop-quickstart), 
 start a new session and paste the following request: Hi Claude please install 
-Jupylet on my computer by following the instructions in https://github.com/nir/jupylet/blob/claude/CLAUDE_SETUP.md
+Jupylet on my computer by following the instructions in https://github.com/nir/jupylet/blob/skills/CLAUDE_SETUP.md
 
 ### No way, I want to do it myself!
 
