@@ -33,6 +33,7 @@ Some blanks appear only here:
 - Start JupyterLab
 - Wait until it is ready
 - Check the sign-in
+- Collapse the side bar
 - Open the default browser
 - Attach
 - Call a tool
@@ -147,6 +148,27 @@ Run this in the page with `javascript_tool`:
 `(await fetch('/api/status', {credentials: 'same-origin'})).status`
 
 Prints `200` if the page signed in, or `403` if it did not.
+
+## Collapse the side bar
+
+Run this in the page with `javascript_tool`:
+
+```javascript
+const stack = document.querySelector('#jp-left-stack');
+const tab = document.querySelector('.jp-SideBar.jp-mod-left .lm-TabBar-tab.lm-mod-current');
+if (stack && tab && !stack.classList.contains('lm-mod-hidden')) {
+  const r = tab.getBoundingClientRect();
+  const o = {bubbles: true, cancelable: true, button: 0, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2};
+  tab.dispatchEvent(new PointerEvent('pointerdown', o));
+  tab.dispatchEvent(new PointerEvent('pointerup', o));
+}
+```
+
+If the left side bar of JupyterLab shows a panel, for example the list of
+files, it presses and releases the tab of that panel. That collapses the
+panel. If the panel is already collapsed, it does nothing. A click event does
+not work: the tab bar reacts only to pointer events. JupyterLab remembers the
+collapsed panel for the next page of this Jupyter server.
 
 ## Open the default browser
 

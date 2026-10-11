@@ -403,7 +403,11 @@ the chat. The browser tools are `mcp__Claude_Browser__preview_start`,
        how it goes.
    - **Other results:** the page did not load. Tell the person, and see "The
      Jupyter server stopped by itself" in `references/troubleshooting.md`.
-3. Offer more room. The pane is narrow, and it can cut off the canvas. This
+3. Run "Collapse the side bar" from the reference file in the page, with
+   `javascript_tool`. The pane is narrow, and the side bar of JupyterLab takes
+   much of it. Do not ask first: if the person wants the side bar, you can
+   show them how to open it.
+4. Offer more room. The pane is narrow, and it can cut off the canvas. This
    needs the tool `mcp__ccd_window__set_sidebar_collapsed`. If the tool list
    shows it only by its name, load it with `ToolSearch`. Read the setting
    `hide-chat-list` with the skill `configuring-jupylet`:
