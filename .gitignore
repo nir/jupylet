@@ -142,3 +142,6 @@ dmypy.json
 .vscode/settings.json
 jpl.code-workspace
 tmp/
+
+# Local Claude settings of this Jupylet folder
+.jupylet/

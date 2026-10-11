@@ -218,6 +218,10 @@ Run these from the reference file, in this order:
    problem. Ask the person before each attempt. If you cannot solve it,
    stop, as in "Rules for this skill".
 
+Then write the local setting `environment` = `{env}` with the skill
+`configuring-jupylet`. The skill `running-jupylet-notebooks` reads it to find
+the environment of this folder.
+
 Then tell the person in one line, for example "Jupylet is installed."
 
 ## Step 7. Trust the example notebooks
@@ -246,7 +250,30 @@ The installation is complete only when an example runs. Ask, for example:
 > ship you steer with the arrow keys. It opens in a notebook right next to
 > our chat. May I open it?
 
-After a clear yes, use the skill `running-jupylet-notebooks` to open and run
-`11-spaceship.ipynb` in `{code}/examples`, with the environment `{env}`.
+After a clear yes, do these, with the environment folder
+`{miniforge}/envs/{env}`, the folder `{code}/examples` and the notebook
+`11-spaceship.ipynb`:
+
+1. "Start a Jupyter server", "Open a page in the Claude app" and "Attach to the
+   notebook", tasks of the skill `running-jupylet-notebooks`.
+2. Tell the person that this first run is slow. Jupylet prepares its code on
+   the first run, and the page can show `[*]` for half a minute, with no
+   visible change. Say, for example: "Running the notebook now. It can take
+   up to a minute to get going, while Jupylet gets everything ready for the
+   first time. After that it starts in seconds."
+3. "Run the notebook" in the skill `running-jupylet-notebooks`. Its first
+   step, the message to the person, is already done.
+4. When the run works, tell the person how to use the example, for example:
+   "The spaceship example should be showing at the bottom of the notebook
+   now. I ran every cell, top to bottom, and the last one started it. Click
+   the canvas, the area where it's drawn, then steer the spaceship with the
+   arrow keys."
+5. Offer once to show how to start Jupylet without Claude, for example: "By
+   the way, you can also start Jupylet on your own, without me. Whenever
+   you'd like, just ask and I'll show you how." When the person asks, do
+   "Start Jupylet without Claude" in the skill `running-jupylet-notebooks`.
+
+The Jupyter server continues to run, so that the person can continue in the
+notebook.
 
 If the person says no, tell the person that they can ask for it at any time.

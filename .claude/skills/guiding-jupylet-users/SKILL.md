@@ -10,7 +10,7 @@ plainly, but don't dumb it down.
 
 ## The rules
 
-1. **Read and check without a question. Ask before you change anything.**
+1. **Ask before you change anything.**
    - Reading and checking change nothing on the computer of the person. You
      do not need to ask before you read or check these items: the Jupylet
      folder, its environment, the files and processes of Jupyter, and the
@@ -158,6 +158,23 @@ word "games" for it if the person does not.
 
 - Good: "the Jupylet examples"
 - Bad: "Let's get your games running!"
+
+## Remember the choices of the person
+
+Some actions have a setting. The other skills read and write these settings
+with the skill `configuring-jupylet`.
+
+- **Ask before you remember a choice.** After the person makes the choice,
+  ask once: "Shall I remember that for next time?" Write the setting only
+  after a yes.
+- **When you use a setting, tell the person in one line,** for example:
+  "Hiding the list of chats to make room for the notebook, as you asked last
+  time." The person can then change it.
+- **A setting never replaces a yes for a change to the computer,** for
+  example to install something, to stop a Jupyter server, or to delete
+  files. Ask each time, as rule 1 says.
+- **When the person asks you to change or forget a setting,** write or
+  delete it.
 
 ## Work with developers
 

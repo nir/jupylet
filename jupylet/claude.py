@@ -52,6 +52,34 @@ its path, its kind (conda or venv), and where its jupylet comes from ("this
 folder", or a version and its source). With --all it also lists
 environments with any other version of jupylet. Every other command needs an
 environment that actually has jupylet installed.
+
+`running` prints a JSON list, one object per Jupyter server that runs:
+
+    port, token   how to reach it.
+    folder        the folder it serves.
+    jupylet       true if that folder, or one up to two levels above it, has
+                  the jupylet package: the server serves a Jupylet folder.
+    environment   the environment it runs from, or null if unknown.
+    notebooks     the notebooks open in it, each as {"path", "connections"}.
+                  connections counts the pages and other clients connected
+                  to the notebook's kernel: 0 means no page shows it.
+
+With <folder>, only the servers that serve <folder>/examples or a folder
+inside it. For example:
+
+    [
+      {
+        "port": 8888,
+        "token": "3f9a1c07",
+        "folder": "/Users/sam/jupylet/examples",
+        "jupylet": true,
+        "environment": "/Users/sam/miniforge3/envs/jupylet",
+        "notebooks": [
+          {"path": "11-spaceship.ipynb", "connections": 1},
+          {"path": "02-hello-jupylet.ipynb", "connections": 0}
+        ]
+      }
+    ]
 """
 
 
@@ -941,12 +969,18 @@ def running(folder=None):
 
     Returns:
         list: (port, token, folder served, whether it is Jupylet's, the
-            notebooks open in it, the environment it runs from) tuples.
+            notebooks open in it, the environment it runs from, the number of
+            connections to each notebook's kernel) tuples. main() prints them
+            as JSON: see USAGE.
 
     Notes:
         Records can outlive their servers, and another Jupyter may have taken
         their port since, hence both checks. Ports are probed all at once:
         a refused connection takes seconds on Windows.
+        A kernel's connections are the pages, and other clients, connected to
+        it: 0 means no page shows that notebook now, for example after the
+        person closed the browser tab. Not tested yet: whether Claude's own
+        attach counts as one.
     """
     runtime = os.environ.get('JUPYTER_RUNTIME_DIR')
 
@@ -998,10 +1032,17 @@ def running(folder=None):
         except (OSError, ValueError):
             continue
 
-        notebooks = sorted({s['path'] for s in sessions if s.get('type') == 'notebook'})
+        connections = {}
+
+        for s in sessions:
+            if s.get('type') == 'notebook':
+                n = (s.get('kernel') or {}).get('connections', 0)
+                connections[s['path']] = max(n, connections.get(s['path'], 0))
+
+        notebooks = sorted(connections)
         seen.add((port, token))
         found.append((port, token, root, _is_jupylet_folder(root), notebooks,
-                      _env_of(info.get('pid', 0))))
+                      _env_of(info.get('pid', 0)), [connections[n] for n in notebooks]))
 
     return found
 
@@ -1296,10 +1337,14 @@ def main(argv):
         print(shutdown(*args))
 
     elif cmd == 'running' and len(args) <= 1:
-        for port, token, root, jupylet, notebooks, env in running(*args):
-            print('%s\t%s\t%s\t%s\t%s\t%s' % (
-                port, token, root, 'jupylet' if jupylet else '-',
-                ', '.join(notebooks) or '-', env or '-'))
+        print(json.dumps([{
+            'port': port,
+            'token': token,
+            'folder': root,
+            'jupylet': jupylet,
+            'environment': env or None,
+            'notebooks': [{'path': n, 'connections': c} for n, c in zip(notebooks, connections)],
+        } for port, token, root, jupylet, notebooks, env, connections in running(*args)], indent=2))
 
     elif cmd == 'cleanup' and args in ([], ['--yes']):
         cleanup(delete=args == ['--yes'])

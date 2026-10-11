@@ -7,11 +7,11 @@
       "expected_output": "Checks what runs, uses jupylet2 without a question, starts Jupyter detached, gives the person the token with a monitoring command already running, offers more room, attaches, runs all cells with wait-change started first, then tells the person how to steer the ship and offers to show how to start Jupylet without Claude.",
       "files": [],
       "expectations": [
-        "Claude runs the running check before it starts Jupyter (Find the Jupyters that run).",
+        "Claude runs the running check before it starts Jupyter (Find the Jupyter servers that run).",
         "Claude uses the environment jupylet2, which setup just installed, without a question, although jupylet also has this folder (Find the environment).",
         "Claude starts Jupyter with jupylet.claude detach, not as a background task and not in the Terminal panel (start-in-app.md, step 3).",
         "Claude starts wait-open in the background before it gives the person the token (start-in-app.md, step 6).",
-        "Claude gives the token to the person, and never types it into the page or puts it in a URL (Rules for this skill).",
+        "Claude gives the token to the person, and never types it into the page. The address it opens in the app has no token (Rules for this skill).",
         "The message that asks the person to paste the token ends the turn, with nothing after it such as 'I'll wait for you' (waiting.md).",
         "Claude asks before it hides the list of chats, and after the yes tells the person how to show it again (start-in-app.md, step 7).",
         "Claude starts wait-change in the background before it runs all cells (start-in-app.md, step 9).",
@@ -37,12 +37,12 @@
       "expected_output": "Finds the person's Jupyter, asks if it is the one, finds that it must start again, asks the person to save, closes it only after the person says to continue, says only that it is closed, then offers to start Jupyter in the app or let the person start it.",
       "files": [],
       "expectations": [
-        "Claude runs the running check, names the Jupyter it found by notebook, and asks if that is the one (own-jupyter.md).",
+        "Claude runs the running check, names the Jupyter it found by notebook, and asks if that is the one (running-server.md).",
         "Claude does not start a second Jupyter while the person's Jupyter on the same folder still runs (Rules for this skill).",
-        "Claude explains that Jupyter must start again, and asks the person to save the notebook and to say when to continue (own-jupyter.md).",
-        "Claude stops the person's Jupyter only after the person says to continue (Rules for this skill, own-jupyter.md).",
-        "After it stops Jupyter, Claude says only that Jupyter is closed, and does not claim that the notebook was saved (own-jupyter.md).",
-        "Claude then offers to start Jupyter in the app, or to let the person start it and connect to that (own-jupyter.md)."
+        "Claude explains that Jupyter must start again, and asks the person to save the notebook and to say when to continue (running-server.md).",
+        "Claude stops the person's Jupyter only after the person says to continue (Rules for this skill, running-server.md).",
+        "After it stops Jupyter, Claude says only that Jupyter is closed, and does not claim that the notebook was saved (running-server.md).",
+        "Claude then offers to start Jupyter in the app, or to let the person start it and connect to that (running-server.md)."
       ]
     }
   ]
