@@ -403,38 +403,46 @@ the chat. The browser tools are `mcp__Claude_Browser__preview_start`,
        how it goes.
    - **Other results:** the page did not load. Tell the person, and see "The
      Jupyter server stopped by itself" in `references/troubleshooting.md`.
-3. Run "Collapse the side bar" from the reference file in the page, with
-   `javascript_tool`. The pane is narrow, and the side bar of JupyterLab takes
-   much of it. Do not ask first: if the person wants the side bar, you can
-   show them how to open it.
-4. Offer more room. The pane is narrow, and it can cut off the canvas. This
-   needs the tool `mcp__ccd_window__set_sidebar_collapsed`. If the tool list
-   shows it only by its name, load it with `ToolSearch`. Read the setting
-   `hide-chat-list` with the skill `configuring-jupylet`:
-   - **`yes`:** hide the list of chats (`collapsed` set to true). Tell the
-     person in one line, for example "Hiding the list of chats to make room
-     for the notebook, as you asked last time."
-   - **`no`:** the task is complete.
-   - **No value:** ask, for example:
+3. Run "Collapse the JupyterLab side bar" from the reference file in the page,
+   with `javascript_tool`. Do it each time that you open a new page, with no
+   question and no setting. The pane is narrow, and the JupyterLab side bar
+   takes much of it.
+4. Do "Offer to hide the list of chats". The list of chats of the Claude app,
+   on the left of the app window, takes the most room.
 
-     > The notebook is a bit cramped. Want me to tuck the list of chats on
-     > the left out of the way, so there's more room for it?
+## Offer to hide the list of chats
 
-     After a yes, hide it, and tell the person how to show it again, for
-     example:
+This task makes room for the notebook in the browser pane: it hides the list
+of chats of the Claude app, if the person wants it.
 
-     > Done. You can bring it back any time by clicking the small panel icon
-     > in the top-left corner of the Claude app, just right of the three
-     > lines.
+This needs the tool `mcp__ccd_window__set_sidebar_collapsed`. If the tool list
+shows it only by its name, load it with `ToolSearch`. Read the setting
+`hide-chat-list` with the skill `configuring-jupylet`:
 
-     After the answer, ask if you can remember it. After a yes, write the
-     global setting `hide-chat-list` (`yes` or `no`) with the skill
-     `configuring-jupylet`.
-   - **The tool does not exist:** tell the person how to hide the list
-     themselves, as in the example above.
+- **`yes`:** hide the list of chats (`collapsed` set to true). Tell the
+  person in one line, for example "Hiding the list of chats to make room
+  for the notebook, as you asked last time."
+- **`no`:** do not hide it.
+- **No value:** ask, for example:
 
-   Ask about the list of chats only once in a conversation. Do not show the
-   list again yourself.
+  > The notebook is a bit cramped. Want me to tuck the list of chats on
+  > the left out of the way, so there's more room for it?
+
+  After a yes, hide it, and tell the person how to show it again, for
+  example:
+
+  > Done. You can bring it back any time by clicking the small panel
+  > icon in the top-left corner of the Claude app, just right of the
+  > three lines.
+
+  After the answer, ask if you can remember it. After a yes, write the
+  global setting `hide-chat-list` (`yes` or `no`) with the skill
+  `configuring-jupylet`.
+- **The tool does not exist:** tell the person how to hide the list
+  themselves, as in the example above.
+
+Ask about the list of chats only once in a conversation. Do not show the
+list again yourself.
 
 ## Open a page in the default browser
 
@@ -510,7 +518,8 @@ it, or when a path tells you to.
      time. Start "Wait for a run" again, with the times in
      `references/waiting.md`. After the last time, tell the person that a
      cell still runs, and stop waiting.
-6. Tell the person the result.
+6. Tell the person the result in plain words, for example: "Done, every cell
+   ran without errors."
 
 ## Wait for the person
 

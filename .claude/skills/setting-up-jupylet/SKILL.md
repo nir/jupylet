@@ -262,8 +262,12 @@ After a clear yes, do these, with the environment folder
    visible change. Say, for example: "Running the notebook now. It can take
    up to a minute to get going, while Jupylet gets everything ready for the
    first time. After that it starts in seconds."
-3. "Run the notebook" in the skill `running-jupylet-notebooks`. Its first
-   step, the message to the person, is already done.
+3. Do "Run the notebook" in the skill `running-jupylet-notebooks`, without its
+   two messages to the person:
+   - Skip step 1 of "Run the notebook" ("Running the notebook now"). Item 2
+     of this list already told the person.
+   - Skip step 6 of "Run the notebook" (the result). Item 4 of this list
+     tells the person how to use the example.
 4. When the run works, tell the person how to use the example, for example:
    "The spaceship example should be showing at the bottom of the notebook
    now. I ran every cell, top to bottom, and the last one started it. Click

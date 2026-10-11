@@ -49,7 +49,7 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 - Start JupyterLab
 - Wait until it is ready
 - Check the sign-in
-- Collapse the side bar
+- Collapse the JupyterLab side bar
 - Open the default browser
 - Attach
 - Call a tool
@@ -188,7 +188,7 @@ Run this in the page with `javascript_tool`:
 
 Prints `200` if the page signed in, or `403` if it did not.
 
-## Collapse the side bar
+## Collapse the JupyterLab side bar
 
 Run this in the page with `javascript_tool`:
 
