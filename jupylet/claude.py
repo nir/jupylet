@@ -43,7 +43,7 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude shutdown <port> <token>
     python -m jupylet.claude cleanup [--yes]
     python -m jupylet.claude running [<folder>]
-    python -m jupylet.claude prepare
+    python -m jupylet.claude prepare [--check]
 
 `find-env` is the one command meant to run from any Python, with or
 without jupylet, such as Miniforge's `base` or a plain python3 (run this
@@ -57,9 +57,14 @@ environment that actually has jupylet installed.
 
     port, token   how to reach it.
     folder        the folder it serves.
-    jupylet       true if that folder, or one up to two levels above it, has
-                  the jupylet package: the server serves a Jupylet folder.
     environment   the environment it runs from, or null if unknown.
+    jupylet_version
+                  the version of jupylet installed in that environment, or
+                  null if it has none or the environment is unknown.
+    mcp_tools     true if the server answers with its MCP tools: the [claude]
+                  extra is installed and loaded.
+    nbmodel_off   true if jupyter_server_nbmodel is off in the server, both
+                  its server part and its browser part.
     notebooks     the notebooks open in it, each as {"path", "connections"}.
                   connections counts the pages and other clients connected
                   to the notebook's kernel: 0 means no page shows it.
@@ -72,8 +77,10 @@ inside it. For example:
         "port": 8888,
         "token": "3f9a1c07",
         "folder": "/Users/sam/jupylet/examples",
-        "jupylet": true,
         "environment": "/Users/sam/miniforge3/envs/jupylet",
+        "jupylet_version": "0.10.0",
+        "mcp_tools": true,
+        "nbmodel_off": true,
         "notebooks": [
           {"path": "11-spaceship.ipynb", "connections": 1},
           {"path": "02-hello-jupylet.ipynb", "connections": 0}
@@ -909,18 +916,29 @@ def run_cell(port, token, index, start):
     return call(port, token, 'notebook_run-cell')
 
 
-def _is_jupylet_folder(root):
-    """Tell whether a Jupyter serving root serves Jupylet's code folder.
+def _jupylet_version(env):
+    """Find the version of jupylet installed in an environment.
+
+    Runs _PROBE with the environment's own python, from inside its folder,
+    as find_env() does.
 
     Returns:
-        bool: True if root, or a folder up to two levels above it, has the
-            jupylet package in it.
+        str: The version, or None if the environment has no jupylet, or
+            cannot be told.
     """
-    for folder in (root, os.path.dirname(root), os.path.dirname(os.path.dirname(root))):
-        if os.path.exists(os.path.join(folder, 'jupylet', '__init__.py')):
-            return True
+    python = env and _python_of(env)
 
-    return False
+    if not python:
+        return None
+
+    try:
+        out = subprocess.run(
+            [python, '-c', _PROBE],
+            capture_output=True, text=True, timeout=20, cwd=env,
+        )
+        return json.loads(out.stdout.strip().splitlines()[-1])[0]
+    except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
+        return None
 
 
 def _env_of(pid):
@@ -968,9 +986,11 @@ def running(folder=None):
             folder inside it.
 
     Returns:
-        list: (port, token, folder served, whether it is Jupylet's, the
-            notebooks open in it, the environment it runs from, the number of
-            connections to each notebook's kernel) tuples. main() prints them
+        list: (port, token, folder served, the notebooks open in it, the
+            environment it runs from, the version of jupylet in that
+            environment, whether it answers with its MCP tools, whether
+            nbmodel is off in it, the number of connections to each notebook's
+            kernel) tuples. main() prints them
             as JSON: see USAGE.
 
     Notes:
@@ -1041,10 +1061,65 @@ def running(folder=None):
 
         notebooks = sorted(connections)
         seen.add((port, token))
-        found.append((port, token, root, _is_jupylet_folder(root), notebooks,
-                      _env_of(info.get('pid', 0)), [connections[n] for n in notebooks]))
+        env = _env_of(info.get('pid', 0))
+        found.append((port, token, root, notebooks, env, _jupylet_version(env),
+                      _mcp_tools(port, token), _nbmodel_off_in(port, token),
+                      [connections[n] for n in notebooks]))
 
     return found
+
+
+def _mcp_tools(port, token):
+    """Tell whether a running Jupyter answers with its MCP tools.
+
+    Returns:
+        bool: True if it lists its tools: the [claude] extra is installed and
+            loaded in it.
+    """
+    try:
+        return bool(tools(port, token))
+    except (OSError, ValueError, KeyError, AttributeError):
+        return False
+
+
+def _nbmodel_off_in(port, token):
+    """Tell whether jupyter_server_nbmodel is off in a running Jupyter.
+
+    Asks the running server itself, not the configuration on disk, which can
+    have changed since the server started.
+
+    Returns:
+        bool: True if both its parts are off.
+
+    Notes:
+        Its server part adds /api/nbmodel/settings/output-recovery, so that
+        address answers 404 when the part is off. Its browser part is listed
+        in the page configuration of /lab: it is off when it is not among
+        federated_extensions, or when it is among disabledExtensions.
+    """
+    try:
+        _api(port, token, '/api/nbmodel/settings/output-recovery')
+        return False
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            return False
+    except (OSError, ValueError):
+        return False
+
+    req = urllib.request.Request(
+        'http://localhost:%s/lab' % port,
+        headers={'Authorization': 'token ' + token},
+    )
+
+    try:
+        html = urllib.request.urlopen(req, timeout=60).read().decode()
+        page = json.loads(re.search(r'id="jupyter-config-data"[^>]*>(.*?)</script>', html, re.S).group(1))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+    names = [e.get('name') for e in page.get('federated_extensions', [])]
+
+    return NBMODEL_LAB not in names or NBMODEL_LAB in page.get('disabledExtensions', [])
 
 
 def _runtime_dir():
@@ -1143,13 +1218,25 @@ def _news_off():
     pop-up in this Python's environment, unless its settings file exists
     already. Setup does it too, but Jupylet may have been installed by hand,
     and an editable install never copies the file setup.py lists."""
-    src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       'assets', 'jupyterlab', 'overrides.json')
-    folder = os.path.join(sys.prefix, 'share', 'jupyter', 'lab', 'settings')
+    src, folder = _news_paths()
 
     if os.path.exists(src) and not os.path.exists(os.path.join(folder, 'overrides.json')):
         os.makedirs(folder, exist_ok=True)
         shutil.copy(src, folder)
+
+
+def _news_paths():
+    """The news settings file that Jupylet ships, and the folder it goes to."""
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       'assets', 'jupyterlab', 'overrides.json')
+    folder = os.path.join(sys.prefix, 'share', 'jupyter', 'lab', 'settings')
+
+    return src, folder
+
+
+def _server_config_path():
+    """This Python's environment's own jupyter_server_config.json."""
+    return os.path.join(sys.prefix, 'etc', 'jupyter', 'jupyter_server_config.json')
 
 
 def _collaboration_config():
@@ -1189,7 +1276,7 @@ def _collaboration_config():
     # own folder. The jupyter_server_config.d folder beside it is read only
     # for turning extensions on and off.
     #
-    path = os.path.join(sys.prefix, 'etc', 'jupyter', 'jupyter_server_config.json')
+    path = _server_config_path()
 
     config = {}
 
@@ -1230,6 +1317,40 @@ def prepare():
     _collaboration_config()
 
     return _nbmodel_off()
+
+
+def prepare_needs():
+    """List the parts of prepare() that would change something.
+
+    Changes nothing, so it can run before the person agrees to the change.
+
+    Returns:
+        list: Names of the parts that are not set yet: 'nbmodel', 'live copy'
+            and 'news'. Empty if the environment is ready.
+    """
+    import importlib.util
+
+    needs = []
+
+    if importlib.util.find_spec(NBMODEL) is not None and _nbmodel_on() != (False, False):
+        needs.append('nbmodel')
+
+    path = _server_config_path()
+    ydoc = {}
+
+    if os.path.exists(path):
+        with open(path) as f:
+            ydoc = json.load(f).get('YDocExtension', {})
+
+    if 'ystore_class' not in ydoc or 'document_cleanup_delay' not in ydoc:
+        needs.append('live copy')
+
+    src, folder = _news_paths()
+
+    if os.path.exists(src) and not os.path.exists(os.path.join(folder, 'overrides.json')):
+        needs.append('news')
+
+    return needs
 
 
 def _nbmodel_off():
@@ -1341,13 +1462,20 @@ def main(argv):
             'port': port,
             'token': token,
             'folder': root,
-            'jupylet': jupylet,
             'environment': env or None,
+            'jupylet_version': version,
+            'mcp_tools': mcp,
+            'nbmodel_off': nbmodel_off,
             'notebooks': [{'path': n, 'connections': c} for n, c in zip(notebooks, connections)],
-        } for port, token, root, jupylet, notebooks, env, connections in running(*args)], indent=2))
+        } for port, token, root, notebooks, env, version, mcp, nbmodel_off, connections
+            in running(*args)], indent=2))
 
     elif cmd == 'cleanup' and args in ([], ['--yes']):
         cleanup(delete=args == ['--yes'])
+
+    elif cmd == 'prepare' and args == ['--check']:
+        needs = prepare_needs()
+        print('needs: ' + ', '.join(needs) if needs else 'ready')
 
     elif cmd == 'prepare' and not args:
         result = prepare()
