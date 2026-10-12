@@ -116,9 +116,6 @@ If it does not exist, this branch does not have the setup skill. Tell the
 person plainly that this version of Jupylet cannot be installed this way.
 Then stop.
 
-Tell the person in one line, for example "The code is in the folder
-`{code}`." You put the code there, so do not say that you found it.
-
 ## Step 4. Move the session to the code folder
 
 Tell the person, for example:
@@ -127,10 +124,31 @@ Tell the person, for example:
 > allow that, and it may call the folder a workspace. Please allow it.
 
 Then call `mcp__ccd_directory__change_directory` with `{code}`. If that tool
-is not available, do step 5 without it. Step 5 uses full paths.
+is not available, go to step 5.
+
+The folder of the session changes only when your turn ends. Only then are
+the skills of `{code}` in your list of skills. So end your turn now with
+this question, for example:
+
+> The Jupylet code is ready in the folder `{code}`. Shall I start the
+> installation? First I'll check what's already on your computer. That
+> changes nothing.
+
+If you downloaded the code in step 3, do not say that you found it, since that is obvious.
 
 ## Step 5. Continue with the setup skill
 
-Read `{code}/.claude/skills/setting-up-jupylet/SKILL.md`. Follow it from its
-start, with `{code}` as the Jupylet folder. Use full paths until your next
-turn. The folder of the session changes only when the current turn ends.
+Load the skill `guiding-jupylet-users` with the Skill tool. It says how to
+talk with the person, and when to ask. Then load the skill
+`setting-up-jupylet`, and follow it from its start, with `{code}` as the
+Jupylet folder.
+
+If these skills are not in your list and the Skill tool cannot load them,
+the session did not move to `{code}`. Then the person must start a new
+session in `{code}`. Tell the person, for example:
+
+> The Jupylet code is ready in the folder `{code}`. To continue, close this
+> session, start Claude Code again in that folder, and ask me again to
+> install Jupylet.
+
+In a terminal, give the two commands `cd "{code}"` and `claude`.
