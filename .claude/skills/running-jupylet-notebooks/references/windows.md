@@ -6,6 +6,10 @@ tool. Never use the Bash tool, even if it exists. Fill in the blanks in
 `{braces}`: "Values" in `SKILL.md` defines them. Each command has a short
 description of what it does, and its expected output.
 
+Run each command exactly as this file shows it, alone in one call. Do not add
+`| Out-Null`, `| Select-String`, `| Select-Object -First` or other commands
+to it: you need its whole output to see an error.
+
 Some blanks appear only here:
 
 - `{tool}`, `{json arguments}`: a notebook tool and its arguments, from
@@ -55,6 +59,7 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 - Attach
 - Call a tool
 - Run all cells
+- Run all cells and wait
 - Run one cell
 - Wait for the page to open
 - Wait for a run
@@ -255,6 +260,17 @@ Some tools need the id of the kernel:
 
 Runs all cells, as Run > Run All Cells in the page does. Prints `True` after
 a second or two. The cells can still run after that.
+
+## Run all cells and wait
+
+`Set-Location "{code}"; & "{python}" -m jupylet.claude run-all {port} {token} {notebook} {seconds}`
+
+Run it in the background. It starts to watch the notebook, then runs all
+cells, as Run > Run All Cells in the page does, and waits until the run ends.
+Prints `ran {fingerprint}`, `timeout {fingerprint}`, or `error` and the
+message of the tool. It must watch before the run starts: a fresh kernel
+gives the same execution counts as the saved notebook, so a watch that starts
+after the run sees no change.
 
 ## Run one cell
 

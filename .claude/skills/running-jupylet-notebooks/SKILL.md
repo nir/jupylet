@@ -308,8 +308,8 @@ Jupyter server serves the folder `{folder}`. The task makes a token, finds a
 free port, prepares the environment, and waits until the Jupyter server is
 ready. The Jupyter server continues to run after your turn, until you stop it.
 
-This task opens no page and runs no cell: "Open a page" and "Attach to the
-notebook" do that. To change the folder of a Jupyter server, do "Stop the
+This task opens no page and runs no cell. The task that called it does that
+next. To change the folder of a Jupyter server, do "Stop the
 Jupyter server", and then this task with the new `{folder}`.
 
 1. Run "Make a token" from the reference file. The result is `{token}`. **You
@@ -506,24 +506,19 @@ This task runs all cells of the notebook. Do it only when the person asks for
 it, or when a path tells you to.
 
 1. Tell the person in one line, for example: "Running the notebook now."
-2. Read the notebook with `read_notebook`, and keep the execution count of
-   each cell.
-3. Start "Wait for a run" from the reference file in the background, with 90
-   seconds, as `references/waiting.md` says.
-4. Run "Run all cells" from the reference file.
-   - **`True`, after a second or two:** the cells can still run. End your
-     turn. "Wait for a run" sends you a message when the run ends.
-   - **"Timeout waiting for result" or "Not Found":** see
-     `references/troubleshooting.md`.
-5. When "Wait for a run" stops, read the notebook again.
-   - **Each code cell has a new execution count, and `read_cell` of the last
-     code cell shows no error:** the run worked.
+2. Start "Run all cells and wait" from the reference file in the background,
+   with 90 seconds, as `references/waiting.md` says. It starts the run, and
+   sends you a message when the run ends. End your turn.
+3. When it stops, read the notebook with `read_notebook`.
+   - **`ran`, and no cell shows an error:** the run worked.
    - **A cell shows an error:** read its output, to find the real error.
    - **`timeout`, and cells still show `[*]`:** a cell can run for a long
-     time. Start "Wait for a run" again, with the times in
-     `references/waiting.md`. After the last time, tell the person that a
-     cell still runs, and stop waiting.
-6. Tell the person the result in plain words, for example: "Done, every cell
+     time. Start "Wait for a run" with the fingerprint that it printed, and
+     with the times in `references/waiting.md`. After the last time, tell the
+     person that a cell still runs, and stop waiting.
+   - **`error` and "Timeout waiting for result" or "Not Found":** see
+     `references/troubleshooting.md`.
+4. Tell the person the result in plain words, for example: "Done, every cell
    ran without errors."
 
 ## Wait for the person
@@ -537,6 +532,11 @@ you start a monitoring command, read `references/waiting.md`.
 Do this only when the person asks for it, or after a yes. Stop only a Jupyter
 server that you started, or that the person chose. It stops each kernel of
 that Jupyter server.
+
+**More than one Jupyter server runs, and the request does not name one:**
+name the one that you want to stop, by its notebook, and wait for a clear
+yes. For example: "Shall I close the Jupyter server with your spaceship
+notebook?" A short word such as "shutdown" does not choose one.
 
 1. Stop each monitoring command that still runs, with the tool `TaskStop`.
 2. Tell the person in one line, for example "Closing Jupyter now."

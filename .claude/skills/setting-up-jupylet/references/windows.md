@@ -5,6 +5,10 @@ exists. A command that starts with a program path in quotes needs `&` in
 front, for example `& "{env_python}" -m pip ...`. Fill in the blanks in
 `{braces}`. Each command has a short description of what it does.
 
+Run each command exactly as this file shows it, alone in one call. Do not add
+`| Out-Null`, `| Select-String`, `| Select-Object -First` or other commands
+to it: you need its whole output to see an error.
+
 Windows PowerShell 5.1 does not keep the double quotes inside an argument that
 it gives to a program. For a long `python -c` command, write a `.py` file into the
 scratchpad and run that file instead.

@@ -3,6 +3,10 @@
 Run each command with the Bash tool. Fill in the blanks in `{braces}`. Each
 command has a short description of what it does.
 
+Run each command exactly as this file shows it, alone in one call. Do not add
+`>/dev/null`, `| grep`, `| head` or other commands to it: you need its whole
+output to see an error.
+
 ## Contents
 
 - Check the system

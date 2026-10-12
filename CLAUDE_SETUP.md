@@ -1,13 +1,23 @@
 # CLAUDE_SETUP.md - download Jupylet for a person
 
 These instructions are for Claude Code. A person gave you a link to this
-file and asked you to install Jupylet. The person is most likely a beginner,
+file and asked you to install Jupylet, or `CLAUDE.md` sent you here. The person is most likely a beginner,
 a kid, or a parent. Use this file for two tasks only: download the Jupylet
 code into a new folder, and move the session to that folder. The skill
 `setting-up-jupylet` comes with the code and does the rest of the
 installation.
 
-Values in `{braces}` are blanks that you fill in.
+Values in `{braces}` are blanks that you fill in. `{scratchpad}` is your
+scratchpad folder.
+
+## Start here
+
+- **The skill `setting-up-jupylet` is in your list of skills:** `{code}` is
+  the folder of the session. Go to step 5.
+- **You read this file on this computer, in a folder with
+  `.claude/skills/setting-up-jupylet`:** the code is already here. `{code}`
+  is that folder. Go to step 4.
+- **Other cases:** start with step 1.
 
 ## Talking to the person
 
@@ -42,7 +52,9 @@ a local archive only when the person asks for it in the chat. Then
 - macOS: use the Bash tool.
 - Windows 11: use the PowerShell tool. Never use the Bash tool.
 
-Put every path in double quotes.
+Put every path in double quotes. Run each command exactly as this file shows
+it, alone in one call. Do not add `>/dev/null`, `| grep`, `| head` or other
+commands to it: you need its whole output to see an error.
 
 ## Step 1. Say hello
 
@@ -74,27 +86,28 @@ inside that folder.
 ## Step 3. Download the code
 
 After a clear yes, say one line, for example "Downloading the code now...".
-Then run one command. The command does these steps:
-
-1. It downloads the archive to a temporary folder.
-2. It creates `{code}`.
-3. It unpacks the code into `{code}`.
-4. It deletes the archive.
+Then run these three commands, each in its own call. Run the next one only if
+the one before it succeeded.
 
 macOS:
 
-`d="$(mktemp -d)" && curl -fL -o "$d/jupylet.tar.gz" "{source}" && mkdir "{code}" && tar -xzf "$d/jupylet.tar.gz" --strip-components=1 -C "{code}"; rm -rf "$d"`
+1. `curl -fL -o "{scratchpad}/jupylet.tar.gz" "{source}"`
+2. `mkdir "{code}"`
+3. `tar -xzf "{scratchpad}/jupylet.tar.gz" --strip-components=1 -C "{code}"`
 
 Windows 11:
 
-`$f = Join-Path $env:TEMP ('jupylet-' + [guid]::NewGuid() + '.tar.gz'); curl.exe -fL -o $f "{source}"; if ($LASTEXITCODE -eq 0) { New-Item -ItemType Directory "{code}" | Out-Null; tar.exe -xzf $f --strip-components=1 -C "{code}" }; Remove-Item $f -ErrorAction SilentlyContinue`
+1. `curl.exe -fL -o "{scratchpad}\jupylet.tar.gz" "{source}"`
+2. `New-Item -ItemType Directory "{code}"`
+3. `tar.exe -xzf "{scratchpad}\jupylet.tar.gz" --strip-components=1 -C "{code}"`
 
-The archive holds one top folder. `--strip-components=1` skips that folder,
-so the code goes directly into `{code}`. The command creates `{code}` only
-after the download succeeds. On Windows, use `curl.exe`, not `curl`. In
-PowerShell, `curl` is a different command.
+The commands download the archive into the scratchpad, a temporary folder of
+this session, then create `{code}`, and then unpack the code into it. The
+archive holds one top folder. `--strip-components=1` skips that folder, so
+the code goes directly into `{code}`. On Windows, use `curl.exe`, not `curl`.
+In PowerShell, `curl` is a different command.
 
-If the command fails, tell the person plainly that the download did not
+If a command fails, tell the person plainly that the download did not
 work. Then try once more. If it fails again, stop. A common cause is a
 branch name that does not exist on GitHub.
 

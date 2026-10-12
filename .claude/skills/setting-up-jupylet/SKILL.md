@@ -266,7 +266,7 @@ After a clear yes, do these, with the environment folder
    two messages to the person:
    - Skip step 1 of "Run the notebook" ("Running the notebook now"). Item 2
      of this list already told the person.
-   - Skip step 6 of "Run the notebook" (the result). Item 4 of this list
+   - Skip step 4 of "Run the notebook" (the result). Item 4 of this list
      tells the person how to use the example.
 4. When the run works, tell the person how to use the example, for example:
    "The spaceship example should be showing at the bottom of the notebook

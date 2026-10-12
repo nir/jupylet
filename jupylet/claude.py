@@ -38,6 +38,7 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
     python -m jupylet.claude watch <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds> [<since>]
+    python -m jupylet.claude run-all <port> <token> <notebook path> <seconds>
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
     python -m jupylet.claude shutdown <port> <token>
@@ -100,6 +101,7 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -540,6 +542,59 @@ def watch(port, token, path, timeout, since=None):
         time.sleep(2)
 
     return 'timeout', since
+
+
+def run_all(port, token, path, timeout):
+    """Run all cells of a notebook, and wait until the run is over.
+
+    Starts watching the notebook first, then runs all its cells through the
+    page, as Run > Run All Cells does, so the watch sees the run happen.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder; it must
+            be attached (attach()) and open in a page.
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        tuple: ('ran', <fingerprint>) or ('timeout', <fingerprint>), as
+            wait_change() returns them, or ('error', <message>) if the run
+            did not start.
+
+    Notes:
+        wait_change() sees a run by the kernel turning busy, or by changed
+        execution counts. A run-all on a fresh kernel gives the same counts
+        as the saved notebook, so a watch that starts after the run is over
+        sees nothing, and times out. Starting the watch first is the reason
+        this command exists.
+
+    History:
+        2026-10-12, macOS: Claude ran the run-all first and started the watch
+        after it; the watch timed out, and Claude reported success from a
+        screenshot only.
+    """
+    result = {}
+
+    def watch_it():
+        result['r'] = wait_change(port, token, path, timeout)
+
+    watcher = threading.Thread(target=watch_it, daemon=True)
+    watcher.start()
+
+    #
+    # Let the watch take its first reading before the run starts.
+    #
+    time.sleep(1)
+
+    out = call(port, token, 'notebook_run-all-cells')
+
+    if str(out).strip() != 'True':
+        return 'error', str(out).strip()
+
+    watcher.join()
+
+    return result.get('r', ('timeout', ''))
 
 
 def wait_change(port, token, path, timeout, since=None):
@@ -1444,6 +1499,9 @@ def main(argv):
 
     elif cmd == 'watch' and len(args) in (4, 5):
         print(*watch(*args[:3], float(args[3]), *args[4:]))
+
+    elif cmd == 'run-all' and len(args) == 4:
+        print(*run_all(*args[:3], float(args[3])))
 
     elif cmd == 'wait-change' and len(args) in (4, 5):
         print(*wait_change(*args[:3], float(args[3]), *args[4:]))

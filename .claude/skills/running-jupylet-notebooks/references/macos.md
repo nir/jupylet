@@ -5,6 +5,10 @@ The tasks in `SKILL.md` run these commands by their names, for example: run
 Fill in the blanks in `{braces}`: "Values" in `SKILL.md` defines them. Each
 command has a short description of what it does, and its expected output.
 
+Run each command exactly as this file shows it, alone in one call. Do not add
+`>/dev/null`, `| grep`, `| head` or other commands to it: you need its whole
+output to see an error.
+
 Each `python -m jupylet.claude` command starts with `cd "{code}"`. In another
 folder, a folder named `jupylet` can hide the installed Jupylet.
 
@@ -39,6 +43,7 @@ Some blanks appear only here:
 - Attach
 - Call a tool
 - Run all cells
+- Run all cells and wait
 - Run one cell
 - Wait for the page to open
 - Wait for a run
@@ -156,8 +161,6 @@ The file does these steps:
 your turn, until you stop it. It prints a process id, and returns at once.
 The output of JupyterLab goes to `jupyter.log`.
 
-Run the command as it is, alone in one call. Do not add other commands to it.
-
 *Developer note, not an instruction: the activation with `bin/activate`, the
 file, and the last option are not tested on macOS yet.*
 
@@ -228,6 +231,17 @@ Some tools need the id of the kernel:
 
 Runs all cells, as Run > Run All Cells in the page does. Prints `True` after
 a second or two. The cells can still run after that.
+
+## Run all cells and wait
+
+`cd "{code}" && "{python}" -m jupylet.claude run-all {port} {token} {notebook} {seconds}`
+
+Run it in the background. It starts to watch the notebook, then runs all
+cells, as Run > Run All Cells in the page does, and waits until the run ends.
+Prints `ran {fingerprint}`, `timeout {fingerprint}`, or `error` and the
+message of the tool. It must watch before the run starts: a fresh kernel
+gives the same execution counts as the saved notebook, so a watch that starts
+after the run sees no change.
 
 ## Run one cell
 
