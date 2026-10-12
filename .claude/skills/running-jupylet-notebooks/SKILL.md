@@ -372,8 +372,8 @@ kernel yet, the page starts it. "Attach to the notebook" needs that kernel.
 2. Read the setting `open-notebooks-in` (`claude-app` or `default-browser`)
    with the skill `configuring-jupylet`. **It has a value:** suggest that
    place. **No value:** ask which place the person prefers. After the person
-   chooses, ask if you can remember the choice. After a yes, write the global
-   setting `open-notebooks-in` with the skill `configuring-jupylet`.
+   chooses, ask if you can remember the choice. After a yes, write boxless the
+   global setting `open-notebooks-in` with the skill `configuring-jupylet`.
 3. Do "Open a page in the Claude app" or "Open a page in the default browser".
 
 ## Open a page in the Claude app
@@ -440,7 +440,7 @@ shows it only by its name, load it with `ToolSearch`. Read the setting
   > icon in the top-left corner of the Claude app, just right of the
   > three lines.
 
-  After the answer, ask if you can remember it. After a yes, write the
+  After the answer, ask if you can remember it. After a yes, write boxless the
   global setting `hide-chat-list` (`yes` or `no`) with the skill
   `configuring-jupylet`.
 - **The tool does not exist:** tell the person how to hide the list

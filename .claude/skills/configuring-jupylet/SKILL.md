@@ -28,49 +28,111 @@ The skill that uses a setting asks for it in one of these forms:
 > Write the global setting `open-notebooks-in` = `claude-app` with the skill
 > `configuring-jupylet`.
 >
-> Write the local setting `environment` = `jp146` with the skill
+> Write boxless the local setting `environment` = `jupylet2` with the skill
 > `configuring-jupylet`.
 >
 > Delete the local setting `environment` with the skill `configuring-jupylet`.
 
 A read names no file. A write or a delete names the file: global or local.
 
-A new file has only this header:
+A file starts with this header:
 
 ```markdown
 # Claude configuration for Jupylet
 
-Settings for Claude when it works with Jupylet. One setting on each line, as
-`- key = value`. You can change or delete any line.
+Settings for Claude when it works with Jupylet. One setting on each line,
+as `- key = value`. When several lines set the same key, the last of these
+lines counts.
 ```
 
-Each setting is one list line after the header, for example:
+Each line after the header sets one key, for example:
 
 ```markdown
 - some-key = some value
 ```
 
+A boxless write adds a line at the end of the file, and does not change the
+lines above it. So several lines can set the same key. Of these lines, the
+last one, nearest to the end of the file, gives the value of the key in that
+file. The lines above it that set the same key do not count.
+
 ## Read a setting
 
-Read the local file first, then the global file. The first value of the key
-that you find is the value of the setting. Use it in the action that needs it.
-If neither file has the key, the setting has no value. A missing file is
-normal until you write the first setting. It is not a problem.
+Read the files with the Read tool, in the order of the steps below. When a
+file does not exist, the Read tool gives an error. That error is normal: a file does not exist until you write
+the first setting to it.
+
+1. If the local file exists and a line in it sets the key, the last line
+   that sets the key gives the value of the setting. Stop.
+2. If the global file exists and a line in it sets the key, the last line
+   that sets the key gives the value of the setting. Stop.
+3. The setting has no value.
 
 ## Write a setting
 
-Write to the file that the request names: global or local.
+Write to the file that the request names: global or local. Use the Write and
+Edit tools.
 
 1. If the file does not exist, make the folder `.jupylet` in the home folder
    (global) or in the Jupylet folder (local), and write the file with the
    header above.
-2. If the key is in the file, change its value. If not, add a line at the
-   end.
+2. Find the lines in the file that set the key:
+   - **No line:** add the line `- {key} = {value}` at the end of the file.
+   - **One line:** change its value.
+   - **Several lines:** change the value in the last line that sets the key.
+     Then delete all other lines that set the key.
+
+## Write a setting boxless
+
+The Claude app shows each file that the Write or Edit tool changes as a box
+in the chat. During the installation, that box confuses a beginner. A
+boxless write does not use these tools, so the app shows no box. Run the
+commands below: with the Bash tool on macOS, with the PowerShell tool on
+Windows. Do a boxless write only when the request says "boxless".
+
+`{folder}` is the folder `.jupylet` of the file that the request names: in
+the home folder of the person (global), or in the Jupylet folder (local).
+Use its full path.
+
+1. Read the file with the Read tool. If the last line that sets the key
+   already has the new value, stop. There is nothing to write.
+2. If the file does not exist, make the folder and the file with the header.
+   On macOS:
+
+   ```bash
+   mkdir -p "{folder}"
+   ```
+
+   ```bash
+   printf '%s\n' '# Claude configuration for Jupylet' '' 'Settings for Claude when it works with Jupylet. One setting on each line,' 'as `- key = value`. When several lines set the same key, the last of these' 'lines counts.' '' > "{folder}/claude-config.md"
+   ```
+
+   On Windows:
+
+   ```powershell
+   New-Item -ItemType Directory -Force "{folder}"
+   ```
+
+   ```powershell
+   Set-Content -Path "{folder}\claude-config.md" -Value '# Claude configuration for Jupylet', '', 'Settings for Claude when it works with Jupylet. One setting on each line,', 'as `- key = value`. When several lines set the same key, the last of these', 'lines counts.', ''
+   ```
+
+3. Add the setting at the end of the file. On macOS:
+
+   ```bash
+   echo "- {key} = {value}" >> "{folder}/claude-config.md"
+   ```
+
+   On Windows:
+
+   ```powershell
+   Add-Content -Path "{folder}\claude-config.md" -Value "- {key} = {value}"
+   ```
 
 ## Delete a setting
 
-Delete the line of the key from the file that the request names: global or
-local. Keep the file, also when it has no settings.
+Delete all lines that set the key from the file that the request names:
+global or local. Use the Edit tool. Keep the file, also when it has no settings.
 
 ## Limits
 
