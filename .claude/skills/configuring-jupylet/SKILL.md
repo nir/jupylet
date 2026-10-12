@@ -23,9 +23,9 @@ A local setting overrides the global setting with the same key.
 
 The skill that uses a setting asks for it in one of these forms:
 
-> Read the setting `open-notebooks-in` with the skill `configuring-jupylet`.
+> Read the setting `hide-chat-list` with the skill `configuring-jupylet`.
 >
-> Write the global setting `open-notebooks-in` = `claude-app` with the skill
+> Write the global setting `hide-chat-list` = `yes` with the skill
 > `configuring-jupylet`.
 >
 > Write boxless the local setting `environment` = `jupylet2` with the skill

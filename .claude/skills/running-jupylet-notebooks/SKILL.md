@@ -110,9 +110,12 @@ together, the notebook can be in one of these states:
   and their variables.
 - **It is open in another Jupyter server:** do "Move the notebook to a new
   Jupyter server".
-- **No Jupyter server has it open:** do "Find the environment", "Choose a
-  notebook", "Start a Jupyter server", "Open a page" and "Attach to the
-  notebook".
+- **No Jupyter server has it open:**
+  1. Do "Find the environment".
+  2. Do "Choose a notebook".
+  3. Do "Start a Jupyter server".
+  4. Do "Open a page".
+  5. Do "Attach to the notebook".
 
 When the notebook is open in a page, and you are attached to it, do what the
 person asked:
@@ -245,9 +248,14 @@ Offer to open the notebook again in a new Jupyter server, for example:
 > Shall I?
 
 After a yes, take `{port}`, `{token}` and `{folder}` from "Find the Jupyter
-servers that run". Do "Find the environment" first: it checks the extra, and
-installs it if it is missing and the person agrees. Then do "Stop the Jupyter
-server", "Start a Jupyter server", "Open a page" and "Attach to the notebook".
+servers that run". Then:
+
+1. Do "Find the environment". It checks the extra, and installs it if it is
+   missing and the person agrees.
+2. Do "Stop the Jupyter server".
+3. Do "Start a Jupyter server".
+4. Do "Open a page".
+5. Do "Attach to the notebook".
 
 ## Find the environment
 
@@ -369,12 +377,12 @@ kernel yet, the page starts it. "Attach to the notebook" needs that kernel.
      that page, and end the task. **No:** tell the person that two open pages
      can cause trouble, and that it is better to close the old one if they
      find it later. Then continue with step 2.
-2. Read the setting `open-notebooks-in` (`claude-app` or `default-browser`)
-   with the skill `configuring-jupylet`. **It has a value:** suggest that
-   place. **No value:** ask which place the person prefers. After the person
-   chooses, ask if you can remember the choice. After a yes, write boxless the
-   global setting `open-notebooks-in` with the skill `configuring-jupylet`.
-3. Do "Open a page in the Claude app" or "Open a page in the default browser".
+2. Choose the place of the page:
+   - **The person asked for their web browser,** for example "open it in
+     Chrome": do "Open a page in the default browser".
+   - **The tools of the browser pane are not available,** for example in
+     Claude Code in a terminal: do "Open a page in the default browser".
+   - **Other cases:** do "Open a page in the Claude app". Do not ask.
 
 ## Open a page in the Claude app
 

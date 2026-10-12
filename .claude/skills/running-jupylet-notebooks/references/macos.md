@@ -99,10 +99,10 @@ so a short token is enough.
 
 ## Check a port
 
-`"{python}" -c "import socket; print(socket.socket().connect_ex(('127.0.0.1', {port})))"`
+`"{python}" -c "import socket; print('in use' if socket.socket().connect_ex(('127.0.0.1', {port})) == 0 else 'free')"`
 
-Tries to connect to the port. `0` means that a program uses the port. Another
-number means that the port is free.
+Tries to connect to the port. Prints `in use` if a program uses the port,
+or `free` if the port is free.
 
 ## Check the environment
 
