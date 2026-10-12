@@ -131,8 +131,7 @@ the skills of `{code}` in your list of skills. So end your turn now with
 this question, for example:
 
 > The Jupylet code is ready in the folder `{code}`. Shall I start the
-> installation? First I'll check what's already on your computer. That
-> changes nothing.
+> installation?
 
 If you downloaded the code in step 3, do not say that you found it, since that is obvious.
 
