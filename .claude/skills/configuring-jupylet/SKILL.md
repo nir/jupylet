@@ -90,9 +90,13 @@ boxless write does not use these tools, so the app shows no box. Run the
 commands below: with the Bash tool on macOS, with the PowerShell tool on
 Windows. Do a boxless write only when the request says "boxless".
 
-`{folder}` is the folder `.jupylet` of the file that the request names: in
-the home folder of the person (global), or in the Jupylet folder (local).
-Use its full path.
+Fill in these blanks, with full paths:
+
+- `{folder}`: the folder `.jupylet` of the file that the request names: in
+  the home folder of the person (global), or in the Jupylet folder (local).
+- `{header}`: the file `header.md` of this skill,
+  `.claude/skills/configuring-jupylet/header.md` in the Jupylet folder. It
+  has the header above.
 
 1. Read the file with the Read tool. If the last line that sets the key
    already has the new value, stop. There is nothing to write.
@@ -104,7 +108,7 @@ Use its full path.
    ```
 
    ```bash
-   printf '%s\n' '# Claude configuration for Jupylet' '' 'Settings for Claude when it works with Jupylet. One setting on each line,' 'as `- key = value`. When several lines set the same key, the last of these' 'lines counts.' '' > "{folder}/claude-config.md"
+   cp -n "{header}" "{folder}/claude-config.md"
    ```
 
    On Windows:
@@ -114,8 +118,12 @@ Use its full path.
    ```
 
    ```powershell
-   Set-Content -Path "{folder}\claude-config.md" -Value '# Claude configuration for Jupylet', '', 'Settings for Claude when it works with Jupylet. One setting on each line,', 'as `- key = value`. When several lines set the same key, the last of these', 'lines counts.', ''
+   New-Item -ItemType File -Path "{folder}\claude-config.md" -Value (Get-Content -Raw "{header}")
    ```
+
+   These two copy commands never change a file that exists: `cp -n` changes
+   nothing and ends with exit code 1, and `New-Item` without `-Force` gives
+   an error. So a copy at the wrong moment cannot delete settings.
 
 3. Add the setting at the end of the file. On macOS:
 
