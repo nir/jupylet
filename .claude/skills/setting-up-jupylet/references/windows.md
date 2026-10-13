@@ -5,9 +5,12 @@ exists. A command that starts with a program path in quotes needs `&` in
 front, for example `& "{env_python}" -m pip ...`. Fill in the blanks in
 `{braces}`. Each command has a short description of what it does.
 
-Run each command exactly as this file shows it, alone in one call. Do not add
-`| Out-Null`, `| Select-String`, `| Select-Object -First` or other commands
-to it: you need its whole output to see an error.
+Run each command exactly as this file shows it, alone in one call, with its
+comment `# jupylet: {name}` at the end. The Jupylet system uses these comments to find each command and check it.
+If you leave out the comment or change the command, this may cause
+failures. Do not add `| Out-Null`,
+`| Select-String`, `| Select-Object -First` or other commands to it: you
+need its whole output to see an error.
 
 Windows PowerShell 5.1 does not keep the double quotes inside an argument that
 it gives to a program. For a long `python -c` command, write a `.py` file into the
@@ -26,7 +29,7 @@ scratchpad and run that file instead.
 
 ## Check the system
 
-`$env:PROCESSOR_ARCHITECTURE; [Environment]::OSVersion.Version.Build`
+`$env:PROCESSOR_ARCHITECTURE; [Environment]::OSVersion.Version.Build  # jupylet: setup/check-system`
 
 Prints the processor type and the Windows build number. `AMD64` and a number
 of `22000` or more is Windows 11 on Intel or AMD.
@@ -35,12 +38,12 @@ of `22000` or more is Windows 11 on Intel or AMD.
 
 Run both commands.
 
-`Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Anaconda|Miniconda|Miniforge|Mambaforge' } | ForEach-Object { Split-Path ($_.UninstallString -replace '"', '') } | Where-Object { Test-Path $_ } | Sort-Object -Unique`
+`Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Anaconda|Miniconda|Miniforge|Mambaforge' } | ForEach-Object { Split-Path ($_.UninstallString -replace '"', '') } | Where-Object { Test-Path $_ } | Sort-Object -Unique  # jupylet: setup/find-conda-programs`
 
 Prints the folders of the conda installations that Windows lists as installed
 programs (Settings > Apps).
 
-`'miniforge3', 'mambaforge', 'miniconda3', 'anaconda3' | ForEach-Object { Join-Path $env:USERPROFILE $_ } | Where-Object { Test-Path $_ }`
+`'miniforge3', 'mambaforge', 'miniconda3', 'anaconda3' | ForEach-Object { Join-Path $env:USERPROFILE $_ } | Where-Object { Test-Path $_ }  # jupylet: setup/find-conda-home`
 
 Prints each of the usual conda folders in the home folder that exists, for an
 installation that is not in the list of programs.
@@ -50,13 +53,13 @@ name a folder that no longer exists.
 
 ## Get the Python version of Miniforge
 
-`& "$env:USERPROFILE\miniforge3\python.exe" --version`
+`& "$env:USERPROFILE\miniforge3\python.exe" --version  # jupylet: setup/miniforge-python`
 
 Prints the Python version of the main environment of Miniforge, `base`.
 
 ## Find environments with Jupylet
 
-`& "{python}" "{code}\jupylet\claude.py" find-env --all {version}`
+`& "{python}" "{code}\jupylet\claude.py" find-env --all {version}  # jupylet: setup/find-jupylet-envs`
 
 `{python}` is `python.exe` in a conda folder from "Find conda
 installations". Use `{miniforge}` if it exists.
@@ -74,12 +77,12 @@ of them.
 
 Run these two commands, each in its own call:
 
-1. `curl.exe -fL -o "{scratchpad}\Miniforge3.exe" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe`
+1. `curl.exe -fL -o "{scratchpad}\Miniforge3.exe" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe  # jupylet: setup/download-miniforge`
 
    It downloads the latest Miniforge installer into the scratchpad, a
    temporary folder of this session.
 2. Only if the download succeeded:
-   `Start-Process -Wait -FilePath "{scratchpad}\Miniforge3.exe" -ArgumentList '/S', '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', "/D=$env:USERPROFILE\miniforge3"`
+   `Start-Process -Wait -FilePath "{scratchpad}\Miniforge3.exe" -ArgumentList '/S', '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', "/D=$env:USERPROFILE\miniforge3"  # jupylet: setup/run-miniforge-installer`
 
    It runs the installer without windows or questions, into `miniforge3` in
    the home folder.
@@ -96,19 +99,19 @@ Use `curl.exe`, not `curl`. In PowerShell, `curl` is a different command.
 
 The installer also adds "Miniforge Prompt" to the Start menu.
 
-Check: `& "$env:USERPROFILE\miniforge3\Scripts\conda.exe" --version` prints a
+Check: `& "$env:USERPROFILE\miniforge3\Scripts\conda.exe" --version  # jupylet: setup/check-miniforge` prints a
 line like `conda 26.x.x`.
 
 ## Create the environment
 
-`& "$env:USERPROFILE\miniforge3\Scripts\conda.exe" create -y -p "$env:USERPROFILE\miniforge3\envs\{env}" --override-channels -c conda-forge python=3.13 moderngl glcontext`
+`& "$env:USERPROFILE\miniforge3\Scripts\conda.exe" create -y -p "$env:USERPROFILE\miniforge3\envs\{env}" --override-channels -c conda-forge python=3.13 moderngl glcontext  # jupylet: setup/create-env`
 
 Creates the environment `{env}` in Miniforge's `envs` folder, with Python 3.13
 and the graphics libraries that Jupylet uses. `-p` with the full path puts the
 environment in `envs` even if the conda settings of the person say otherwise.
 `--override-channels -c conda-forge` uses only packages from conda-forge.
 
-Check: `& "$env:USERPROFILE\miniforge3\envs\{env}\python.exe" --version`
+Check: `& "$env:USERPROFILE\miniforge3\envs\{env}\python.exe" --version  # jupylet: setup/check-env-python`
 prints `Python 3.13.x`.
 
 For an existing environment that the person chose in step 5, skip this
@@ -121,21 +124,21 @@ Python of the environment that the person chose.
 
 Install Jupylet:
 
-`& "{env_python}" -m pip install -e "{code}[claude]"`
+`& "{env_python}" -m pip install -e "{code}[claude]"  # jupylet: setup/install-jupylet`
 
 Installs Jupylet from `{code}`, with the extra tools for Claude. `-e` means
 that the environment uses the code in `{code}` directly.
 
 Check Jupylet:
 
-`& "{env_python}" -I -c "import jupylet; print(jupylet.VERSION)"`
+`& "{env_python}" -I -c "import jupylet; print(jupylet.VERSION)"  # jupylet: setup/check-jupylet`
 
 Prints the version of the Jupylet that the environment uses. `-I` stops
 Python from finding a folder named `jupylet` in the current folder.
 
 Prepare the environment:
 
-`& "{env_python}" -I -m jupylet.claude prepare`
+`& "{env_python}" -I -m jupylet.claude prepare  # jupylet: setup/prepare-env`
 
 Changes the Jupyter settings of the environment:
 
@@ -149,11 +152,11 @@ Changes the Jupyter settings of the environment:
 
 Trust the notebooks:
 
-`Set-Location "{code}\examples"; & "{env_python}" -m jupylet trust_notebooks`
+`Set-Location "{code}\examples"; & "{env_python}" -m jupylet trust_notebooks  # jupylet: setup/trust-notebooks`
 
 Check the trust:
 
-`Set-Location "{code}\examples"; & "{env_python}" -m jupylet is_trusted`
+`Set-Location "{code}\examples"; & "{env_python}" -m jupylet is_trusted  # jupylet: setup/check-trust`
 
 Run both from inside `examples`. In the folder above it, Python finds the
 code folder, also named `jupylet`, instead of the installed Jupylet, and the

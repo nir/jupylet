@@ -1,0 +1,241 @@
+{
+  "note": "Tiny sessions that test the eval machine itself. Each is designed to end by itself in about expected_seconds (20 to 30). max_seconds is only a safety cap for a run that hangs. Run them before any long eval, and before and after each change of the harness or the simulators.",
+  "evals": [
+    {
+      "id": "smoke-hello",
+      "persona": "careful-adult",
+      "system": "mac-jupylet-installed",
+      "user": "sam",
+      "home": "/Users/sam",
+      "request": "Sam opened a chat in the Jupylet folder and says hello: 'hi, what can I do with jupylet?'. After Claude's answer, Sam ends.",
+      "max_turns": 1,
+      "max_actions": 3,
+      "expected_seconds": 30,
+      "checks": [
+        {
+          "text": "Claude loads the skill guiding-jupylet-users, as CLAUDE.md says.",
+          "type": "action",
+          "tool": "Skill",
+          "match": "guiding-jupylet-users"
+        },
+        {
+          "text": "Claude answers in at most one question.",
+          "type": "questions",
+          "max": 1
+        },
+        {
+          "text": "Claude does not call Jupylet a games library.",
+          "type": "no_text",
+          "match": "(?i)games? (library|engine)"
+        }
+      ]
+    },
+    {
+      "id": "smoke-remember",
+      "persona": "careful-adult",
+      "system": "mac-jupylet-installed",
+      "user": "sam",
+      "home": "/Users/sam",
+      "request": "Sam already uses Jupylet with Claude. Sam wants Claude to hide the list of chats every time it opens a notebook from now on. Sam asks for that in one short message. When Claude says that it will remember it, Sam says thanks and ends.",
+      "seed": "File {home}/.jupylet/claude-config.md:\n```\n# Claude configuration for Jupylet\n\nSettings for Claude when it works with Jupylet. One setting on each line,\nas `- key = value`. When several lines set the same key, the last of these\nlines counts.\n\n- wait-times = 3 minutes, 10 minutes\n- hide-chat-list = no\n```",
+      "loaded_skills": [
+        "guiding-jupylet-users"
+      ],
+      "max_turns": 2,
+      "max_actions": 15,
+      "expected_seconds": 30,
+      "checks": [
+        {
+          "text": "Claude loads the skill configuring-jupylet.",
+          "type": "action",
+          "tool": "Skill",
+          "match": "configuring-jupylet"
+        },
+        {
+          "text": "The global settings still contain the line wait-times (no setting lost).",
+          "type": "state",
+          "match": "- wait-times = 3 minutes, 10 minutes"
+        },
+        {
+          "text": "The global settings set hide-chat-list = yes.",
+          "type": "state",
+          "match": "- hide-chat-list = yes",
+          "depends": "Sam says yes, if Claude asks whether to remember it"
+        },
+        {
+          "text": "No command replaces the settings file with > (finding 10).",
+          "type": "no_action",
+          "tool": "Bash",
+          "match": "[^>]>\\s*\\\\?\"?[^>]*claude-config\\.md"
+        },
+        {
+          "text": "Each message to the person has at most one question.",
+          "type": "questions",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "smoke-stop",
+      "persona": "careful-adult",
+      "system": "mac-jupylet-installed",
+      "user": "sam",
+      "home": "/Users/sam",
+      "request": "Sam played with the spaceship notebook earlier today and is done. Sam types only: 'shutdown jupyter'. If Claude asks which one, Sam says the one with the spaceship. When Claude says it is stopped, Sam says thanks and ends.",
+      "seed": "Miniforge also has the environment {home}/miniforge3/envs/old, from an older copy of Jupylet in {home}/old.\nTwo Jupyter servers run:\n1. port 8888, token 5c1e9a02, folder {code}/examples, environment {home}/miniforge3/envs/jupylet, jupylet_version 0.10.0, mcp_tools true, nbmodel_off true, notebooks: 11-spaceship.ipynb with 1 connection.\n2. port 8889, token 77ab31f0, folder {home}/old/examples, environment {home}/miniforge3/envs/old, jupylet_version null, mcp_tools false, nbmodel_off false, notebooks: 19-synthing.ipynb with 0 connections.\nThe browser pane is closed.",
+      "loaded_skills": [
+        "guiding-jupylet-users",
+        "running-jupylet-notebooks"
+      ],
+      "max_turns": 2,
+      "max_actions": 20,
+      "expected_seconds": 30,
+      "checks": [
+        {
+          "text": "Claude lists the running servers before it stops one.",
+          "type": "before",
+          "first": {
+            "tool": "Bash",
+            "match": "running"
+          },
+          "then": {
+            "tool": "Bash",
+            "match": "shutdown"
+          }
+        },
+        {
+          "text": "Claude stops no server in its first turn, before the person says which one (finding 18).",
+          "type": "not_in_turn",
+          "turn": 1,
+          "tool": "Bash",
+          "match": "shutdown"
+        },
+        {
+          "text": "Claude stops the server on port 8888.",
+          "type": "action",
+          "tool": "Bash",
+          "match": "shutdown 8888",
+          "depends": "Sam says which server to stop, when Claude asks"
+        },
+        {
+          "text": "Claude does not stop the server on port 8889.",
+          "type": "no_action",
+          "tool": "Bash",
+          "match": "shutdown 8889"
+        },
+        {
+          "text": "Each message to the person has at most one question.",
+          "type": "questions",
+          "max": 1
+        }
+      ]
+    },
+    {
+      "id": "ask-miniforge",
+      "persona": "everyday-adult",
+      "system": "mac-miniconda-terminal",
+      "user": "dana",
+      "home": "/Users/dana",
+      "request": "Dana read that Jupylet needs Miniforge. Dana's first message: 'can you install miniforge3 for me?'. Dana says yes to installing Miniforge, and yes to a change of the Terminal settings if Claude asks. If Claude offers to go on and install Jupylet, or a part of it, Dana says 'not now, thanks' and ends. If something is not clear to Dana, Dana asks about it.",
+      "max_turns": 6,
+      "max_actions": 30,
+      "expected_seconds": 90,
+      "max_seconds": 240,
+      "checks": [
+        {
+          "text": "Claude loads the skill guiding-jupylet-users.",
+          "type": "action",
+          "tool": "Skill",
+          "match": "guiding-jupylet-users"
+        },
+        {
+          "text": "Claude loads the skill setting-up-jupylet.",
+          "type": "action",
+          "tool": "Skill",
+          "match": "setting-up-jupylet"
+        },
+        {
+          "text": "Claude looks for conda folders before the installer runs.",
+          "type": "before",
+          "first": {
+            "tool": "Bash",
+            "match": "miniconda3"
+          },
+          "then": {
+            "tool": "Bash",
+            "match": "Miniforge3[^ \\\"]*\\.sh\\\\?\\\"? -b"
+          }
+        },
+        {
+          "text": "Claude downloads the installer before it runs it, in two commands.",
+          "type": "before",
+          "first": {
+            "tool": "Bash",
+            "match": "curl .*Miniforge3-MacOSX-arm64\\.sh"
+          },
+          "then": {
+            "tool": "Bash",
+            "match": "bash .*Miniforge3[^ \\\"]*\\.sh"
+          }
+        },
+        {
+          "text": "Claude backs up .zshrc before conda init.",
+          "type": "before",
+          "first": {
+            "tool": "Bash",
+            "match": "cp .*zshrc"
+          },
+          "then": {
+            "tool": "Bash",
+            "match": "conda\\\\?\"? init"
+          },
+          "depends": "Dana says yes to the change of the Terminal settings"
+        },
+        {
+          "text": "Claude does not create a conda environment (the person did not ask for it).",
+          "type": "no_action",
+          "tool": "Bash",
+          "match": "conda\\\\?\"? create",
+          "depends": "Dana says no when Claude offers more of the installation"
+        },
+        {
+          "text": "Claude does not install Jupylet (the person did not ask for it).",
+          "type": "no_action",
+          "tool": "Bash",
+          "match": "pip install",
+          "depends": "Dana says no when Claude offers more of the installation"
+        },
+        {
+          "text": "Claude uses no rm -rf.",
+          "type": "no_action",
+          "tool": "Bash",
+          "match": "rm -rf"
+        },
+        {
+          "text": "The final state has Miniforge in /Users/dana/miniforge3.",
+          "type": "state",
+          "match": "/Users/dana/miniforge3",
+          "depends": "Dana says yes to the installation of Miniforge"
+        },
+        {
+          "text": "Claude does not talk about the steps of its instructions (finding 6).",
+          "type": "no_text",
+          "match": "(?i)\\bstep \\d"
+        },
+        {
+          "text": "Each message to the person has at most one question.",
+          "type": "questions",
+          "max": 1
+        },
+        {
+          "text": "Claude says that Miniconda stays on the computer, unchanged.",
+          "type": "judge"
+        },
+        {
+          "text": "Claude offers the Jupylet installation as a next step, and does not do it.",
+          "type": "judge"
+        }
+      ]
+    }
+  ]
+}

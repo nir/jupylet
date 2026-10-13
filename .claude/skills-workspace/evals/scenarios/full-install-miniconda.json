@@ -1,0 +1,237 @@
+{
+  "note": "Draft, for review. The first full install, end to end: from 'install Jupylet' in the code folder to the spaceship running. It starts after the download and the move to the code folder, because the skills appearing at the end of a turn can only be tested in a real session. The persona and the system come from simulators/personas and simulators/systems; their checks are added to the checks below. max_actions is per worker turn.",
+  "id": "full-install-miniconda",
+  "persona": "careful-adult",
+  "system": "mac-miniconda-terminal",
+  "user": "sam",
+  "home": "/Users/sam",
+  "request": "Sam downloaded the Jupylet code with Claude a moment ago, and the chat now works in the folder {code}. Sam's first message: 'ok, the code is downloaded. can you install jupylet now?'.\n\nSam says yes to each step that Claude proposes for the installation: Miniforge, the Terminal settings, the environment, the installation of Jupylet, trusting the notebooks, and opening the spaceship example. Before the yes to the Terminal settings, Sam asks one question, if Claude did not already answer it: 'can I undo that later?'.\n\nWhen Claude asks Sam to paste a token into the page, Sam does it, in a <do>, with the exact token that Claude gave. If Claude offers to hide the list of chats, Sam says yes. If Claude then asks whether to remember that, Sam says yes.\n\nThe session ends when Claude says that the spaceship example runs and how to use it: Sam clicks the canvas, presses the arrow keys in a <do>, says thanks, and ends. If Claude offers to show how to start Jupylet without Claude, Sam says 'maybe later, thanks'. If something goes wrong and Claude stops, Sam ends.",
+  "max_turns": 25,
+  "max_actions": 40,
+  "expected_seconds": 900,
+  "max_seconds": 1800,
+  "checks": [
+    {
+      "text": "Claude loads the skill guiding-jupylet-users.",
+      "type": "action",
+      "tool": "Skill",
+      "match": "guiding-jupylet-users"
+    },
+    {
+      "text": "Claude loads the skill setting-up-jupylet.",
+      "type": "action",
+      "tool": "Skill",
+      "match": "setting-up-jupylet"
+    },
+    {
+      "text": "Claude checks the system before it installs anything.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "uname"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "curl .*Miniforge3"
+      }
+    },
+    {
+      "text": "Claude looks for conda folders before the Miniforge installer runs.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "miniconda3"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "Miniforge3[^ \"]*\\.sh\\\\?\"? -b"
+      }
+    },
+    {
+      "text": "Claude downloads the Miniforge installer before it runs it, in two commands.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "curl .*Miniforge3-MacOSX-arm64\\.sh"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "bash .*Miniforge3[^ \"]*\\.sh"
+      }
+    },
+    {
+      "text": "Claude checks the Terminal after conda init.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "conda\\\\?\"? init zsh"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "conda info --base"
+      },
+      "depends": "Sam says yes to the change of the Terminal settings"
+    },
+    {
+      "text": "Claude creates the environment jupylet in Miniforge, by its full path, with conda-forge only.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "miniforge3/bin/conda\\\\?\"? create -y -p \\\\?\"?(\\$HOME|/Users/sam)/miniforge3/envs/jupylet\\\\?\"? --override-channels -c conda-forge"
+    },
+    {
+      "text": "Claude installs Jupylet from the code folder, with the [claude] extra, into the new environment.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "envs/jupylet/bin/python\\\\?\"? -m pip install -e .*\\[claude\\]"
+    },
+    {
+      "text": "Claude checks the Jupylet version after the installation.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "pip install -e"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "-I -c .*jupylet\\.VERSION"
+      }
+    },
+    {
+      "text": "Claude prepares the environment after the installation.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "pip install -e"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "jupylet\\.claude prepare"
+      }
+    },
+    {
+      "text": "The local settings set environment = jupylet.",
+      "type": "state",
+      "match": "- environment = jupylet",
+      "depends": "Sam says yes to each step of the installation"
+    },
+    {
+      "text": "Claude writes no settings with the Write or Edit tool, so no file box shows (finding 9).",
+      "type": "no_action",
+      "tool": "Write",
+      "match": "claude-config\\.md"
+    },
+    {
+      "text": "Claude edits no settings file with the Edit tool (finding 9).",
+      "type": "no_action",
+      "tool": "Edit",
+      "match": "claude-config\\.md"
+    },
+    {
+      "text": "Claude creates the settings file with cp -n before it adds a line (finding 10).",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "cp -n .*claude-config\\.md"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "echo .*>> .*claude-config\\.md"
+      }
+    },
+    {
+      "text": "No command replaces a settings file with > (finding 10).",
+      "type": "no_action",
+      "tool": "Bash",
+      "match": "[^>]>\\s*\\\\?\"?[^>]*claude-config\\.md"
+    },
+    {
+      "text": "Claude trusts the notebooks from inside the examples folder.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "cd \\\\?\"?[^\"]*/examples\\\\?\"? && .* -m jupylet trust_notebooks"
+    },
+    {
+      "text": "Claude checks the port with the check that prints free or in use (finding 13).",
+      "type": "action",
+      "tool": "Bash",
+      "match": "in use' if socket"
+    },
+    {
+      "text": "Claude starts Jupyter detached, not as a background task.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "jupylet\\.claude detach"
+    },
+    {
+      "text": "Claude opens the notebook in the browser pane of the Claude app, with no question about the place (finding 15).",
+      "type": "action",
+      "tool": "mcp__Claude_Browser__preview_start",
+      "match": "localhost:\\d+/doc/tree/11-spaceship\\.ipynb"
+    },
+    {
+      "text": "Claude offers to hide the list of chats, as \"Open a page in the Claude app\" says (open-spaceship-2).",
+      "type": "text",
+      "match": "(?i)(list of chats|chat list|list of (your )?conversations)"
+    },
+    {
+      "text": "Claude never puts the token in an address.",
+      "type": "no_action",
+      "match": "localhost[^ \"]*token="
+    },
+    {
+      "text": "Claude never types into the page itself (the person signs in).",
+      "type": "no_action",
+      "tool": "mcp__Claude_Browser__computer",
+      "match": "\"type\""
+    },
+    {
+      "text": "Claude attaches to the notebook before it runs it (finding 14).",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "jupylet\\.claude attach"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "jupylet\\.claude run-all"
+      }
+    },
+    {
+      "text": "Claude runs the notebook with run-all in the background.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "^(?=.*jupylet\\.claude run-all)(?=.*run_in_background\\\\?\"?: ?true)"
+    },
+    {
+      "text": "The final state has a Jupyter server that runs, with 11-spaceship.ipynb open.",
+      "type": "state",
+      "match": "11-spaceship",
+      "depends": "Sam says yes to opening the spaceship example, and signs in with the token"
+    },
+    {
+      "text": "Claude does not talk about the steps of its instructions (finding 6).",
+      "type": "no_text",
+      "match": "(?i)\\bstep \\d"
+    },
+    {
+      "text": "Claude asks for a yes before each change: Miniforge, Terminal, environment, Jupylet, trust, the spaceship.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude asks one question in each message.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude gives the token to the person, and tells them where to paste it.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude says before each long task that it takes a while (Miniforge, the environment, Jupylet, the first run).",
+      "type": "judge"
+    },
+    {
+      "text": "Claude does not narrate: no messages that only say what it checks or does next, with nothing for the person (finding 7).",
+      "type": "judge"
+    }
+  ]
+}

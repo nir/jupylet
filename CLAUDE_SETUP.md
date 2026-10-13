@@ -53,8 +53,11 @@ a local archive only when the person asks for it in the chat. Then
 - Windows 11: use the PowerShell tool. Never use the Bash tool.
 
 Put every path in double quotes. Run each command exactly as this file shows
-it, alone in one call. Do not add `>/dev/null`, `| grep`, `| head` or other
-commands to it: you need its whole output to see an error.
+it, alone in one call, with its comment `# jupylet: {name}` at the end.
+The Jupylet system uses these comments to find each command and check it.
+If you leave out the comment or change the command, this may cause
+failures. Do not add `>/dev/null`, `| grep`, `| head` or other commands to it:
+you need its whole output to see an error.
 
 ## Step 1. Say hello
 
@@ -69,8 +72,8 @@ In the home folder, find the first of the names `jupylet`, `jupylet2` and
 `jupylet3` that is not in use. These commands show the names that are in
 use:
 
-- macOS: `ls -d "$HOME/jupylet" "$HOME/jupylet2" "$HOME/jupylet3" 2>/dev/null`
-- Windows 11: `'jupylet', 'jupylet2', 'jupylet3' | ForEach-Object { Join-Path $env:USERPROFILE $_ } | Where-Object { Test-Path $_ }`
+- macOS: `ls -d "$HOME/jupylet" "$HOME/jupylet2" "$HOME/jupylet3" 2>/dev/null || true  # jupylet: download/find-free-folder`
+- Windows 11: `'jupylet', 'jupylet2', 'jupylet3' | ForEach-Object { Join-Path $env:USERPROFILE $_ } | Where-Object { Test-Path $_ }  # jupylet: download/find-free-folder`
 
 `{code}` is the full path of the first free name. Then ask, for example:
 
@@ -91,15 +94,15 @@ the one before it succeeded.
 
 macOS:
 
-1. `curl -fL -o "{scratchpad}/jupylet.tar.gz" "{source}"`
-2. `mkdir "{code}"`
-3. `tar -xzf "{scratchpad}/jupylet.tar.gz" --strip-components=1 -C "{code}"`
+1. `curl -fL -o "{scratchpad}/jupylet.tar.gz" "{source}"  # jupylet: download/get-archive`
+2. `mkdir "{code}"  # jupylet: download/make-folder`
+3. `tar -xzf "{scratchpad}/jupylet.tar.gz" --strip-components=1 -C "{code}"  # jupylet: download/unpack`
 
 Windows 11:
 
-1. `curl.exe -fL -o "{scratchpad}\jupylet.tar.gz" "{source}"`
-2. `New-Item -ItemType Directory "{code}"`
-3. `tar.exe -xzf "{scratchpad}\jupylet.tar.gz" --strip-components=1 -C "{code}"`
+1. `curl.exe -fL -o "{scratchpad}\jupylet.tar.gz" "{source}"  # jupylet: download/get-archive`
+2. `New-Item -ItemType Directory "{code}"  # jupylet: download/make-folder`
+3. `tar.exe -xzf "{scratchpad}\jupylet.tar.gz" --strip-components=1 -C "{code}"  # jupylet: download/unpack`
 
 The commands download the archive into the scratchpad, a temporary folder of
 this session, then create `{code}`, and then unpack the code into it. The

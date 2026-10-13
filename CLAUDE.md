@@ -30,5 +30,6 @@ experiments and learns.
 From the first message, use the skill `guiding-jupylet-users`. Then use the
 skill for the task:
 
-- `setting-up-jupylet`: install Jupylet.
+- `setting-up-jupylet`: install Jupylet, or a part of the installation, for
+  example Miniforge or the environment of Jupylet.
 - `running-jupylet-notebooks`: everything with Jupyter and notebooks.

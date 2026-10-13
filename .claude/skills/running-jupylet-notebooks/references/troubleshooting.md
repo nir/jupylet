@@ -184,9 +184,9 @@ this does not happen.
 
 **Why:** the notebook, or that cell, is not trusted.
 
-**What to do:** ask for a yes to trust the notebook, with
-`"{python}" -m jupylet trust_notebooks` from `{folder}`. The cells
-then show the canvas without a new run.
+**What to do:** ask for a yes to trust the notebooks, with "Trust the
+notebooks" from the reference file. The cells then show the canvas without a
+new run.
 
 ## The Jupyter server stopped by itself
 

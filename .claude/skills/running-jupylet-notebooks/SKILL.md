@@ -18,8 +18,7 @@ Values in `{braces}` are blanks that you fill in.
 
 - `{code}`: the Jupylet folder. It is the folder that contains
   `.claude/skills/running-jupylet-notebooks`. Use its full path.
-- `{version}`: the line `VERSION = '...'` near the top of
-  `{code}/jupylet/__init__.py`.
+- `{version}`: the Jupylet version of the code in `{code}`.
 - `{miniforge}`: the folder `miniforge3` in the home folder of the person.
 - `{conda_python}`: the Python of a conda installation. "Find a Python" finds
   it.
@@ -86,8 +85,10 @@ strangely, read `references/troubleshooting.md`.
 
 ## Understand the request
 
-The person wants to open, run or continue a notebook. First do "Find a Python"
-and "Find the Jupyter servers that run". Then use the person's request
+The person wants to open, run or continue a notebook. First, read
+`{code}/jupylet/__init__.py` with the Read tool. `{version}` is the version in
+its line `VERSION = '...'`, near the top. Then do "Find a Python" and "Find
+the Jupyter servers that run". Then use the person's request
 and what you found to work out what the person most likely wants. The words of
 the person alone do not always make it clear. Ask a short question to make
 sure, for example:
@@ -143,7 +144,7 @@ Windows): that Python is `{conda_python}`.
 **`{miniforge}` does not exist, or has no Python:** Miniforge is not installed
 there. The person can have another conda installation, for example Anaconda.
 Run "Find conda installations" from the reference file. `{conda_python}` is
-the Python of a folder that it prints.
+the Python of a conda installation that it finds.
 
 **The computer has no conda installation:** Jupylet is not installed in a
 way that this skill can use. Do "Install Jupylet first", below.
@@ -526,8 +527,9 @@ it, or when a path tells you to.
      person that a cell still runs, and stop waiting.
    - **`error` and "Timeout waiting for result" or "Not Found":** see
      `references/troubleshooting.md`.
-4. Tell the person the result in plain words, for example: "Done, every cell
-   ran without errors."
+4. Tell the person the result in plain words. If you already know what the
+   notebook should show, describe that. Otherwise, read its cells first, to
+   find out what it should show, and describe that.
 
 ## Wait for the person
 

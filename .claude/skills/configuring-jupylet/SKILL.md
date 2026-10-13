@@ -90,6 +90,11 @@ boxless write does not use these tools, so the app shows no box. Run the
 commands below: with the Bash tool on macOS, with the PowerShell tool on
 Windows. Do a boxless write only when the request says "boxless".
 
+Run each command exactly as this section shows it, alone in one call, with
+its comment `# jupylet: {name}` at the end. The Jupylet system uses these
+comments to find each command and check it. If you leave out the comment or
+change the command, this may cause failures.
+
 Fill in these blanks, with full paths:
 
 - `{folder}`: the folder `.jupylet` of the file that the request names: in
@@ -104,21 +109,21 @@ Fill in these blanks, with full paths:
    On macOS:
 
    ```bash
-   mkdir -p "{folder}"
+   mkdir -p "{folder}"  # jupylet: config/make-folder
    ```
 
    ```bash
-   cp -n "{header}" "{folder}/claude-config.md"
+   cp -n "{header}" "{folder}/claude-config.md"  # jupylet: config/copy-header
    ```
 
    On Windows:
 
    ```powershell
-   New-Item -ItemType Directory -Force "{folder}"
+   New-Item -ItemType Directory -Force "{folder}"  # jupylet: config/make-folder
    ```
 
    ```powershell
-   New-Item -ItemType File -Path "{folder}\claude-config.md" -Value (Get-Content -Raw "{header}")
+   New-Item -ItemType File -Path "{folder}\claude-config.md" -Value (Get-Content -Raw "{header}")  # jupylet: config/copy-header
    ```
 
    These two copy commands never change a file that exists: `cp -n` changes
@@ -128,13 +133,13 @@ Fill in these blanks, with full paths:
 3. Add the setting at the end of the file. On macOS:
 
    ```bash
-   echo "- {key} = {value}" >> "{folder}/claude-config.md"
+   echo "- {key} = {value}" >> "{folder}/claude-config.md"  # jupylet: config/add-line
    ```
 
    On Windows:
 
    ```powershell
-   Add-Content -Path "{folder}\claude-config.md" -Value "- {key} = {value}"
+   Add-Content -Path "{folder}\claude-config.md" -Value "- {key} = {value}"  # jupylet: config/add-line
    ```
 
 ## Delete a setting

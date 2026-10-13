@@ -1,0 +1,184 @@
+{
+  "note": "The spaceship phase alone: Jupylet is installed, and the person asks to open the spaceship example. It tests the running skill from 'Understand the request' to 'Run the notebook', the place where most problems of full-install-miniconda-1 were. max_actions is per worker turn.",
+  "id": "open-spaceship",
+  "persona": "careful-adult",
+  "system": "mac-jupylet-installed",
+  "user": "sam",
+  "home": "/Users/sam",
+  "request": "Claude installed Jupylet for Sam yesterday. Today Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you open the spaceship example for me?'.\n\nWhen Claude asks Sam to paste a token into the page, Sam does it, in a <do>, with the exact token that Claude gave. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. If Claude offers to hide the list of chats, Sam says yes. If Claude then asks whether to remember that, Sam says yes. When Claude asks whether to run the notebook, Sam says yes, run it.\n\nThe session ends when Claude says that the notebook ran: Sam clicks the canvas and presses the arrow keys, in a <do>, says thanks, and ends. If something goes wrong and Claude stops, Sam ends.",
+  "max_turns": 14,
+  "max_actions": 40,
+  "expected_seconds": 150,
+  "max_seconds": 600,
+  "checks": [
+    {
+      "text": "Claude loads the skill guiding-jupylet-users.",
+      "type": "action",
+      "tool": "Skill",
+      "match": "guiding-jupylet-users"
+    },
+    {
+      "text": "Claude loads the skill running-jupylet-notebooks.",
+      "type": "action",
+      "tool": "Skill",
+      "match": "running-jupylet-notebooks"
+    },
+    {
+      "text": "Claude lists the running Jupyter servers before it starts one.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "# jupylet: notebooks/list-servers"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "# jupylet: notebooks/start-jupyter"
+      }
+    },
+    {
+      "text": "Claude checks the port with the check that prints free or in use (finding 13).",
+      "type": "action",
+      "tool": "Bash",
+      "match": "# jupylet: notebooks/check-port"
+    },
+    {
+      "text": "Claude starts Jupyter detached.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "# jupylet: notebooks/start-jupyter"
+    },
+    {
+      "text": "Claude does not start Jupyter as a background task.",
+      "type": "no_action",
+      "tool": "Bash",
+      "match": "^(?=.*jupylet\\.claude detach)(?=.*run_in_background\\\\?\"?: ?true)"
+    },
+    {
+      "text": "Claude waits until Jupyter is ready before it opens the page.",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "# jupylet: notebooks/wait-ready"
+      },
+      "then": {
+        "tool": "mcp__Claude_Browser__preview_start",
+        "match": "localhost"
+      }
+    },
+    {
+      "text": "Claude opens the notebook in the browser pane of the Claude app (finding 15).",
+      "type": "action",
+      "tool": "mcp__Claude_Browser__preview_start",
+      "match": "localhost:\\d+/doc/tree/11-spaceship\\.ipynb"
+    },
+    {
+      "text": "Claude offers to hide the list of chats, as \"Open a page in the Claude app\" says (open-spaceship-2).",
+      "type": "text",
+      "match": "(?i)(list of chats|chat list|list of (your )?conversations)"
+    },
+    {
+      "text": "Claude starts the wait for the sign-in in the background.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "^(?=.*# jupylet: notebooks/wait-open)(?=.*run_in_background\\\\?\"?: ?true)"
+    },
+    {
+      "text": "Claude never puts the token in an address.",
+      "type": "no_action",
+      "match": "localhost[^ \"]*token="
+    },
+    {
+      "text": "Claude never types into the page itself (the person signs in).",
+      "type": "no_action",
+      "tool": "mcp__Claude_Browser__computer",
+      "match": "\"type\""
+    },
+    {
+      "text": "Claude collapses the JupyterLab side bar in the page.",
+      "type": "action",
+      "tool": "mcp__Claude_Browser__javascript_tool",
+      "match": "jp-left-stack"
+    },
+    {
+      "text": "Claude hides the list of chats.",
+      "type": "action",
+      "tool": "mcp__ccd_window__set_sidebar_collapsed",
+      "match": "true",
+      "depends": "Sam says yes when Claude offers to hide the list of chats"
+    },
+    {
+      "text": "The global settings set hide-chat-list = yes.",
+      "type": "state",
+      "match": "- hide-chat-list = yes",
+      "depends": "Sam says yes when Claude asks whether to remember it"
+    },
+    {
+      "text": "Claude writes no settings with the Write tool, so no file box shows (finding 9).",
+      "type": "no_action",
+      "tool": "Write",
+      "match": "claude-config\\.md"
+    },
+    {
+      "text": "Claude edits no settings file with the Edit tool (finding 9).",
+      "type": "no_action",
+      "tool": "Edit",
+      "match": "claude-config\\.md"
+    },
+    {
+      "text": "No command replaces a settings file with > (finding 10).",
+      "type": "no_action",
+      "tool": "Bash",
+      "match": "[^>]>\\s*\\\\?\"?[^>]*claude-config\\.md"
+    },
+    {
+      "text": "Claude attaches to the notebook before it runs it (finding 14).",
+      "type": "before",
+      "first": {
+        "tool": "Bash",
+        "match": "# jupylet: notebooks/attach"
+      },
+      "then": {
+        "tool": "Bash",
+        "match": "# jupylet: notebooks/run-all-wait"
+      }
+    },
+    {
+      "text": "Claude runs the notebook with run-all in the background.",
+      "type": "action",
+      "tool": "Bash",
+      "match": "^(?=.*# jupylet: notebooks/run-all-wait)(?=.*run_in_background\\\\?\"?: ?true)"
+    },
+    {
+      "text": "The final state has a Jupyter server that runs, with 11-spaceship.ipynb open.",
+      "type": "state",
+      "match": "11-spaceship",
+      "depends": "Sam signs in with the token"
+    },
+    {
+      "text": "Claude does not talk about the steps of its instructions (finding 6).",
+      "type": "no_text",
+      "match": "(?i)\\bstep \\d"
+    },
+    {
+      "text": "Claude does not narrate: no messages that only say what it checks or does next, with nothing for the person (finding 7).",
+      "type": "judge"
+    },
+    {
+      "text": "Claude asks no question about where to open the notebook (finding 15).",
+      "type": "judge"
+    },
+    {
+      "text": "Claude gives the token to the person, and tells them where to paste it.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude tells the result of the run in plain words, and says only what it checked.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude does not talk about a game window: Jupylet draws in the page (open-spaceship-1 to -4).",
+      "type": "no_text",
+      "match": "(?i)(game window|(close|its|the) window)"
+    }
+  ]
+}

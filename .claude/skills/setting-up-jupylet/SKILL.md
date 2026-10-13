@@ -1,6 +1,6 @@
 ---
 name: setting-up-jupylet
-description: Installs Jupylet on the computer of a person, step by step, from the Jupylet code that is already on disk. Supports macOS with an Apple chip and Windows 11 on Intel or AMD. Use this skill when the person asks to install or set up Jupylet. Also use it when the person says that they downloaded Jupylet and asks what to do next. Also use it when CLAUDE_SETUP.md hands over after the download, or when running-jupylet-notebooks finds that Jupylet is not set up for this folder. Use it together with guiding-jupylet-users.
+description: Installs Jupylet on the computer of a person, step by step, from the Jupylet code that is already on disk. Supports macOS with an Apple chip and Windows 11 on Intel or AMD. Use this skill when the person asks to install or set up Jupylet. Also use it when the person asks to install only a part of the installation, for example Miniforge, the Jupylet environment, or the Terminal settings for Miniforge. Also use it when the person says that they downloaded Jupylet and asks what to do next. Also use it when CLAUDE_SETUP.md hands over after the download, or when running-jupylet-notebooks finds that Jupylet is not set up for this folder. Use it together with guiding-jupylet-users.
 ---
 
 # Setting up Jupylet
@@ -10,21 +10,24 @@ environment, checks the result, and ends with the spaceship example running.
 Use the skill `guiding-jupylet-users` for how to talk with the person and when
 to ask.
 
+When the person asks for only a part of the installation, for example only
+Miniforge, do the steps of that part, from step 1 to the end of that part.
+The checks of steps 1 and 2 come first in each case. Then tell the person
+what the next part would be, and ask before you continue.
+
 ## Values
 
 Values in `{braces}` are blanks that you fill in.
 
 - `{code}`: the Jupylet folder. It is the folder that contains
   `.claude/skills/setting-up-jupylet`. Use its full path.
-- `{version}`: the line `VERSION = '...'` near the top of
-  `{code}/jupylet/__init__.py`.
+- `{version}`: the Jupylet version of the code in `{code}`.
 - `{miniforge}`: the folder `miniforge3` in the home folder of the person.
 - `{env}`: the name of the environment that Jupylet goes into.
 - `{scratchpad}`: your scratchpad folder.
 
 The commands for each step are in `references/macos.md` and
-`references/windows.md`. Read the file for this computer, if one exists,
-before step 1. Put every path in double quotes.
+`references/windows.md`. Put every path in double quotes.
 
 ## Rules for this skill
 
@@ -59,7 +62,11 @@ Copy this checklist into your notes, and update it after each step:
 
 ## Step 1. Check the system
 
-Run the system check from the reference file.
+1. Read with the Read tool the reference file for this computer,
+   `references/macos.md` or `references/windows.md`, and
+   `{code}/jupylet/__init__.py`. `{version}` is the version in its line
+   `VERSION = '...'`, near the top.
+2. Run the system check from the reference file.
 
 - **macOS with an Apple chip, or Windows 11 on Intel or AMD:** tell the
   person in one line what system you found, and that Jupylet supports it.
@@ -80,17 +87,19 @@ These checks only read. Say at most one line about them, for example
 "Checking what's already on your computer...". Do not tell the person the
 results now. The next steps use them.
 
-1. **Conda installations.** Find each Miniforge, Miniconda, Anaconda or
+1. **Conda installations.** Run "Find conda installations" from the
+   reference file. It finds each Miniforge, Miniconda, Anaconda or
    Mambaforge folder on the computer.
-2. **Miniforge in `{miniforge}`.** If it exists, get the Python version of
-   its main environment, `base`. Jupylet needs Python 3.11 or newer.
-3. **Environments with Jupylet.** If a conda installation exists, run
-   `find-env --all {version}` with the Python of a conda installation. Use
-   the Python of `{miniforge}` if it exists. The script prints one line for
+2. **Miniforge in `{miniforge}`.** If it exists, run "Get the Python version
+   of Miniforge" from the reference file. Jupylet needs Python 3.11 or newer.
+3. **Environments with Jupylet.** If a conda installation exists, run "Find
+   environments with Jupylet" from the reference file, with the Python of a
+   conda installation. Use the Python of `{miniforge}` if it exists. The script prints one line for
    each environment that has Jupylet. `this folder` at the end of a line
    means that the environment runs the code in `{code}`.
-4. **macOS only: the conda of Terminal.** Find which conda new Terminal
-   windows use: none, the one in `{miniforge}`, or another one.
+4. **macOS only: the conda of Terminal.** Run "Find the conda of Terminal"
+   from the reference file. It finds which conda new Terminal windows use:
+   none, the one in `{miniforge}`, or another one.
 
 ## Step 3. Install Miniforge, if necessary
 
@@ -257,23 +266,13 @@ After a clear yes, do these, with the environment folder
 
 1. "Start a Jupyter server", "Open a page in the Claude app" and "Attach to the
    notebook", tasks of the skill `running-jupylet-notebooks`.
-2. Tell the person that this first run is slow. Jupylet prepares its code on
-   the first run, and the page can show `[*]` for half a minute, with no
-   visible change. Say, for example: "Running the notebook now. It can take
-   up to a minute to get going, while Jupylet gets everything ready for the
-   first time. After that it starts in seconds."
-3. Do "Run the notebook" in the skill `running-jupylet-notebooks`, without its
-   two messages to the person:
-   - Skip step 1 of "Run the notebook" ("Running the notebook now"). Item 2
-     of this list already told the person.
-   - Skip step 4 of "Run the notebook" (the result). Item 4 of this list
-     tells the person how to use the example.
-4. When the run works, tell the person how to use the example, for example:
-   "The spaceship example should be showing at the bottom of the notebook
-   now. I ran every cell, top to bottom, and the last one started it. Click
-   the canvas, the area where it's drawn, then steer the spaceship with the
-   arrow keys."
-5. Offer once to show how to start Jupylet without Claude, for example: "By
+2. Tell the person that this first run may be slow, for example: "It can take
+   up to a minute the first time, while Jupylet gets everything ready." Then
+   do "Run the notebook" in the skill `running-jupylet-notebooks`. The page
+   can show `[*]` for half a minute. Then the spaceship should show up in a
+   canvas at the end of the notebook. The person should be able to click the
+   canvas, and then steer the spaceship with the arrow keys.
+3. Offer once to show how to start Jupylet without Claude, for example: "By
    the way, you can also start Jupylet on your own, without me. Whenever
    you'd like, just ask and I'll show you how." When the person asks, do
    "Start Jupylet without Claude" in the skill `running-jupylet-notebooks`.
