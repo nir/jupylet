@@ -45,6 +45,7 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 
 ## Contents
 
+- Read the version
 - Find conda installations
 - List the Jupyter servers
 - List the environments
@@ -70,6 +71,13 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 - Stop JupyterLab
 - Trust the notebooks
 - List the state files, Delete the state files
+
+## Read the version
+
+`(Select-String -Path "{code}\jupylet\__init__.py" -Pattern '^VERSION' | Select-Object -First 1).Line  # jupylet: notebooks/read-version`
+
+Prints the line `VERSION = '...'` of the Jupylet code in `{code}`. `{version}`
+is the version between the quotes, for example `0.10.0`.
 
 ## Find conda installations
 

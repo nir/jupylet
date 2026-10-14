@@ -18,6 +18,7 @@ scratchpad and run that file instead.
 
 ## Contents
 
+- Read the version
 - Check the system
 - Find conda installations
 - Get the Python version of Miniforge
@@ -26,6 +27,13 @@ scratchpad and run that file instead.
 - Create the environment
 - Install Jupylet, Check Jupylet, Prepare the environment
 - Trust the notebooks, Check the trust
+
+## Read the version
+
+`(Select-String -Path "{code}\jupylet\__init__.py" -Pattern '^VERSION' | Select-Object -First 1).Line  # jupylet: setup/read-version`
+
+Prints the line `VERSION = '...'` of the Jupylet code in `{code}`. `{version}`
+is the version between the quotes, for example `0.10.0`.
 
 ## Check the system
 

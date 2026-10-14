@@ -34,6 +34,7 @@ import time
 import uuid
 
 import library
+import recordings
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -569,6 +570,10 @@ class Session:
         self.state = ev['seed'].strip().replace('{code}', self.code) + '\n\n' + self.file_list()
         self.pending = {}
         self.pages_new, self.pages_shown = [], []
+        self.recordings = recordings.load()
+        self.task_files, self.task_info = {}, {}
+        self.tasks_dir = os.path.join(os.path.dirname(self.ev.get('scratchpad', '/private/tmp/claude-501/scratchpad')),
+                                      'tasks')
         self.events = []
         self.turn = 0
         self.fake = args.fake
@@ -795,19 +800,57 @@ class Session:
         if self.served:
             return served
 
+        task = self.task_output(tool, inp)
+        if task is not None:
+            return task
+
         self.files.changed(tool, inp)
         self.note_page(tool, inp)
 
         if tool == 'Bash' and inp.get('run_in_background'):
-            tid = 'b%d' % (len(self.pending) + 1)
+            #
+            # As the real Bash tool: the output goes into a file, and the
+            # notification at the end has no output (run T8). Claude reads
+            # the file (task_output).
+            #
+            tid = 'b' + uuid.uuid4().hex[:8]
+            path = os.path.join(self.tasks_dir, tid + '.output')
             self.pending[tid] = inp.get('command', '')
-            return 'Command running in background with ID: %s. You will get a task-notification when it ends.' % tid
+            self.task_files[path] = ''
+            self.task_info[tid] = {'path': path, 'description': inp.get('description') or inp.get('command', '')[:60]}
+            return ('Command running in background with ID: %s. Output is being written to: %s. You will be '
+                    'notified when it completes. To check interim output, use Read on that file path.' % (tid, path))
 
         cells = self.files.notebook_cells(json.dumps(inp)) if tool == 'Bash' else ''
+        extra = [x for x in (cells, self.examples_for(tool, inp)) if x]
         output, _ = self.ask_system('<action tool="%s">\n%s\n</action>%s' % (
-            tool, json.dumps(inp), '\n\n' + cells if cells else ''))
+            tool, json.dumps(inp), ''.join('\n\n' + x for x in extra)))
 
         return output
+
+    def task_output(self, tool, inp):
+        """The output file of a background command, for a Read or a `cat`
+        of it, or None."""
+        if tool == 'Read':
+            path = inp.get('file_path', '')
+            if path in self.task_files:
+                return numbered(self.task_files[path]) if self.task_files[path] else ''
+        elif tool == 'Bash':
+            m = re.fullmatch(r'\s*cat\s+"?([^"]+?)"?\s*', inp.get('command', ''))
+            if m and m.group(1) in self.task_files:
+                return self.task_files[m.group(1)]
+
+        return None
+
+    def examples_for(self, tool, inp):
+        """Real outputs of the same command or tool, from recordings.json."""
+        if tool == 'Bash':
+            m = TAG.search(inp.get('command', '').rstrip())
+            key = m.group(1) if m else None
+        else:
+            key = 'tool:' + tool if tool.startswith('mcp__') else None
+
+        return recordings.examples(key, self.recordings) if key else ''
 
     PAGE_TOOLS = ('mcp__Claude_Browser__preview_start', 'mcp__Claude_Browser__navigate')
 
@@ -844,7 +887,8 @@ class Session:
 
         listing = '\n'.join('<task id="%s">%s</task>' % kv for kv in self.pending.items())
         cells = self.files.notebook_cells(listing)
-        _, done = self.ask_system('<pending>\n%s\n</pending>%s' % (listing, '\n\n' + cells if cells else ''))
+        extra = [x for x in [cells] + [self.examples_for('Bash', {'command': c}) for c in self.pending.values()] if x]
+        _, done = self.ask_system('<pending>\n%s\n</pending>%s' % (listing, ''.join('\n\n' + x for x in extra)))
 
         notes = []
         for tid, out in done:
@@ -855,8 +899,14 @@ class Session:
                     self.progress('NOTIFICATION %s:' % tid, out)
                 else:
                     self.progress('NOTIFICATION %s: %s' % (tid, out))
-                notes.append('<task-notification>\n<task-id>%s</task-id>\n<status>completed</status>\n'
-                             '<output>\n%s\n</output>\n</task-notification>' % (tid, out))
+                m = re.match(r'\s*Exit code (\d+)\s*\n?', out)
+                code = int(m.group(1)) if m else 0
+                info = self.task_info[tid]
+                body = re.sub(r'\s*\[exited with code \d+\]\s*$', '', out[m.end():] if m else out).rstrip()
+                self.task_files[info['path']] = '%s\n\n[exited with code %d]' % (body, code)
+                notes.append('<task-notification>\n<task-id>%s</task-id>\n<output-file>%s</output-file>\n'
+                             '<status>completed</status>\n<summary>Background command "%s" completed (exit code %d)'
+                             '</summary>\n</task-notification>' % (tid, info['path'], info['description'], code))
 
         return notes
 
@@ -1112,7 +1162,7 @@ def make_fakes():
 
     def system(agent, text):
         if '<pending>' in text:
-            return '<done id="b1">\nfinished\n</done>'
+            return ''.join('<done id="%s">\nfinished\n</done>' % t for t in re.findall(r'<task id="(\w+)"', text))
         return '<output>\nclaude-config.md\n</output>\n<state>\nfake state %d\n</state>' % agent.calls
 
     def human(agent, text):

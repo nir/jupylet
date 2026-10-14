@@ -11,6 +11,7 @@ failures. Do not add `>/dev/null`, `| grep`,
 
 ## Contents
 
+- Read the version
 - Check the system
 - Find conda installations
 - Get the Python version of Miniforge
@@ -22,6 +23,13 @@ failures. Do not add `>/dev/null`, `| grep`,
 - Install Jupylet, Check Jupylet, Prepare the environment
 - Trust the notebooks, Check the trust
 - Check the Terminal
+
+## Read the version
+
+`grep -m1 "^VERSION" "{code}/jupylet/__init__.py"  # jupylet: setup/read-version`
+
+Prints the line `VERSION = '...'` of the Jupylet code in `{code}`. `{version}`
+is the version between the quotes, for example `0.10.0`.
 
 ## Check the system
 

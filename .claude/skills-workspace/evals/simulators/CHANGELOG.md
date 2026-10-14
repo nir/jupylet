@@ -114,3 +114,24 @@ the problem), and the run that shows the effect.
   last cell still at `[*]`, and Claude explained it with a game window.
 - Effect: to be shown by `open-spaceship-5`.
 
+## System version 7 (2026-10-13)
+
+- `system.md`: the `<examples>` part. Harness: `recordings.py` collects the
+  real outputs of tagged commands and of the app tools from exported
+  sessions into `simulators/recordings.json`, and the harness adds the
+  outputs of the same command to each request (few-shot). An error output is
+  shown only next to a normal one.
+- Source: T8, a clean install with Sonnet 5.5 on Nir's Mac
+  (`session-export-1791923120091`): 46 outputs for 43 commands and tools.
+- Why: the simulator gave short or invented outputs for the installer,
+  `conda init`, `preview_start` and the "Tab Context" of the browser tools.
+- Effect: to be shown by the next runs.
+
+## Harness: background commands as in the real app (2026-10-13)
+
+- A background command gives its ID and the path of its output file; the
+  notification has only a status line; Claude reads the output file, which
+  the harness serves. `grade.py` allows reading such a file.
+- Why: T8 shows the real form. Before, the harness put the output into the
+  notification, so a run never showed the step of reading the file.
+

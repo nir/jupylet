@@ -114,8 +114,13 @@ If a command fails, tell the person plainly that the download did not
 work. Then try once more. If it fails again, stop. A common cause is a
 branch name that does not exist on GitHub.
 
-Then check that `{code}/.claude/skills/setting-up-jupylet/SKILL.md` exists.
-If it does not exist, this branch does not have the setup skill. Tell the
+Then check that the setup skill is in the code. This command prints `found`
+or `missing`:
+
+- macOS: `test -f "{code}/.claude/skills/setting-up-jupylet/SKILL.md" && echo found || echo missing  # jupylet: download/check-skill`
+- Windows 11: `if (Test-Path "{code}\.claude\skills\setting-up-jupylet\SKILL.md") { 'found' } else { 'missing' }  # jupylet: download/check-skill`
+
+If it prints `missing`, this branch does not have the setup skill. Tell the
 person plainly that this version of Jupylet cannot be installed this way.
 Then stop.
 

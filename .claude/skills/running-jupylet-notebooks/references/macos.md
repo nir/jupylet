@@ -28,6 +28,7 @@ Some blanks appear only here:
 
 ## Contents
 
+- Read the version
 - Find conda installations
 - List the Jupyter servers
 - List the environments
@@ -54,6 +55,13 @@ Some blanks appear only here:
 - List the state files, Delete the state files
 - Trust the notebooks
 - Check the Terminal
+
+## Read the version
+
+`grep -m1 "^VERSION" "{code}/jupylet/__init__.py"  # jupylet: notebooks/read-version`
+
+Prints the line `VERSION = '...'` of the Jupylet code in `{code}`. `{version}`
+is the version between the quotes, for example `0.10.0`.
 
 ## Find conda installations
 

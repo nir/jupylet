@@ -23,6 +23,9 @@ Check types, in each check of the eval:
                 question marks
     judge       graded by a person or a Haiku grader
 
+A real session, from import_export.py, is graded the same way, except the
+checks of the final state, the models, the skills seen and the served files.
+
 Automatic checks, for each eval: every agent used Haiku, every Jupylet file
 that Claude read was served by the harness, and every shell command of
 Claude has the comment `# jupylet: {group}/{name}` of the skills, with a
@@ -160,7 +163,12 @@ def commands_tagged(events, ev, known=None):
     eval can allow other commands with `allowed_commands`, a list of
     patterns.
     """
-    allowed = [re.compile(a) for a in ev.get('allowed_commands', [])]
+    #
+    # Reading the output file of a background command is how the real app
+    # gives its result (run T8): it is part of the tool, not a command of
+    # Claude's own.
+    #
+    allowed = [re.compile(a) for a in ev.get('allowed_commands', [])] + [re.compile(r'^\s*cat\s+"?[^"]*/tasks/\w+\.output"?\s*$')]
     bad = []
     for e in actions(events, 'Bash'):
         cmd = e['input'].get('command', '') if isinstance(e['input'], dict) else str(e['input'])
@@ -244,13 +252,27 @@ def main():
         evals = library.load_evals(evals_path)
         ev = library.expand(next(e for e in evals if str(e['id']) == str(run['eval_id'])))
     events = [json.loads(line) for line in open(os.path.join(run_dir, 'events.jsonl'))]
-    state = open(os.path.join(run_dir, 'state.md')).read()
+    #
+    # A real session from import_export.py has no final state, no agents of
+    # the harness, and no served files. Its skills are those of the person:
+    # skills_seen guards the simulated worker only.
+    #
+    real = run.get('real', False)
+    state = '' if real else open(os.path.join(run_dir, 'state.md')).read()
 
     tags_path = os.path.join(run_dir, 'tags.json')
     known = json.load(open(tags_path)) if os.path.isfile(tags_path) else None
-    expectations = [models_used(run_dir), skills_seen(run_dir), files_served(events),
-                    commands_tagged(events, ev, known)]
+    if real:
+        expectations = [{'text': 'A real session: the models were %s.' % ', '.join(run.get('models', [])),
+                         'passed': None, 'evidence': run.get('source', '')},
+                        commands_tagged(events, ev, known)]
+    else:
+        expectations = [models_used(run_dir), skills_seen(run_dir), files_served(events),
+                        commands_tagged(events, ev, known)]
     for c in ev['checks']:
+        if real and c['type'] == 'state':
+            expectations.append({'text': c['text'], 'passed': None, 'evidence': 'a real session has no final state'})
+            continue
         passed, evidence = grade_check(c, events, state)
         x = {'text': c['text'], 'passed': passed, 'evidence': evidence}
         if passed is False and c.get('depends'):

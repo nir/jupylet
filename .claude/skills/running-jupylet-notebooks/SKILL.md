@@ -85,10 +85,9 @@ strangely, read `references/troubleshooting.md`.
 
 ## Understand the request
 
-The person wants to open, run or continue a notebook. First, read
-`{code}/jupylet/__init__.py` with the Read tool. `{version}` is the version in
-its line `VERSION = '...'`, near the top. Then do "Find a Python" and "Find
-the Jupyter servers that run". Then use the person's request
+The person wants to open, run or continue a notebook. First, run "Read the
+version" from the reference file. It gives `{version}`. Then do "Find a
+Python" and "Find the Jupyter servers that run". Then use the person's request
 and what you found to work out what the person most likely wants. The words of
 the person alone do not always make it clear. Ask a short question to make
 sure, for example:
@@ -138,16 +137,15 @@ can run them. Do not use `python3` or `python` of the system: on a computer
 without Python, they can be stubs that only start an installation (the
 Microsoft Store on Windows, or the Command Line Tools on macOS).
 
-**`{miniforge}` has a Python** (`bin/python` on macOS, `python.exe` on
-Windows): that Python is `{conda_python}`.
+Run "Find conda installations" from the reference file. It finds the Python
+of each conda installation.
 
-**`{miniforge}` does not exist, or has no Python:** Miniforge is not installed
-there. The person can have another conda installation, for example Anaconda.
-Run "Find conda installations" from the reference file. `{conda_python}` is
-the Python of a conda installation that it finds.
-
-**The computer has no conda installation:** Jupylet is not installed in a
-way that this skill can use. Do "Install Jupylet first", below.
+- **It finds the Python of `{miniforge}`:** that Python is `{conda_python}`.
+- **It finds only other conda installations,** for example Anaconda: the
+  first Python that it finds is `{conda_python}`.
+- **It finds nothing:** the computer has no conda installation, and Jupylet
+  is not installed in a way that this skill can use. Do "Install Jupylet
+  first", below.
 
 ### Install Jupylet first
 

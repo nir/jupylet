@@ -100,8 +100,26 @@ as `{code}`.
      of that notebook to the request, so the system simulator gives the
      real sources and only makes up the run state. Before run
      `open-spaceship-3`, it made up the code of the spaceship notebook.
-   - **A background command** (`run_in_background`): an ID at once. The
-     command stays pending.
+   - **A tagged command, or an app tool:** before the system simulator
+     answers, the harness adds the real outputs of the same command or tool
+     from real sessions (`simulators/recordings.json`), as examples. To add
+     the outputs of a new export: `python3 recordings.py add <export.zip>
+     <name>`, for example `T9`. `recordings.py list` shows what is there.
+   - **Known limitation:** no command runs for real. When a command uses
+     the content of a real file of the copy to make an imagined one, for
+     example `cp -n "…/header.md" ~/.jupylet/claude-config.md`, the system
+     simulator does not know that content, and makes it up. In
+     `open-spaceship-7`, Claude then saw a header that differs from
+     `header.md`. Treat such a difference as an artifact of the simulator,
+     not as a failure of Claude. Fix it (give the simulator the content of
+     the files that a command names) only if it comes back often.
+   - **A background command** (`run_in_background`): as the real Bash
+     tool, an ID and the path of an output file at once. The command stays
+     pending. When the system simulator ends it, the notification to Claude
+     has only a status line, with the exit code, and the output goes into
+     the file. Claude reads it with Read or `cat`, and the harness serves it,
+     with `[exited with code N]` at the end. Before T8, the notification had
+     the output in it.
    - **Any other tool call:** the system simulator's answer.
 4. A turn of the person: the human simulator writes a message. The person's
    `<do>` actions go to the system simulator as events. Then the system
@@ -205,6 +223,25 @@ Options of `run_eval.py`:
 
 Run folders are numbered: do not reuse a name, because the old results are
 the comparison.
+
+## Grade a real session
+
+An exported real session can be graded with the checks of a scenario:
+
+```bash
+python3 import_export.py ~/Downloads/session-export-….zip scenarios/full-install-miniconda.json runs/real-T8
+python3 grade.py scenarios/full-install-miniconda.json runs/real-T8
+```
+
+`import_export.py` writes a run folder, with `"real": true` in `run.json`.
+The grader skips what only a simulated run has: the final state, the models
+of the agents, the skills that the worker saw, and the served files. It
+also skips the preamble: what Claude did before its first Jupylet step,
+for example the download of `CLAUDE_SETUP.md` from the address that the
+person gave. A check about the system of the scenario only, for example
+its Miniconda, does not apply to a computer that does not have it.
+
+Grading costs nothing: it calls no model.
 
 ## Test the machine first
 
@@ -406,7 +443,7 @@ cost, per run and per call. `reports/` keeps the reports.
 ## State, 2026-10-12
 
 Built: `run_eval.py`, `sim_mcp.py`, `grade.py`, `token_report.py`,
-`worker.md`, simulators version 6 (system) and 5 (human), `smoke.json`, and
+`worker.md`, simulators version 7 (system) and 5 (human), `smoke.json`, and
 `findings.md` with the findings from 7 real sessions and 8 proposed evals.
 
 Runs, in `runs/`:
@@ -456,6 +493,8 @@ Next:
 - `token_report.py`: the token and cost report.
 - `smoke.json`: the short evals and `ask-miniforge`.
 - `library.py`: builds an eval from a scenario and the library.
+- `recordings.py`, `simulators/recordings.json`: the real outputs of
+  commands and tools, from exported sessions, for the system simulator.
 - `simulators/LIBRARY.md`, `simulators/personas/`, `simulators/systems/`:
   the persona and system library, and how to write its files.
 - `scenarios/`: the scenarios, one file each.
