@@ -11,8 +11,9 @@ expectation for each check, with text, passed and evidence. Checks of type
 "judge" need judgment; this script marks them as not graded (passed: null).
 
 Check types, in each check of the eval:
-    action      some action of `tool` has an input that matches `match`
-    no_action   no action of `tool` has an input that matches `match`
+    action      some action of `tool` has an input that matches `match`, or
+                a shell command (Bash or PowerShell) has the tag `tag`
+    no_action   no such action
     before      the first action that matches `first` comes before the first
                 action that matches `then`, and both exist
     not_in_turn no action that matches `tool`/`match` happens in turn `turn`
@@ -26,11 +27,16 @@ Check types, in each check of the eval:
 A real session, from import_export.py, is graded the same way, except the
 checks of the final state, the models, the skills seen and the served files.
 
+A check with "platform" ("macos" or "windows") is graded only on that
+platform: the platform of the system, or of the real session.
+
 Automatic checks, for each eval: every agent used Haiku, every Jupylet file
 that Claude read was served by the harness, and every shell command of
 Claude has the comment `# jupylet: {group}/{name}` of the skills, with a
 tag that is in the tags.json of the run: the tags of the files under test
-(the eval can allow other commands with "allowed_commands").
+(the eval can allow other commands with "allowed_commands"), and each
+tagged command is the command of the skills with that tag, with only its
+blanks filled in.
 
 A check can have "depends": what a simulator must do for the check to apply,
 for example "the person says yes to the Terminal change". Only the worker
@@ -49,13 +55,35 @@ import sys
 import library
 
 
-def actions(events, tool=None, match=None):
+TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)\s*$')
+SHELLS = ('Bash', 'PowerShell')
 
+
+def command_of(e):
+
+    return e['input'].get('command', '') if isinstance(e['input'], dict) else str(e['input'])
+
+
+def tag_of(e):
+    """The tag `group/name` of a shell command of Claude, or None."""
+    if e['tool'] not in SHELLS:
+        return None
+    m = TAG.search(command_of(e).rstrip())
+
+    return m.group(1) if m else None
+
+
+def actions(events, tool=None, match=None, tag=None):
+    """The actions of Claude that match. `tag` matches a shell command of
+    the skills by its tag, on macOS (Bash) and on Windows (PowerShell). It
+    is a pattern: `setup/find-conda.*` matches the tags of both systems."""
     found = []
     for e in events:
         if e['kind'] != 'action':
             continue
         if tool and e['tool'] != tool:
+            continue
+        if tag and not re.fullmatch(tag, tag_of(e) or ''):
             continue
         text = json.dumps(e['input']) if not isinstance(e['input'], str) else e['input']
         if match and not re.search(match, text):
@@ -84,23 +112,23 @@ def grade_check(c, events, state):
     kind = c['type']
 
     if kind == 'action':
-        found = actions(events, c.get('tool'), c.get('match'))
+        found = actions(events, c.get('tool'), c.get('match'), c.get('tag'))
         return bool(found), describe(found[0]) if found else 'no such action'
 
     if kind == 'no_action':
-        found = actions(events, c.get('tool'), c.get('match'))
+        found = actions(events, c.get('tool'), c.get('match'), c.get('tag'))
         return not found, describe(found[0]) if found else 'no such action'
 
     if kind == 'before':
-        a = actions(events, c['first'].get('tool'), c['first'].get('match'))
-        b = actions(events, c['then'].get('tool'), c['then'].get('match'))
+        a = actions(events, c['first'].get('tool'), c['first'].get('match'), c['first'].get('tag'))
+        b = actions(events, c['then'].get('tool'), c['then'].get('match'), c['then'].get('tag'))
         if not a or not b:
             return False, 'missing: %s' % ('first' if not a else 'then')
         ok = index(events, a[0]) < index(events, b[0])
         return ok, '%s / %s' % (describe(a[0]), describe(b[0]))
 
     if kind == 'not_in_turn':
-        found = [e for e in actions(events, c.get('tool'), c.get('match')) if e['turn'] == c['turn']]
+        found = [e for e in actions(events, c.get('tool'), c.get('match'), c.get('tag')) if e['turn'] == c['turn']]
         return not found, describe(found[0]) if found else 'none in turn %d' % c['turn']
 
     if kind == 'state':
@@ -151,9 +179,6 @@ def models_used(run_dir):
             'evidence': ', '.join(sorted(models)) or 'no model calls (fake run?)'}
 
 
-TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)\s*$')
-
-
 def commands_tagged(events, ev, known=None):
     """A check that each shell command of Claude comes from the skills.
 
@@ -169,19 +194,65 @@ def commands_tagged(events, ev, known=None):
     # Claude's own.
     #
     allowed = [re.compile(a) for a in ev.get('allowed_commands', [])] + [re.compile(r'^\s*cat\s+"?[^"]*/tasks/\w+\.output"?\s*$')]
+    shell = [e for e in actions(events) if e['tool'] in SHELLS]
     bad = []
-    for e in actions(events, 'Bash'):
-        cmd = e['input'].get('command', '') if isinstance(e['input'], dict) else str(e['input'])
+    for e in shell:
+        cmd = command_of(e)
         if any(a.search(cmd) for a in allowed):
             continue
-        m = TAG.search(cmd.rstrip())
-        if not m:
+        tag = tag_of(e)
+        if not tag:
             bad.append('no tag: ' + describe(e))
-        elif known is not None and m.group(1) not in known:
-            bad.append('tag not in the skills (%s): %s' % (m.group(1), describe(e)))
+        elif known is not None and tag not in known:
+            bad.append('tag not in the skills (%s): %s' % (tag, describe(e)))
 
     return {'text': 'Each shell command of Claude comes from the skills, with its comment # jupylet: (finding 5).',
-            'passed': not bad, 'evidence': '; '.join(bad) or 'all %d tagged' % len(actions(events, 'Bash'))}
+            'passed': not bad, 'evidence': '; '.join(bad) or 'all %d tagged' % len(shell)}
+
+
+def template(line):
+    """A pattern for a command line of the skills: the same text, with any
+    value for each blank in {braces}, and any spaces for spaces."""
+    m = re.search(r'`([^`]*#\s*jupylet:\s*[\w-]+/[\w-]+)', line)
+    line = (m.group(1) if m else line).strip()
+    #
+    # A blank starts with a letter, and can have spaces: `{json arguments}`.
+    # A PowerShell block starts with a space: `{ Join-Path $env:USERPROFILE $_ }`.
+    #
+    blank = r'\{[A-Za-z][\w ]*\}'
+    parts = re.split('(%s)' % blank, line)
+    rx = ''.join('.+?' if re.fullmatch(blank, p) else
+                 r'\s+'.join(re.escape(w) for w in re.split(r'\s+', p)) for p in parts)
+
+    return re.compile(rx)
+
+
+def commands_unchanged(events, known):
+    """A check that each tagged command is the command of the skills with
+    that tag, with only the blanks filled in.
+
+    A tag can have several lines, for example the macOS and the Windows
+    command. The command must match one of them. Some commands of the skills
+    have several lines, for example a PowerShell here-string, and the skill
+    file has the tag on the last one: then only the last line is compared.
+    """
+    if known is None:
+        return {'text': 'Each tagged command is the same as in the skills.', 'passed': None,
+                'evidence': 'no tags.json'}
+
+    bad, n = [], 0
+    for e in actions(events):
+        tag = tag_of(e)
+        if not tag or tag not in known:
+            continue
+        n += 1
+        cmd = command_of(e).strip()
+        last = cmd.splitlines()[-1].strip() if '\n' in cmd else cmd
+        if not any(template(x['line']).fullmatch(last) for x in known[tag]):
+            bad.append('changed (%s): %s' % (tag, describe(e)))
+
+    return {'text': 'Each tagged command is the same as in the skills, with only the blanks filled in.',
+            'passed': not bad, 'evidence': '; '.join(bad) or 'all %d the same' % n}
 
 
 def skills_seen(run_dir):
@@ -258,6 +329,7 @@ def main():
     # skills_seen guards the simulated worker only.
     #
     real = run.get('real', False)
+    platform = run.get('platform') or ev.get('os', 'macos')
     state = '' if real else open(os.path.join(run_dir, 'state.md')).read()
 
     tags_path = os.path.join(run_dir, 'tags.json')
@@ -265,11 +337,14 @@ def main():
     if real:
         expectations = [{'text': 'A real session: the models were %s.' % ', '.join(run.get('models', [])),
                          'passed': None, 'evidence': run.get('source', '')},
-                        commands_tagged(events, ev, known)]
+                        commands_tagged(events, ev, known), commands_unchanged(events, known)]
     else:
         expectations = [models_used(run_dir), skills_seen(run_dir), files_served(events),
-                        commands_tagged(events, ev, known)]
+                        commands_tagged(events, ev, known), commands_unchanged(events, known)]
     for c in ev['checks']:
+        if c.get('platform', platform) != platform:
+            expectations.append({'text': c['text'], 'passed': None, 'evidence': 'only on ' + c['platform']})
+            continue
         if real and c['type'] == 'state':
             expectations.append({'text': c['text'], 'passed': None, 'evidence': 'a real session has no final state'})
             continue

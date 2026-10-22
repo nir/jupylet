@@ -51,21 +51,19 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 - List the environments
 - Check JupyterLab and the extra
 - Check the Jupyter MCP tools
+- Browse notebooks
 - Make a token
-- Check a port
 - Check the environment
 - Prepare the environment
 - Start JupyterLab
-- Wait until it is ready
 - Check the sign-in
 - Collapse the JupyterLab side bar
-- Open the default browser
 - Attach
 - Call a tool
 - Run all cells
 - Run all cells and wait
 - Run one cell
-- Wait for the page to open
+- Wait for the web page to open
 - Wait for a run
 - Replace the kernel
 - Stop JupyterLab
@@ -97,7 +95,7 @@ the Microsoft Store.
 
 ## List the Jupyter servers
 
-`& "{conda_python}" "{code}\jupylet\claude.py" running  # jupylet: notebooks/list-servers`
+`Set-Location "{code}"; & "{conda_python}" "{code}\jupylet\claude.py" running  # jupylet: notebooks/list-servers`
 
 Runs `claude.py` by its path, so it needs no Jupylet in that Python. Prints a
 JSON list of the Jupyter servers that run, as the task "Find the Jupyter
@@ -105,11 +103,12 @@ servers that run" in `SKILL.md` describes.
 
 ## List the environments
 
-`& "{conda_python}" "{code}\jupylet\claude.py" find-env {version}  # jupylet: notebooks/list-envs`
+`Set-Location "{code}"; & "{conda_python}" "{code}\jupylet\claude.py" find-env {version}  # jupylet: notebooks/list-envs`
 
 Asks each conda environment on the computer which Jupylet it has. Prints one
-line for each environment with the Jupylet version of this folder: the path,
-the kind, and where its Jupylet comes from.
+line for each environment with the Jupylet version of the code in `{code}`,
+best first, in three columns: the path, the kind (`conda` or `venv`), and the
+source of its Jupylet: `this folder`, or its version and where it comes from.
 
 ## Check JupyterLab and the extra
 
@@ -125,6 +124,16 @@ Expected: no output. An error names the part that is missing:
 Lists the Jupyter MCP tools that the Jupyter server offers. Expected: the list
 contains `notebook_run-all-cells`.
 
+## Browse notebooks
+
+`Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.OpenFileDialog; $d.Title = 'Choose your notebook'; $d.Filter = 'Notebooks (*.ipynb)|*.ipynb'; $d.InitialDirectory = '{code}'; $f = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}; if ($d.ShowDialog($f) -eq 'OK') { $d.FileName } else { 'canceled' }  # jupylet: notebooks/browse-notebooks`
+
+Loads the Windows window for opening a file, and sets it to show only
+notebooks, in the folder `{code}`. An invisible helper window keeps it in
+front of the other windows. The command prints the full path of the notebook,
+or `canceled` if the person closes the window without a choice. It waits
+until the person chooses, so start it in the background.
+
 ## Make a token
 
 `& "{python}" -c "import secrets; print(secrets.token_hex(4))"  # jupylet: notebooks/make-token`
@@ -132,13 +141,6 @@ contains `notebook_run-all-cells`.
 Prints a new token of eight characters. It is short, so that a kid can paste
 or type it. The Jupyter server accepts connections from this computer only,
 so a short token is enough.
-
-## Check a port
-
-`& "{python}" -c "import socket; print('in use' if socket.socket().connect_ex(('127.0.0.1', {port})) == 0 else 'free')"  # jupylet: notebooks/check-port`
-
-Tries to connect to the port. Prints `in use` if a program uses the port,
-or `free` if the port is free.
 
 ## Check the environment
 
@@ -159,7 +161,7 @@ notebook with Claude:
 - It turns off `jupyter_server_nbmodel`, which can make a cell stop
   responding.
 - It keeps the live copy of each notebook while the Jupyter server runs, so
-  that the page shows the cells that Claude adds.
+  that the web page shows the cells that Claude adds.
 - It turns off the news pop-up of JupyterLab.
 
 Prints `off` or `not installed` (nothing changed), `turned off` (it changed
@@ -174,23 +176,31 @@ environment `base`, leave out `{env name}` after `activate.bat`.
 @echo off
 call "{conda}\condabin\activate.bat" {env name}
 cd /d "{folder}"
-jupyter lab --no-browser --port %2 --ServerApp.port_retries=0 --IdentityProvider.token=%1 "--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up"
+jupyter lab --no-browser --IdentityProvider.token=%1 "--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,notebook_move-cursor-down,notebook_move-cursor-up"
 ```
 
 Then run it:
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude detach "{scratchpad}\jupyter.log" cmd /c {scratchpad}\start_jupyter.cmd {token} {port}  # jupylet: notebooks/start-jupyter`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude detach "{scratchpad}\jupyter.log" cmd /c {scratchpad}\start_jupyter.cmd {token}  # jupylet: notebooks/start-jupyter`
 
 The file does these steps:
 
 1. It activates the environment.
 2. It goes to the folder `{folder}`.
-3. It starts JupyterLab with the token and the port that it gets, without a
-   browser window.
+3. It starts JupyterLab with the token that it gets, without a browser
+   window. JupyterLab uses port 8888, or the next free port if 8888 is in
+   use.
 4. The last option lets you run one cell and move between cells.
 
 `detach` starts the file apart from your task, so that it continues after
 your turn, until you stop it. It prints a process id, and returns at once.
+Then wait until it is ready:
+
+`Set-Location "{code}"; & "{python}" -m jupylet.claude wait "{scratchpad}\jupyter.log" {token}  # jupylet: notebooks/wait-ready`
+
+It prints `ready` and the port, for example `ready 8889`, or `not ready
+after 60 seconds`. The port is `{port}`.
+
 `jupyter.log` must say `JupyterLab extension loaded from ...\envs\{env name}\...`:
 that shows that the environment is active.
 
@@ -200,24 +210,17 @@ default.
 
 *Developer note, not an instruction: `detach` on Windows is not tested yet.*
 
-## Wait until it is ready
-
-`Set-Location "{code}"; & "{python}" -m jupylet.claude wait {port} {token}  # jupylet: notebooks/wait-ready`
-
-Waits up to 60 seconds until the Jupyter server answers. Prints `ready`, or
-`not ready after 60 seconds`.
-
 ## Check the sign-in
 
-Run this in the page with `javascript_tool`:
+Run this in the web page with `javascript_tool`:
 
 `(await fetch('/api/status', {credentials: 'same-origin'})).status`
 
-Prints `200` if the page signed in, or `403` if it did not.
+Prints `200` if the web page signed in, or `403` if it did not.
 
 ## Collapse the JupyterLab side bar
 
-Run this in the page with `javascript_tool`:
+Run this in the web page with `javascript_tool`:
 
 ```javascript
 const stack = document.querySelector('#jp-left-stack');
@@ -234,20 +237,14 @@ If the left side bar of JupyterLab shows a panel, for example the list of
 files, it presses and releases the tab of that panel. That collapses the
 panel. If the panel is already collapsed, it does nothing. A click event does
 not work: the tab bar reacts only to pointer events. JupyterLab remembers the
-collapsed panel for the next page of this Jupyter server.
-
-## Open the default browser
-
-`Start-Process "http://localhost:{port}/lab/tree/{notebook}"  # jupylet: notebooks/open-browser`
-
-Opens the notebook in the default web browser of the computer.
+collapsed panel for the next web page of this Jupyter server.
 
 ## Attach
 
 `Set-Location "{code}"; & "{python}" -m jupylet.claude attach {port} {token} {notebook}  # jupylet: notebooks/attach`
 
 Connects the Jupyter MCP tools to the notebook. The notebook must be open in a
-page. Expected: the output contains `Successfully activate notebook`.
+web page. Expected: the output contains `Successfully activate notebook`.
 
 ## Call a tool
 
@@ -270,7 +267,7 @@ Some tools need the id of the kernel:
 
 `Set-Location "{code}"; & "{python}" -m jupylet.claude call {port} {token} notebook_run-all-cells  # jupylet: notebooks/run-all`
 
-Runs all cells, as Run > Run All Cells in the page does. Prints `True` after
+Runs all cells, as Run > Run All Cells in the web page does. Prints `True` after
 a second or two. The cells can still run after that.
 
 ## Run all cells and wait
@@ -278,7 +275,7 @@ a second or two. The cells can still run after that.
 `Set-Location "{code}"; & "{python}" -m jupylet.claude run-all {port} {token} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
 
 Run it in the background. It starts to watch the notebook, then runs all
-cells, as Run > Run All Cells in the page does, and waits until the run ends.
+cells, as Run > Run All Cells in the web page does, and waits until the run ends.
 Prints `ran {fingerprint}`, `timeout {fingerprint}`, or `error` and the
 message of the tool. It must watch before the run starts: a fresh kernel
 gives the same execution counts as the saved notebook, so a watch that starts
@@ -288,7 +285,7 @@ after the run sees no change.
 
 `Set-Location "{code}"; & "{python}" -m jupylet.claude run-cell {port} {token} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
 
-Moves the active cell of the page to the cell, one cell at a time. It checks
+Moves the active cell of the web page to the cell, one cell at a time. It checks
 that the source of the cell starts with the text that you give, and only then
 runs it. Prints `True`, or why it did not run. It moves the cursor of the
 person.
@@ -296,11 +293,11 @@ person.
 *Developer note, not an instruction: `run-cell` is not tested on Windows
 yet.*
 
-## Wait for the page to open
+## Wait for the web page to open
 
 `Set-Location "{code}"; & "{python}" -m jupylet.claude wait-open {port} {token} {notebook} {seconds}  # jupylet: notebooks/wait-open`
 
-Run it in the background. Prints `open` when the notebook opens in a page,
+Run it in the background. Prints `open` when the notebook opens in a web page,
 or `timeout`.
 
 ## Wait for a run
@@ -363,7 +360,7 @@ Delete: `Set-Location "{code}"; & "{python}" -m jupylet.claude cleanup --yes  # 
 The state files are the files that Jupyter keeps for itself: the `.jupyter`
 folders in `{code}` and `{code}\examples`, old `.jupyter_ystore.db` files,
 and the cookie secret and the server records in the runtime folder of
-Jupyter. Never a notebook. Deleting the cookie secret signs each page out.
+Jupyter. Never a notebook. Deleting the cookie secret signs each web page out.
 
 *Developer note, not an instruction: `replace-kernel` and `cleanup` are not
 tested on Windows yet.*

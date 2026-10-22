@@ -30,6 +30,12 @@ Each persona and system file has two parts:
 A system file can start with `Extends: {name}`. The harness then puts the
 text of that system first, and this file adds to it or changes it.
 
+A base system starts with `Platform: macos` or `Platform: windows` (no line
+means macos). The platform sets the home folder, the scratchpad and the
+shell tool of the worker: Bash on macOS, PowerShell on Windows. The systems
+that extend it have its platform. Their checks name the tool of their
+platform, for example `"tool": "PowerShell"`.
+
 Blanks: `{home}` (the home folder), `{user}` (the user name), `{code}` (the
 Jupylet folder of the scenario), `{scratchpad}` (the scratchpad folder of
 the worker).

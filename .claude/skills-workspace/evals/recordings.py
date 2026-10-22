@@ -11,15 +11,20 @@ Usage:
 
 `add` reads a session and adds what it finds to simulators/recordings.json:
 
-- each Bash command with a tag `# jupylet: {group}/{name}`, under its tag;
+- each Bash or PowerShell command with a tag `# jupylet: {group}/{name}`,
+  under its tag;
 - each call of an app tool (`mcp__Claude_Browser__…`, `mcp__ccd_…`), under
   `tool:{name}`;
 - the output of a background command, which the real app writes into a file:
   when Claude reads that file, the output goes under the tag of the command.
 
+Each output has its platform: `macos` (Bash) or `windows` (PowerShell). The
+macOS and the Windows command of a step have the same tag, so the system
+simulator gets only the outputs of its own platform.
+
 The home folder of the session becomes `{home}`, and the session's own
-folders become `{scratchpad}`. At most MAX outputs are kept for each key,
-and long outputs are shortened.
+folders become `{scratchpad}`. At most MAX outputs are kept for each key and
+platform, and long outputs are shortened.
 """
 
 import json
@@ -34,6 +39,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STORE = os.path.join(HERE, 'simulators', 'recordings.json')
 TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)\s*$')
 MAX = 3
+SHELLS = {'Bash': 'macos', 'PowerShell': 'windows'}
+TASK_FILE = re.compile(r'[/\\]tasks[/\\](\w+)\.output')
 HEAD, TAIL = 40, 10
 
 
@@ -83,15 +90,28 @@ def shorten(text):
 
 def general(text, home, scratch):
     """Replace the folders of this session with blanks."""
+    #
+    # A Windows path can also be in JSON, with each `\` written twice, for
+    # example in the output of `running` (W2).
+    #
     for folder in scratch:
-        text = text.replace(folder, '{scratchpad}')
+        text = text.replace(folder.replace('\\', '\\\\'), '{scratchpad}').replace(folder, '{scratchpad}')
     if home:
-        text = text.replace(home, '{home}')
+        text = text.replace(home.replace('\\', '\\\\'), '{home}').replace(home, '{home}')
 
     return text
 
 
 def find_home(lines):
+    """The home folder of the session, on macOS or on Windows."""
+    for line in lines:
+        try:
+            cwd = json.loads(line).get('cwd') or ''
+        except ValueError:
+            continue
+        m = re.match(r'(/Users/[^/]+|[A-Za-z]:\\Users\\[^\\]+)', cwd)
+        if m:
+            return m.group(1)
 
     for line in lines:
         m = re.search(r'"(/Users/[^/"]+)/', line)
@@ -101,9 +121,27 @@ def find_home(lines):
     return None
 
 
+def find_scratch(texts):
+    """The folders of the session: its scratchpad, and the folder above it.
+
+    On macOS: /private/tmp/claude-<uid>/<project>/<session id>/scratchpad.
+    On Windows: C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\<project>\\<session id>\\scratchpad.
+    The project part can be long, for example a scratch workspace of the app.
+    """
+    joined = '\n'.join(texts)
+    found = []
+    for base in (r'/private/tmp/claude-\d+/[^"\s]+?/[0-9a-f-]{36}',
+                 r'[A-Za-z]:\\Users\\[^\\]+\\AppData\\Local\\Temp\\claude\\[^"\s\\]+\\[0-9a-f-]{36}'):
+        found += sorted(set(re.findall('(%s[/\\\\]scratchpad)' % base, joined)), key=len, reverse=True)
+        found += sorted(set(re.findall('(%s)(?=[/\\\\])' % base, joined)), key=len, reverse=True)
+
+    return found
+
+
 def collect(lines):
-    """(key, command or input, output, is_error) for each recorded call."""
+    """(key, command or input, output, is_error, platform) for each recorded call."""
     uses, background, found = {}, {}, []
+    platform = 'windows' if any('"name":"PowerShell"' in l.replace(' ', '') for l in lines) else 'macos'
 
     for line in lines:
         try:
@@ -123,35 +161,42 @@ def collect(lines):
 
             name, inp = uses[b['tool_use_id']]
             out = text_of(b.get('content'))
-            read = re.search(r'/tasks/(\w+)\.output', inp.get('file_path', '')) if name == 'Read' else None
+            #
+            # A note of the app instead of an output, for example when Claude
+            # reads the output file of a command that has not written to it yet.
+            #
+            if re.fullmatch(r'\s*<system-reminder>.*</system-reminder>\s*', out, re.S):
+                continue
+            read = TASK_FILE.search(inp.get('file_path', '')) if name == 'Read' else None
             if read and read.group(1) in background:
-                tag_name, bg_cmd = background[read.group(1)]
+                tag_name, bg_cmd, bg_platform = background[read.group(1)]
                 out = re.sub(r'^\s*\d+\t', '', out, flags=re.M)
                 out = re.sub(r'\s*\[exited with code \d+\]\s*$', '', out)
                 found.append((tag_name, bg_cmd + '   (run in the background; its output file)', out,
-                              bool(b.get('is_error'))))
+                              bool(b.get('is_error')), bg_platform))
                 continue
-            if name == 'Bash':
+            if name in SHELLS:
                 cmd = inp.get('command', '')
                 tag = TAG.search(cmd.rstrip())
                 m = re.match(r'Command running in background with ID: (\w+)', out)
                 if tag and m:
-                    background[m.group(1)] = (tag.group(1), cmd)
+                    background[m.group(1)] = (tag.group(1), cmd, SHELLS[name])
                     continue
-                read = re.search(r'/tasks/(\w+)\.output', cmd)
+                read = TASK_FILE.search(cmd)
                 if read and read.group(1) in background:
-                    tag_name, bg_cmd = background[read.group(1)]
+                    tag_name, bg_cmd, bg_platform = background[read.group(1)]
                     #
                     # The harness adds `[exited with code N]` to the file itself.
                     #
                     out = re.sub(r'\s*\[exited with code \d+\]\s*$', '', out)
                     found.append((tag_name, bg_cmd + '   (run in the background; its output file)', out,
-                                  bool(b.get('is_error'))))
+                                  bool(b.get('is_error')), bg_platform))
                     continue
                 if tag:
-                    found.append((tag.group(1), cmd, out, bool(b.get('is_error'))))
+                    found.append((tag.group(1), cmd, out, bool(b.get('is_error')), SHELLS[name]))
             elif name.startswith(('mcp__Claude_Browser__', 'mcp__ccd_')):
-                found.append(('tool:' + name, json.dumps(inp, ensure_ascii=False), out, bool(b.get('is_error'))))
+                found.append(('tool:' + name, json.dumps(inp, ensure_ascii=False), out, bool(b.get('is_error')),
+                              platform))
 
     return found
 
@@ -160,19 +205,12 @@ def add(path, source):
 
     lines = transcript_lines(path)
     home = find_home(lines)
-    #
-    # The scratchpad of a session is /private/tmp/claude-<uid>/<project>/<session id>/scratchpad.
-    # The project part can be long, for example a scratch workspace of the app.
-    #
-    joined = '\n'.join(lines)
-    scratch = sorted(set(re.findall(r'(/private/tmp/claude-\d+/[^"\s]+?/[0-9a-f-]{36}/scratchpad)', joined)),
-                     key=len, reverse=True)
-    scratch += sorted(set(re.findall(r'(/private/tmp/claude-\d+/[^"\s]+?/[0-9a-f-]{36})(?=/)', joined)),
-                      key=len, reverse=True)
+    calls = collect(lines)
+    scratch = find_scratch([c[1] + '\n' + c[2] for c in calls])
 
     data = load()
     added = 0
-    for key, cmd, out, err in collect(lines):
+    for key, cmd, out, err, platform in calls:
         #
         # An error can be in the output of a command that ran, for example
         # `error Error executing tool: Timeout waiting for result`.
@@ -180,8 +218,10 @@ def add(path, source):
         err = err or bool(re.match(r'\s*(error\b|Exit code [1-9]|ERROR)', out))
         item = {'source': source, 'input': general(cmd, home, scratch),
                 'output': shorten(general(out, home, scratch)), 'error': err}
+        item['platform'] = platform
         items = data.setdefault(key, [])
-        if any(x['output'] == item['output'] for x in items) or len(items) >= MAX:
+        same = [x for x in items if x.get('platform', 'macos') == platform]
+        if any(x['output'] == item['output'] for x in same) or len(same) >= MAX:
             continue
         items.append(item)
         added += 1
@@ -190,9 +230,10 @@ def add(path, source):
     print('%s: %d outputs added, %d keys in %s' % (source, added, len(data), STORE))
 
 
-def examples(key, data=None):
-    """The recorded outputs of a key, as a block for the system simulator, or ''."""
-    items = (data if data is not None else load()).get(key, [])
+def examples(key, data=None, platform='macos'):
+    """The recorded outputs of a key on a platform, as a block for the system simulator, or ''."""
+    items = [x for x in (data if data is not None else load()).get(key, [])
+             if x.get('platform', 'macos') == platform]
     #
     # An error alone would be copied as the normal output: show errors only
     # next to a normal output (the first run of run-all timed out in T8).
@@ -217,7 +258,8 @@ def main():
         add(sys.argv[2], sys.argv[3])
     elif sys.argv[1:2] == ['list']:
         for key, items in sorted(load().items()):
-            print('%-40s %s' % (key, ', '.join(x['source'] for x in items)))
+            print('%-40s %s' % (key, ', '.join(x['source'] + ('/' + x['platform'] if 'platform' in x else '')
+                                               for x in items)))
     else:
         sys.exit(__doc__)
 

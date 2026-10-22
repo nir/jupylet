@@ -6,12 +6,11 @@ Jupylet folder of the person.
 
 In this session, the shell and file tools have these names:
 
-- `mcp__computer__Bash`: the Bash tool. It runs shell commands (zsh on
-  macOS).
+- {shell_tool}
 - `mcp__computer__Read`, `mcp__computer__Write`, `mcp__computer__Edit`: the
   Read, Write and Edit tools.
 
-When a skill or a file says "the Bash tool", "Read", "Write" or "Edit", use
+When a skill or a file says "the {shell_name} tool", "Read", "Write" or "Edit", use
 these tools.
 
 - `mcp__browser__…`: the tools of the browser pane of the Claude app. When a
@@ -25,4 +24,4 @@ usual names.
 
 - Platform: {platform}
 - Home folder of the person: {home}
-- Scratchpad directory: {scratchpad}. Use it for temporary files.
+- Scratchpad directory: {scratchpad}. Use it for temporary files.{platform_note}

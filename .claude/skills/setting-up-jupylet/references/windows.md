@@ -153,7 +153,7 @@ Changes the Jupyter settings of the environment:
 - It turns off `jupyter_server_nbmodel`, which can make a cell that runs a
   game or a widget stop responding.
 - It keeps the live copy of each notebook while Jupyter runs, so that the
-  page shows the cells that Claude adds.
+  web page shows the cells that Claude adds.
 - It turns off the news pop-up of JupyterLab.
 
 ## Trust the notebooks, Check the trust

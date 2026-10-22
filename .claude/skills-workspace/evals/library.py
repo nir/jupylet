@@ -21,6 +21,26 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIBRARY = os.path.join(HERE, 'simulators')
 SCRATCHPAD = '/private/tmp/claude-501/scratchpad'
+#
+# A system says its platform in its base file, with a line `Platform: …`.
+# The platform gives the defaults of the home folder, the scratchpad and the
+# shell tool, as on a real computer of that kind (run W1 for Windows).
+#
+PLATFORMS = {
+    'macos': {
+        'home': '/Users/{user}',
+        'scratchpad': SCRATCHPAD,
+        'shell': 'Bash',
+        'platform': 'macOS on an Apple chip, shell zsh',
+    },
+    'windows': {
+        'home': 'C:\\Users\\{user}',
+        'scratchpad': 'C:\\Users\\{user}\\AppData\\Local\\Temp\\claude\\C--Users-{user}-jupylet\\'
+                      '5f0c2a9e-3b71-4d8a-9c6e-1a2b3c4d5e6f\\scratchpad',
+        'shell': 'PowerShell',
+        'platform': 'Windows 11 on an Intel or AMD processor, shell PowerShell',
+    },
+}
 
 
 def load_evals(path):
@@ -31,16 +51,25 @@ def load_evals(path):
     return data['evals'] if 'evals' in data else [data]
 
 
+def header(text):
+    """The lines `Extends: …` and `Platform: …` at the top of a library
+    file, as a dict, and the text after them."""
+    found = {}
+    while True:
+        m = re.match(r'(Extends|Platform): (\S+)\s*\n', text)
+        if not m:
+            return found, text
+        found[m.group(1).lower()] = m.group(2)
+        text = text[m.end():]
+
+
 def split(path):
     """The simulator text of a library file, its checks, and its Extends."""
     with open(path, encoding='utf-8') as f:
         text = f.read()
 
-    extends = None
-    m = re.match(r'Extends: (\S+)\s*\n', text)
-    if m:
-        extends = m.group(1)
-        text = text[m.end():]
+    head, text = header(text)
+    extends = head.get('extends')
 
     checks = []
     head, sep, tail = text.partition('\n## Checks\n')
@@ -66,6 +95,19 @@ def digest(path):
 
     with open(path, 'rb') as f:
         return hashlib.sha1(f.read()).hexdigest()[:10]
+
+
+def system_platform(name):
+    """The platform of a system: the `Platform:` of its base file, or macos."""
+    for path in system_parts(name):
+        with open(path, encoding='utf-8') as f:
+            platform = header(f.read())[0].get('platform')
+        if platform:
+            if platform not in PLATFORMS:
+                raise ValueError('%s: unknown platform %r' % (path, platform))
+            return platform
+
+    return 'macos'
 
 
 def system_parts(name, seen=()):
@@ -106,10 +148,21 @@ def expand(ev):
             os.path.join(LIBRARY, 'personas', ev['persona'] + '.md')):
         return ev
 
-    home = ev.get('home') or '/Users/%s' % ev.get('user', 'sam')
+    #
+    # The platform of the system gives the home folder, the scratchpad and
+    # the shell tool, unless the eval names them: so the same scenario runs
+    # on a Mac and on a Windows system.
+    #
+    os_name = system_platform(ev['system']) if 'system' in ev else 'macos'
+    defaults = {k: v.replace('{user}', ev.get('user', 'sam')) for k, v in PLATFORMS[os_name].items()}
+    ev['os'] = os_name
+    home = ev.get('home') or defaults['home']
     ev['home'] = home
-    blanks = {'{user}': ev.get('user', os.path.basename(home)), '{home}': home,
-              '{scratchpad}': ev.get('scratchpad', SCRATCHPAD)}
+    ev.setdefault('scratchpad', defaults['scratchpad'])
+    ev.setdefault('shell', defaults['shell'])
+    ev.setdefault('platform', defaults['platform'])
+    blanks = {'{user}': ev.get('user', re.split(r'[\\/]', home)[-1]), '{home}': home,
+              '{scratchpad}': ev['scratchpad']}
     used = {}
     checks = fill_checks(ev.get('checks', []), blanks, 'scenario')
 

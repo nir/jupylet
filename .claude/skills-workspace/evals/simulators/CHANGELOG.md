@@ -135,3 +135,72 @@ the problem), and the run that shows the effect.
 - Why: T8 shows the real form. Before, the harness put the output into the
   notification, so a run never showed the step of reading the file.
 
+
+## System version 8, Windows systems (2026-10-14)
+
+- `system.md`: three phrases that named only the Mac or Bash now say "the
+  real computer" and "Bash and PowerShell". Nothing else changed, so the Mac
+  runs get the same rules.
+- New systems `win-base` (with `Platform: windows`) and `win-miniconda`,
+  from W1, a real installation on Windows 11 with Sonnet 5.5
+  (`session-export-1791990888138`). `recordings.py` added its 45 outputs to
+  `recordings.json`, marked `windows`. The system simulator gets only the
+  examples of its own platform.
+- Harness: a system's platform sets the home folder, the scratchpad and the
+  shell tool. On Windows the worker gets a simulated `PowerShell` tool
+  instead of `Bash`, and a note that the Jupylet folder has the form of a
+  macOS path (the worker runs on the Mac). `run_eval.py --system NAME` runs
+  a scenario on another system. The new scenario `full-install` names its
+  steps by command tags, so it serves both platforms.
+- Why: Nir: Haiku can play a Windows computer as well as a Mac, and the
+  skills already have the Windows commands.
+- Checked: the Mac worker prompt is byte for byte the same, the Mac
+  recordings are the same, and the 34 earlier runs grade the same. Fake runs
+  `fake-mac-1` and `fake-win-1` pass.
+- Effect: to be shown by `full-install-win-1`.
+- Also from Windows: W2 (`session-export-1791995312126`, a server already
+  runs, with the notebook open in another browser) added 12 outputs, and W3
+  (`session-export-1791995717388`, open the spaceship) 6. Among them:
+  `running` with a server in its JSON, `attach` to a notebook that is
+  already connected, and the sign-in check with `403` and `200`.
+
+## Commands: wait-open as it really is (2026-10-14)
+
+- `commands.md`: `wait-open` prints `open` as soon as the Jupyter server has
+  a session for the notebook, also a session of another page that signed in
+  earlier. Before, it said "when a page shows the notebook and has signed
+  in", which is what the command is meant to do, not what it does.
+- Why: W2 (Windows, a server already runs with the notebook open in the web
+  browser): `wait-open` printed `open` at once, before the new page in the
+  app signed in. The simulator must show the real behavior, so that a
+  scenario can test how Claude handles it.
+- New scenario `open-spaceship-running`, on `mac-jupyter-in-browser` with the
+  setting `hide-chat-list = yes`.
+- Effect: to be shown by `open-spaceship-running-1`.
+
+## Harness: the text of header.md in the seed; Sam knows the setting (2026-10-14)
+
+- The seed of the system simulator now has the text of
+  `configuring-jupylet/header.md`, as the header of each settings file.
+- Why: in `open-spaceship-7` (after `cp -n "…/header.md"`) and in
+  `open-spaceship-running-2` (a settings file "with the header" in the
+  seed), the simulator made up another header.
+- `open-spaceship-running`: the request tells Sam that, in an earlier
+  session, Sam asked Claude to hide the list of chats and to remember it.
+  Why: in `open-spaceship-running-2`, the setting was only in the seed,
+  which the human simulator does not get, so Sam objected when Claude hid
+  the list. The request is the note of the director to the actor.
+- Effect: to be shown by `open-spaceship-running-3`.
+
+## System version 9 (2026-10-14)
+
+- `system.md`: `tabs_context` adds the line that says whether the person
+  sees the pane, in the real wording, and a page that `preview_start` opens
+  is in a hidden pane until the person shows it.
+- Source: a live test in Nir's Claude app (desktop, macOS): `preview_start`
+  opened a page in a hidden pane ("The Browser pane is currently hidden.");
+  after Nir showed the pane, "The Browser pane is currently displayed."
+- Why: in `open-spaceship-running-2`, the simulated `tabs_context` had no
+  such line, so Claude could not do what the skill says: check whether the
+  pane is visible.
+- Effect: to be shown by `open-spaceship-running-3`.

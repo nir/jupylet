@@ -31,9 +31,12 @@ Jupylet folder, or as `"{python}" "{code}/jupylet/claude.py" <command> …`.
 - `wait <port> <token>`: `ready` when a Jupyter server answers on the port
   within 60 seconds, otherwise `not ready after 60 seconds`, with exit code
   1.
-- `wait-open <port> <token> <notebook> <seconds>`: `open` when a page shows
-  the notebook and has signed in, otherwise `timeout`. It runs until then,
-  so it is usually started in the background.
+- `wait-open <port> <token> <notebook> <seconds>`: `open` as soon as the
+  Jupyter server has a session for the notebook, otherwise `timeout`. A page
+  starts that session only after it signs in. But a session that another
+  page started earlier counts too: then `wait-open` prints `open` at once,
+  also when the new page has not signed in yet (W2). It runs until it can
+  print, so it is usually started in the background.
 - `attach <port> <token> <notebook>`: about ten lines. They start with
   `[INFO] Connected to kernel '<uuid>'.`, contain
   `[INFO] Successfully activate notebook '<name>'.`, and end with a table of

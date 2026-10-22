@@ -105,14 +105,17 @@ as `{code}`.
      from real sessions (`simulators/recordings.json`), as examples. To add
      the outputs of a new export: `python3 recordings.py add <export.zip>
      <name>`, for example `T9`. `recordings.py list` shows what is there.
+     Each output has its platform, macOS or Windows (`W1`), and the system
+     simulator gets only the outputs of its own platform.
    - **Known limitation:** no command runs for real. When a command uses
      the content of a real file of the copy to make an imagined one, for
      example `cp -n "…/header.md" ~/.jupylet/claude-config.md`, the system
      simulator does not know that content, and makes it up. In
      `open-spaceship-7`, Claude then saw a header that differs from
      `header.md`. Treat such a difference as an artifact of the simulator,
-     not as a failure of Claude. Fix it (give the simulator the content of
-     the files that a command names) only if it comes back often.
+     not as a failure of Claude. Fixed for `header.md`, which came back in
+     `open-spaceship-running-2`: the seed now has its text. For other files,
+     fix it only if it comes back often.
    - **A background command** (`run_in_background`): as the real Bash
      tool, an ID and the path of an output file at once. The command stays
      pending. When the system simulator ends it, the notification to Claude
@@ -220,6 +223,14 @@ Options of `run_eval.py`:
   It tests the harness itself, for free.
 - `--ref <commit>`: the skills of an older commit, for a baseline run.
 - `--skills <folder>`: the skills of another Jupylet folder.
+- `--system <name>`: run the scenario on another system of the library, for
+  example `win-miniconda`. The platform of the system (macOS or Windows)
+  sets the home folder, the scratchpad and the shell tool of the worker:
+  Bash or PowerShell.
+
+```bash
+python3 run_eval.py scenarios/full-install.json full-install runs/full-install-win-1 --system win-miniconda --live
+```
 
 Run folders are numbered: do not reuse a name, because the old results are
 the comparison.
@@ -229,9 +240,13 @@ the comparison.
 An exported real session can be graded with the checks of a scenario:
 
 ```bash
-python3 import_export.py ~/Downloads/session-export-….zip scenarios/full-install-miniconda.json runs/real-T8
-python3 grade.py scenarios/full-install-miniconda.json runs/real-T8
+python3 import_export.py ~/Downloads/session-export-….zip scenarios/full-install.json runs/real-T8
+python3 grade.py scenarios/full-install.json runs/real-T8
 ```
+
+For a session on Windows, add the system with `--system win-miniconda`, so
+that the checks of a Windows system apply. `run.json` gets the platform of
+the session (Windows when it used the PowerShell tool).
 
 `import_export.py` writes a run folder, with `"real": true` in `run.json`.
 The grader skips what only a simulated run has: the final state, the models
@@ -293,7 +308,7 @@ rule:
   Each check gets `source`: `scenario`, `persona …` or `system …`.
 
 `library.py` does this. Run a scenario as any eval, with its file:
-`python3 run_eval.py scenarios/full-install-miniconda.json full-install-miniconda runs/full-install-miniconda-1`.
+`python3 run_eval.py scenarios/full-install.json full-install runs/full-install-mac-1`.
 
 **Only Claude is graded.** The simulators can deviate from the persona
 or from a real computer, for example a person who says no where the
@@ -313,11 +328,25 @@ the checks, grade again with `--current`.
 **Commands from the skills.** Each shell command in the skills ends with a
 comment, `# jupylet: {group}/{name}`, for example
 `# jupylet: setup/find-conda`. The groups are `download` (`CLAUDE_SETUP.md`),
-`setup`, `notebooks` and `config`. `grade.py` fails a run when a Bash command
-of Claude has no such comment, or a tag that is not in the skills (in
-`tags.json` of the run): Claude wrote the command itself (finding 5). An eval can
-allow other commands with `allowed_commands`, a list of patterns. The same
-comments make the commands easy to find in real transcripts.
+`setup`, `notebooks` and `config`. `grade.py` fails a run when a Bash or
+PowerShell command of Claude has no such comment, or a tag that is not in
+the skills (in `tags.json` of the run): Claude wrote the command itself
+(finding 5). An eval can allow other commands with `allowed_commands`, a list
+of patterns. The same comments make the commands easy to find in real
+transcripts.
+
+`grade.py` also checks that each tagged command is the command of the skills
+with that tag: the same text, with only the blanks in `{braces}` filled in.
+A command that Claude changed and kept the comment fails, for example a
+`printf … >` instead of `cp -n`, or `sleep 5;` added in front.
+
+**The same checks on macOS and Windows.** The macOS and the Windows command
+of a step have the same tag. So a check names a step by its tag, not by its
+command text: `{"type": "action", "tag": "setup/create-env"}`, or in
+`before`, `"first": {"tag": "setup/check-system"}`. A tag is a pattern:
+`setup/find-conda.*` matches the conda search of both platforms. A check
+for one platform only has `"platform": "macos"` or `"windows"`, for
+example the Terminal steps, and is not graded on the other.
 
 **A problem that comes back becomes a check.** When a run shows a problem
 that earlier runs showed too, add a PASS/FAIL check for it, without
@@ -326,7 +355,8 @@ after `open-spaceship-2`: "Claude offers to hide the list of chats".
 
 Check types of `grade.py`:
 
-- `action`, `no_action`: an action of a tool whose input matches a pattern.
+- `action`, `no_action`: an action of a tool whose input matches a pattern,
+  or a shell command with a tag (`tag`).
 - `before`: the first match of one pattern comes before the first match of
   another.
 - `not_in_turn`: no matching action in a turn of the conversation.

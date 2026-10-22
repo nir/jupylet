@@ -30,13 +30,12 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
 
     python -m jupylet.claude find-env [--all] <version>
     python -m jupylet.claude detach <log file> <command> [<argument> ...]
-    python -m jupylet.claude wait <port> <token>
+    python -m jupylet.claude wait <log file> <token>
     python -m jupylet.claude attach <port> <token> <notebook path>
     python -m jupylet.claude kernel <port> <token> <notebook path>
     python -m jupylet.claude tools <port> <token>
     python -m jupylet.claude call <port> <token> <tool> ['<json arguments>']
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
-    python -m jupylet.claude watch <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude run-all <port> <token> <notebook path> <seconds>
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
@@ -88,6 +87,85 @@ inside it. For example:
         ]
       }
     ]
+
+What the other commands print:
+
+detach <log file> <command> [<argument> ...]
+    The process id of the started command, for example `23413`, at once.
+    The command runs on, apart from the caller; its output goes to <log file>.
+
+wait <log file> <token>
+    `ready <port>` once the server started with <token> answers, for example
+    `ready 8889`, or `not ready after 60 seconds` (exit code 1). <log file>
+    is the log file given to detach: the server prints its address there.
+
+attach <port> <token> <notebook path>
+    The answer of the Jupyter MCP tool use_notebook, about ten lines. On
+    success it contains `Successfully activate notebook`, for example:
+
+        [INFO] Connected to kernel '3f9a1c52-...'.
+        [INFO] Existing Jupyter session already binds '11-spaceship.ipynb' to kernel '3f9a1c52-...'.
+        [INFO] Successfully activate notebook '11-spaceship'.
+
+        Notebook has 34 cells.
+        ...
+
+kernel <port> <token> <notebook path>
+    The id of the notebook's kernel, or `no kernel yet: is the notebook open
+    in the browser?`. A notebook gets a kernel only when a web page opens it.
+
+tools <port> <token>
+    The names of the Jupyter MCP tools, one on each line.
+
+call <port> <token> <tool> ['<json arguments>']
+    The tool's own answer, as it gives it. The arguments are JSON, `@<file>`,
+    or `-` to read them from stdin.
+
+wait-open <port> <token> <notebook path> <seconds>
+    `open` when a new web page opens the notebook, signed in, or `timeout`.
+    A web page that had the notebook open before the wait started does not
+    count.
+
+wait-change <port> <token> <notebook path> <seconds> [<since>]
+    `ran <fingerprint>` once the kernel ran something and is idle again, or
+    `timeout <fingerprint>`, for example `ran 3c9d07e5.5f2a81b4`. Give the
+    fingerprint as <since> to the next wait-change, so that a run between
+    the two is not missed. A Tab completion counts as a run too. Edits
+    without a run do not end it.
+
+run-all <port> <token> <notebook path> <seconds>
+    Runs all cells through the web page, and waits until the run is over:
+    `ran <fingerprint>` or `timeout <fingerprint>`, as wait-change prints
+    them, or `error <message>` if the run did not start, for example
+    `error Timeout waiting for result`.
+
+replace-kernel <port> <token> <notebook path>
+    The id of the new kernel, once it is idle and the web page is attached
+    to it.
+
+run-cell <port> <token> <cell index> <start of its source>
+    `True` when the cell ran. Before it runs, it checks that the cell at
+    <cell index> starts with <start of its source>, so a cell that moved is
+    never run by mistake: `not run: cell 4 starts with 'import math'`, or
+    `not run: the selection moved from 4 to 5`.
+
+shutdown <port> <token>
+    `stopped`, `not running`, or `stopped after ending its process` (a
+    process outlived the shutdown, and was ended). Also `a kernel is still
+    running: not shutting the server down`, or `still running`.
+
+cleanup [--yes]
+    One line for each state file: `would delete <path>`, or `deleted <path>`
+    with --yes; or `nothing to clean up`.
+
+prepare
+    The state of jupyter_server_nbmodel: `turned off` the first time, `off`
+    after that, `not installed`, or `still on: <parts>` (exit code 1). It
+    also keeps the notebook's live copy, and turns off JupyterLab's news.
+
+prepare --check
+    `ready`, or `needs: ` and what prepare would change, for example
+    `needs: nbmodel, live copy, news`. It changes nothing.
 """
 
 
@@ -262,37 +340,61 @@ def _rpc(port, token, body):
     return json.loads(re.search(r'\{.*\}', raw, re.S).group(0))
 
 
-def wait(port, token, timeout=60):
-    """Wait until Jupyter answers its health check.
+def wait(log, token, timeout=60):
+    """Wait until a Jupyter just started with `token` answers, and find its port.
 
-    Polls http://localhost:<port>/mcp/healthz every 2 seconds.
+    Jupyter picks the first free port from 8888 on, and prints its address
+    to its output a few seconds after it starts. That output goes to `log`.
+    Every 2 seconds, the ports of the addresses in `log` are tried, newest
+    first. The server is ours if it accepts `token`, and ready once it also
+    answers its health check at /mcp/healthz.
 
     Args:
-        port (int): Jupyter's port.
-        token (str): Jupyter's token.
+        log (str): The log file that detach gave the Jupyter command.
+        token (str): The token Jupyter was started with.
         timeout (float): Seconds to wait at most.
 
     Returns:
-        bool: True once it answers healthy, False on timeout.
+        int: The port, or None on timeout.
+
+    Notes:
+        detach appends to the log, so it can hold the addresses of servers
+        started before. Their tokens differ, so they never pass. Jupyter
+        prints a token given on the command line as `...`, so the address
+        alone cannot tell.
     """
     t0 = time.time()
 
     while time.time() - t0 < timeout:
-        try:
-            req = urllib.request.Request(
-                'http://localhost:%s/mcp/healthz' % port,
-                headers={'Authorization': 'Bearer ' + token},
-            )
+        for port in reversed(_ports_in(log)):
+            try:
+                _api(port, token, '/api/status')
 
-            if b'healthy' in urllib.request.urlopen(req, timeout=5).read():
-                return True
+                req = urllib.request.Request(
+                    'http://localhost:%s/mcp/healthz' % port,
+                    headers={'Authorization': 'Bearer ' + token},
+                )
 
-        except Exception:
-            pass
+                if b'healthy' in urllib.request.urlopen(req, timeout=5).read():
+                    return port
+
+            except Exception:
+                pass
 
         time.sleep(2)
 
-    return False
+    return None
+
+
+def _ports_in(log):
+    try:
+        with open(log, errors='replace') as f:
+            text = f.read()
+    except OSError:
+        return []
+
+    ports = re.findall(r'https?://(?:localhost|127\.0\.0\.1|\[::1\]):(\d+)/', text)
+    return list(dict.fromkeys(int(p) for p in ports))
 
 
 def detach(log, command):
@@ -475,7 +577,7 @@ def _notebook_kernel(port, token, path):
 
 
 def wait_open(port, token, path, timeout):
-    """Wait until the notebook is open in a signed-in browser page.
+    """Wait until a new web page opens the notebook, signed in.
 
     Args:
         port (int): Jupyter's port.
@@ -484,64 +586,32 @@ def wait_open(port, token, path, timeout):
         timeout (float): Seconds to wait at most.
 
     Returns:
-        bool: True once it is open, False on timeout.
+        bool: True once a new web page has it open, False on timeout.
 
     Notes:
-        The server cannot see the browser's sign-in, but the page only opens the
-        notebook, and so only starts its session, after signing in. It looks
-        the session up on every check, so it keeps working after
-        replace_kernel().
+        The server cannot see the browser's sign-in, but a web page opens the
+        notebook, and so connects to its kernel, only after signing in. If
+        the notebook has no session yet, its first session means a new web
+        page opened it. If it has one, another web page opened it earlier, so
+        only one more connection to its kernel than at the start means a new
+        web page. It looks the session up on every check, so it keeps working
+        after replace_kernel().
 
     History:
         2026-09-22, Windows 11: with the page signed out, on the login page, no
         session appeared.
+        2026-10-14, Windows 11 (W2): the notebook was already open in the
+        default web browser. The wait printed 'open' at once, before the new
+        page in the Claude app signed in, and Claude missed the real sign-in.
     """
-    return _wait_until(lambda: _notebook_kernel(port, token, path) is not None, timeout)
+    first = _notebook_kernel(port, token, path)
+    before = first['connections'] if first else None
 
-
-def watch(port, token, path, timeout, since=None):
-    """Wait until the notebook's kernel did something after `since`.
-
-    Polls the kernel's last_activity in /api/sessions every 2 seconds.
-
-    Args:
-        port (int): Jupyter's port.
-        token (str): Jupyter's token.
-        path (str): The notebook's path, relative to Jupyter's folder.
-        timeout (float): Seconds to wait at most.
-        since (str): The time returned by the previous watch; now if None.
-
-    Returns:
-        tuple: ('ran', <time>) once the kernel was active after since and is
-            idle again, or ('timeout', since). Pass the time on to the next
-            watch, so nothing in between is missed.
-
-    Notes:
-        Any kernel request moves last_activity, a Tab completion too, so 'ran'
-        means something happened, not that a cell ran. To find which cell ran,
-        compare execution counts before and after; the highest count misleads,
-        since cells keep the counts of earlier kernels.
-
-    History:
-        2026-09-22, Windows 11: over idle minutes with the page open, nothing
-        moved last_activity by itself; two cells showed 16 next to a fresh 1.
-    """
-    if since is None:
+    def opened():
         k = _notebook_kernel(port, token, path)
-        since = k['last_activity'] if k else ''
+        return k is not None and (before is None or k['connections'] > before)
 
-    t0 = time.time()
-
-    while time.time() - t0 < timeout:
-        k = _notebook_kernel(port, token, path)
-
-        # Same ISO format on both sides, so comparing the strings is enough.
-        if k and k['last_activity'] > since and k['execution_state'] == 'idle':
-            return 'ran', k['last_activity']
-
-        time.sleep(2)
-
-    return 'timeout', since
+    return _wait_until(opened, timeout)
 
 
 def run_all(port, token, path, timeout):
@@ -1478,9 +1548,9 @@ def main(argv):
         print(detach(args[0], args[1:]))
 
     elif cmd == 'wait' and len(args) == 2:
-        ok = wait(*args)
-        print('ready' if ok else 'not ready after 60 seconds')
-        return 0 if ok else 1
+        port = wait(*args)
+        print('ready %s' % port if port else 'not ready after 60 seconds')
+        return 0 if port else 1
 
     elif cmd == 'attach' and len(args) == 3:
         print(attach(*args))
@@ -1496,9 +1566,6 @@ def main(argv):
 
     elif cmd == 'wait-open' and len(args) == 4:
         print('open' if wait_open(*args[:3], float(args[3])) else 'timeout')
-
-    elif cmd == 'watch' and len(args) in (4, 5):
-        print(*watch(*args[:3], float(args[3]), *args[4:]))
 
     elif cmd == 'run-all' and len(args) == 4:
         print(*run_all(*args[:3], float(args[3])))

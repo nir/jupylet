@@ -64,6 +64,18 @@ TOOLS = {
 }
 
 
+#
+# On Windows, the shell tool is PowerShell, as in the Claude app (run W1).
+#
+if os.environ.get('SIM_SHELL') == 'PowerShell':
+    TOOLS['computer'] = dict(
+        [('PowerShell', ('Runs a PowerShell command on the computer (Windows 11), and returns its output. '
+                         'With run_in_background, it returns an ID at once, and a task-notification '
+                         'arrives when the command ends.',
+                         TOOLS['computer']['Bash'][1]))]
+        + [(k, v) for k, v in TOOLS['computer'].items() if k != 'Bash'])
+
+
 def ask_harness(tool, args):
 
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

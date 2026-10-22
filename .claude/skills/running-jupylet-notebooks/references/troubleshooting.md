@@ -13,12 +13,12 @@ person, and ask before the next attempt.
 - Jupylet, JupyterLab or the extra is missing
 - The Jupyter server does not become ready
 - The notebook has no kernel
-- The page shows the login page
+- The web page shows the login page
 - Run all says "Timeout waiting for result"
 - Run all says "Not Found"
 - Run all stops at a cell, with "500 Internal Server Error"
 - A cell shows `[*]`, and does not finish
-- Cells that you added do not show in the page
+- Cells that you added do not show in the web page
 - The canvas shows as text
 - The Jupyter server stopped by itself
 - The Jupyter server does not stop correctly
@@ -52,57 +52,56 @@ Offer to install it.
   > If you change your mind, just ask.
 
   **Only the extra is missing:** you can still start a Jupyter server and open
-  a page, but do not attach. Tell the person how to run the cells: "Click into
+  a web page, but do not attach. Tell the person how to run the cells: "Click into
   the first box of code and press Shift+Enter to run it. Each press runs one
   box and moves to the next."
 
 ## The Jupyter server does not become ready
 
-**What you see:** "Wait until it is ready" prints `not ready after 60
-seconds`.
+**What you see:** "Start JupyterLab" gives no port after 60 seconds.
 
-**Why:** the log tells. Read `{scratchpad}/jupyter.log`.
+**Why:** the output of JupyterLab tells. Read the `Jupyter` tab with
+`read_terminal`, or `{scratchpad}/jupyter.log` if you started it with
+`detach`.
 
 **What to do:**
 
-- **The port is in use:** do "Start a Jupyter server" again. It finds a free
-  port.
-- **`No module named`:** see "Jupylet, JupyterLab or the extra is missing".
+- **`No module named`:** follow "Jupylet, JupyterLab or the extra is
+  missing".
 - **Other errors:** tell the person, and stop.
 
 ## The notebook has no kernel
 
 **What you see:** "Attach" says that there is no kernel.
 
-**Why:** a notebook gets a kernel only when a page opens it.
+**Why:** a notebook gets a kernel only when a web page opens it.
 
-**What to do:** check that a page shows the notebook, that the pane is
+**What to do:** check that a web page shows the notebook, that the pane is
 visible, and that the person signed in ("Check the sign-in" says `200`). Then
 do "Attach to the notebook" again.
 
-## The page shows the login page
+## The web page shows the login page
 
-**What you see:** the page asks for a token.
+**What you see:** the web page asks for a token.
 
-**Why:** the page is not signed in. This happens after a reset of the Jupyter
+**Why:** the web page is not signed in. This happens after a reset of the Jupyter
 server, and with a browser that did not sign in to this Jupyter server
-before. After a restart of a Jupyter server, a page usually stays signed in.
+before. After a restart of a Jupyter server, a web page usually stays signed in.
 
-**What to do:** give the token to the person, as in "Open a page in the
-Claude app".
+**What to do:** give the token to the person, as in "Open a web page".
 
 ## Run all says "Timeout waiting for result"
 
 **What you see:** "Run all cells" stops after about 30 seconds with this
 message.
 
-**Why:** it happened after the person used Restart Kernel in the page. Once,
+**Why:** it happened after the person used Restart Kernel in the web page. Once,
 on Windows, the notebook ran anyway.
 
 **What to do:** first check if the notebook ran:
 
 - `read_cell` of the last cell: does it have a new execution count?
-- The page: does the canvas show?
+- The web page: does the canvas show?
 - `execute_code` with `print(app.is_running)`, if the notebook has `app`.
 
 Then:
@@ -116,7 +115,7 @@ Then:
 
 **What you see:** "Run all cells" prints "Not Found".
 
-**Why:** the kernel was just replaced, and the page is not attached to it
+**Why:** the kernel was just replaced, and the web page is not attached to it
 yet.
 
 **What to do:** wait ten seconds, and try one more time.
@@ -155,10 +154,10 @@ off, but the change applies only to a Jupyter server that started after it.
    variables are lost. Then call `unuse_notebook`, and do "Attach to the
    notebook" again.
 
-## Cells that you added do not show in the page
+## Cells that you added do not show in the web page
 
 **What you see:** `read_notebook` and the saved file have the cell, but the
-page shows fewer cells, or the cell as one empty line.
+web page shows fewer cells, or the cell as one empty line.
 
 **Why:** the Jupyter server built its live copy of the notebook again from an
 old log of changes. "Prepare the environment" sets the Jupyter server so that
@@ -166,10 +165,10 @@ this does not happen.
 
 **What to do:**
 
-1. Check the copy in the page, not only `read_cell`: count its cells, or
+1. Check the copy in the web page, not only `read_cell`: count its cells, or
    scroll to the cell and read its text.
 2. Ask for a yes to stop the Jupyter server, and to move two files of
-   Jupyter out of `{folder}`. Then close the page, and do "Stop the Jupyter
+   Jupyter out of `{folder}`. Then close the web page, and do "Stop the Jupyter
    server".
 3. Move `.jupyter_ystore.db` and `.jupyter/collaboration_sessions.json` from
    `{folder}` to a new folder in `{scratchpad}`. Keep them: they hold
@@ -198,8 +197,8 @@ JupyterLab" starts it apart from your task, so the end of your task does not
 stop it.
 
 **What to do:** tell the person, and ask for a yes to start it again. Do
-"Start a Jupyter server" with the same `{folder}` and token, so that the page
-stays signed in. Then do "Open a page" (the old page shows an error) and
+"Start a Jupyter server" with the same `{folder}` and token, so that the web page
+stays signed in. Then do "Open a web page" (the old web page shows an error) and
 "Attach to the notebook".
 
 ## The Jupyter server does not stop correctly
@@ -228,7 +227,7 @@ activates the environment.
 "Overwrite or Revert".
 
 **Why:** the Jupyter server saves the notebook by itself a few seconds after
-each change, so the file is newer than the last save of the page. Both have
+each change, so the file is newer than the last save of the web page. Both have
 the same content.
 
 **What to do:** tell the person that "Overwrite" loses nothing, and that they
@@ -253,11 +252,11 @@ helps.
 **What to do:** reset the Jupyter server. A reset deletes the state files
 of Jupyter, and some of them belong to all Jupyter servers of the person. It
 also deletes the old log of changes. **A notebook lost cells:** do "Cells that
-you added do not show in the page" first, because it keeps that log.
+you added do not show in the web page" first, because it keeps that log.
 
 First do "Find the Jupyter servers that run" in `SKILL.md`. **Another
 Jupyter server runs, besides the one that you work with:** a reset would sign
-out its pages. Ask the person if you can stop it first. **No:** do not reset,
+out its web pages. Ask the person if you can stop it first. **No:** do not reset,
 and tell the person what is wrong in plain words.
 
 Ask, for example:
@@ -271,6 +270,6 @@ After a yes:
 1. Do "Stop the Jupyter server".
 2. Run "List the state files" from the reference file. The list has only state
    files of Jupyter, never a notebook. Check the list. Then run "Delete the
-   state files". This also signs the pages out, so the person must paste the
+   state files". This also signs the web pages out, so the person must paste the
    token again.
-3. Do "Start a Jupyter server", "Open a page" and "Attach to the notebook".
+3. Do "Start a Jupyter server", "Open a web page" and "Attach to the notebook".

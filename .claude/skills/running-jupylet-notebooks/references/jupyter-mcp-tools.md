@@ -6,7 +6,7 @@ Call each one with "Call a tool", as `SKILL.md` says.
 ## Contents
 
 - Tools that work
-- Page commands
+- Web page commands
 - Tools that do not work
 - Read cells
 - Change cells
@@ -27,21 +27,21 @@ Tested on macOS, with `jupyter_server_nbmodel` off:
 - `restart_notebook`, `notebook_run-all-cells`, `notebook_get-selected-cell`,
   `notebook_run-cell`, `notebook_move-cursor-down`, `notebook_move-cursor-up`
 
-A change shows in the page in less than a second.
+A change shows in the web page in less than a second.
 
-## Page commands
+## Web page commands
 
 Some tools are JupyterLab commands: `notebook_run-all-cells`,
 `notebook_run-cell`, `notebook_get-selected-cell` and the cursor moves. The
-Jupyter server sends each one to a page, and the page does it, as if the
-person used the menu. The Jupyter server keeps one list of pages for all its
-notebooks, and sends the command to one of them. With more than one page, the
+Jupyter server sends each one to a web page, and the web page does it, as if the
+person used the menu. The Jupyter server keeps one list of web pages for all its
+notebooks, and sends the command to one of them. With more than one web page, the
 choice is arbitrary (`jupyter_mcp_tools`, `handlers.py`, version 0.1.8). The
-command acts on the current notebook of that page, so it can act on another
-notebook. That is why the skill keeps one page on a Jupyter server.
+command acts on the current notebook of that web page, so it can act on another
+notebook. That is why the skill keeps one web page on a Jupyter server.
 
 The other tools, for example `read_notebook`, `insert_cell` and
-`execute_code`, work in the Jupyter server, without a page.
+`execute_code`, work in the Jupyter server, without a web page.
 
 ## Tools that do not work
 
@@ -86,7 +86,7 @@ With it, they stopped responding for minutes. Use `notebook_run-all-cells`,
 
 - **All cells:** "Run all cells".
 - **One cell, as the person does:** "Run one cell". It needs the option for
-  page commands that "Start JupyterLab" gives. A Jupyter server that
+  web page commands that "Start JupyterLab" gives. A Jupyter server that
   the person started does not have it: there, run all cells, or ask the
   person to run the cell.
 - **Code that is not in a cell:** `execute_code`. Stop a monitoring command

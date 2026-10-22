@@ -6,11 +6,13 @@ system simulator (the computer and the Claude app), and the human simulator
 
 Usage:
     run_eval.py <evals.json> <eval id> <run dir> [--skills DIR | --ref REF]
-                [--fake] [--live] [--model MODEL]
+                [--system NAME] [--fake] [--live] [--model MODEL]
 
 --skills DIR: a Jupylet folder whose skills the worker uses (default: the
   repository that contains this script).
 --ref REF: use the skills of a git commit instead, for a baseline.
+--system NAME: the system of the library to run the scenario on, instead of
+  the system that the scenario names, for example win-miniconda.
 --fake: use scripted stand-ins for the three agents. No model is called, so
   this tests the harness itself, for free.
 --live: show the whole transcript in the terminal while the run goes on:
@@ -22,6 +24,7 @@ import argparse
 import datetime
 import glob
 import json
+import ntpath
 import os
 import re
 import shutil
@@ -341,6 +344,7 @@ def skills_folder(args):
 
 
 TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)')
+SHELLS = ('Bash', 'PowerShell')
 
 
 def command_tags(folder):
@@ -424,8 +428,8 @@ class Files:
         """Note an action that can change files. A file that an action named,
         or a folder of it, is state from then on: the system simulator
         answers its reads, not the copy."""
-        if tool == 'Bash':
-            self.changes.append(inp.get('command', ''))
+        if tool in SHELLS:
+            self.changes.append(inp.get('command', '').replace('\\', '/'))
         elif tool in ('Write', 'Edit'):
             self.changes.append(inp.get('file_path', ''))
 
@@ -453,8 +457,10 @@ class Files:
         return any(re.search(re.escape(n) + r'(?=["\'\s;&|)]|$)', c) for c in self.changes for n in names)
 
     def local(self, path):
-
-        path = os.path.realpath(path.strip().strip('"\''))
+        #
+        # On Windows, Claude writes the paths of the copy with `\`.
+        #
+        path = os.path.realpath(path.strip().strip('"\'').replace('\\', '/'))
         if not path.startswith(self.code + '/'):
             return None
 
@@ -529,7 +535,7 @@ class Files:
                 return self.notebook_text(os.path.basename(p)[:-6], p)
             return numbered(read(p)) if p else None
 
-        if tool == 'Bash':
+        if tool in SHELLS:
             m = re.fullmatch(r'\s*cat((?:\s+"[^"]+"|\s+\S+)+)\s*', inp.get('command', ''))
             if m:
                 paths = [self.local(x) for x in re.findall(r'"[^"]+"|\S+', m.group(1))]
@@ -572,8 +578,10 @@ class Session:
         self.pages_new, self.pages_shown = [], []
         self.recordings = recordings.load()
         self.task_files, self.task_info = {}, {}
-        self.tasks_dir = os.path.join(os.path.dirname(self.ev.get('scratchpad', '/private/tmp/claude-501/scratchpad')),
-                                      'tasks')
+        self.shell = ev.get('shell', 'Bash')
+        paths = ntpath if self.shell == 'PowerShell' else os.path
+        self.tasks_dir = paths.join(paths.dirname(self.ev.get('scratchpad', '/private/tmp/claude-501/scratchpad')),
+                                    'tasks')
         self.events = []
         self.turn = 0
         self.fake = args.fake
@@ -621,10 +629,23 @@ class Session:
             paths.update(os.path.relpath(os.path.join(d, n), self.code) for n in names)
         rows = ['- `%s`' % rel for rel in paths]
 
-        return ('These files exist in `%s`, the Jupylet code as a person downloads it, with '
+        text = ('These files exist in `%s`, the Jupylet code as a person downloads it, with '
                 'their real content. Their paths here are relative to that folder. The harness '
                 'gives the content when Claude reads one of them, until a command changes it.'
                 '\n\n%s' % (self.code, '\n'.join(sorted(rows))))
+        #
+        # The header of the settings files: a command copies it into a new
+        # settings file (`cp -n`), and a seed can name a settings file "with
+        # the header". Without its text, the system simulator made up another
+        # header (runs open-spaceship-7, open-spaceship-running-2).
+        #
+        header = os.path.join(self.code, '.claude', 'skills', 'configuring-jupylet', 'header.md')
+        if os.path.isfile(header):
+            text += ('\n\nThe file `.claude/skills/configuring-jupylet/header.md` has this content. Each '
+                     'settings file `claude-config.md` starts with it, also a settings file that the '
+                     'computer at the start names "with the header":\n\n```\n%s```' % read(header))
+
+        return text
 
     def worker_prompt(self):
 
@@ -637,10 +658,30 @@ class Session:
         for key, value in (
                 ('{home}', self.ev.get('home', '/Users/sam')),
                 ('{scratchpad}', self.ev.get('scratchpad', '/private/tmp/claude-501/scratchpad')),
-                ('{platform}', self.ev.get('platform', 'macOS on an Apple chip, shell zsh'))):
+                ('{platform}', self.ev.get('platform', 'macOS on an Apple chip, shell zsh')),
+                ('{shell_tool}', self.SHELL_TEXT[self.shell]),
+                ('{shell_name}', self.shell),
+                ('{platform_note}', self.PLATFORM_NOTE.get(self.shell, '').replace('{code}', self.code))):
             text = text.replace(key, value)
 
         return text
+
+    SHELL_TEXT = {
+        'Bash': '`mcp__computer__Bash`: the Bash tool. It runs shell commands (zsh on\n  macOS).',
+        'PowerShell': '`mcp__computer__PowerShell`: the PowerShell tool. It runs PowerShell\n'
+                      '  commands on Windows 11.',
+    }
+
+    #
+    # The worker runs on this Mac, so the CLI gives it a macOS working
+    # folder: the copy of the Jupylet code. On a Windows system, that folder
+    # stands for the Jupylet folder of the person.
+    #
+    PLATFORM_NOTE = {
+        'PowerShell': '\n- The Jupylet folder of the person is `{code}`. Its path has the form of a\n'
+                      '  macOS path, but here it is a folder of this Windows computer. Use the path as\n'
+                      '  it is.',
+    }
 
     SERVERS = ('computer', 'browser', 'ccd_window', 'ccd_directory')
     #
@@ -657,7 +698,7 @@ class Session:
 
         servers = {name: {'command': sys.executable,
                           'args': [os.path.join(HERE, 'sim_mcp.py')],
-                          'env': {'SIM_SOCKET': self.sock_path, 'SIM_SERVER': name}}
+                          'env': {'SIM_SOCKET': self.sock_path, 'SIM_SERVER': name, 'SIM_SHELL': self.shell}}
                    for name in self.SERVERS}
 
         return ['--mcp-config', json.dumps({'mcpServers': servers}),
@@ -807,21 +848,21 @@ class Session:
         self.files.changed(tool, inp)
         self.note_page(tool, inp)
 
-        if tool == 'Bash' and inp.get('run_in_background'):
+        if tool in SHELLS and inp.get('run_in_background'):
             #
             # As the real Bash tool: the output goes into a file, and the
             # notification at the end has no output (run T8). Claude reads
             # the file (task_output).
             #
             tid = 'b' + uuid.uuid4().hex[:8]
-            path = os.path.join(self.tasks_dir, tid + '.output')
+            path = (ntpath if tool == 'PowerShell' else os.path).join(self.tasks_dir, tid + '.output')
             self.pending[tid] = inp.get('command', '')
             self.task_files[path] = ''
             self.task_info[tid] = {'path': path, 'description': inp.get('description') or inp.get('command', '')[:60]}
             return ('Command running in background with ID: %s. Output is being written to: %s. You will be '
                     'notified when it completes. To check interim output, use Read on that file path.' % (tid, path))
 
-        cells = self.files.notebook_cells(json.dumps(inp)) if tool == 'Bash' else ''
+        cells = self.files.notebook_cells(json.dumps(inp)) if tool in SHELLS else ''
         extra = [x for x in (cells, self.examples_for(tool, inp)) if x]
         output, _ = self.ask_system('<action tool="%s">\n%s\n</action>%s' % (
             tool, json.dumps(inp), ''.join('\n\n' + x for x in extra)))
@@ -835,8 +876,8 @@ class Session:
             path = inp.get('file_path', '')
             if path in self.task_files:
                 return numbered(self.task_files[path]) if self.task_files[path] else ''
-        elif tool == 'Bash':
-            m = re.fullmatch(r'\s*cat\s+"?([^"]+?)"?\s*', inp.get('command', ''))
+        elif tool in SHELLS:
+            m = re.fullmatch(r'\s*(?:cat|Get-Content)\s+"?([^"]+?)"?\s*', inp.get('command', ''))
             if m and m.group(1) in self.task_files:
                 return self.task_files[m.group(1)]
 
@@ -844,13 +885,14 @@ class Session:
 
     def examples_for(self, tool, inp):
         """Real outputs of the same command or tool, from recordings.json."""
-        if tool == 'Bash':
+        if tool in SHELLS:
             m = TAG.search(inp.get('command', '').rstrip())
             key = m.group(1) if m else None
         else:
             key = 'tool:' + tool if tool.startswith('mcp__') else None
+        platform = self.ev.get('os', 'macos')
 
-        return recordings.examples(key, self.recordings) if key else ''
+        return recordings.examples(key, self.recordings, platform) if key else ''
 
     PAGE_TOOLS = ('mcp__Claude_Browser__preview_start', 'mcp__Claude_Browser__navigate')
 
@@ -858,7 +900,7 @@ class Session:
         """Note a page that Claude opens with a notebook: the person sees it,
         so the human simulator gets its cells (page_for_human)."""
         text = inp.get('url', '') if tool in self.PAGE_TOOLS else (
-            inp.get('command', '') if tool == 'Bash' and '/lab/tree/' in inp.get('command', '') else '')
+            inp.get('command', '') if tool in SHELLS and '/lab/tree/' in inp.get('command', '') else '')
         for name in self.files.notebook_names(text):
             if name not in self.pages_shown and name not in self.pages_new:
                 self.pages_new.append(name)
@@ -887,7 +929,8 @@ class Session:
 
         listing = '\n'.join('<task id="%s">%s</task>' % kv for kv in self.pending.items())
         cells = self.files.notebook_cells(listing)
-        extra = [x for x in [cells] + [self.examples_for('Bash', {'command': c}) for c in self.pending.values()] if x]
+        extra = [x for x in [cells] + [self.examples_for(self.shell, {'command': c}) for c in self.pending.values()]
+                 if x]
         _, done = self.ask_system('<pending>\n%s\n</pending>%s' % (listing, ''.join('\n\n' + x for x in extra)))
 
         notes = []
@@ -1183,6 +1226,7 @@ def main():
     p.add_argument('run_dir')
     p.add_argument('--skills')
     p.add_argument('--ref')
+    p.add_argument('--system')
     p.add_argument('--fake', action='store_true')
     p.add_argument('--live', action='store_true')
     p.add_argument('--model', default=MODEL)
@@ -1192,6 +1236,8 @@ def main():
     ev = next((e for e in evals if str(e['id']) == args.eval_id), None)
     if not ev:
         sys.exit('no eval %r in %s' % (args.eval_id, args.evals))
+    if args.system:
+        ev = dict(ev, system=args.system)
     try:
         ev = library.expand(ev)
     except ValueError as e:

@@ -1,10 +1,10 @@
 """Turn an exported real Claude session into a run folder, for grade.py.
 
 Usage:
-    import_export.py <export.zip or transcript.jsonl> <scenario.json> <run name>
+    import_export.py <export.zip or transcript.jsonl> <scenario.json> <run dir> [--system NAME]
 
 Then grade it as a simulated run:
-    grade.py <scenario.json> runs/<run name>
+    grade.py <scenario.json> <run dir>
 
 The run folder has the same files as a run of run_eval.py, and run.json
 says "real": true. For a real run, grade.py does not grade what only a
@@ -12,7 +12,9 @@ simulated run has: the final state, the model of the three agents, and the
 files that the harness served.
 
 The checks come from the scenario, with the home folder of the session in
-place of the home folder of the persona. Some checks of a scenario can be
+place of the home folder of the persona. --system NAME takes the checks of
+another system of the library than the one that the scenario names, for
+example win-miniconda for a session on Windows. Some checks of a scenario can be
 about its system only, for example a Miniconda that the real computer does
 not have: read such a FAIL as "does not apply".
 
@@ -61,7 +63,14 @@ def events_of(lines):
         if e.get('type') == 'user' and not e.get('isMeta'):
             said = person_text(content) if not (isinstance(content, list) and any(
                 isinstance(b, dict) and b.get('type') == 'tool_result' for b in content)) else ''
-            if said:
+            #
+            # The real app gives the end of a background command as a user
+            # message: it is a notification, not the person.
+            #
+            note = re.match(r'<task-notification>.*?<task-id>(\w+)</task-id>.*?<status>(\w+)</status>', said, re.S)
+            if note:
+                events.append({'id': note.group(1), 'output': note.group(2), 'kind': 'notification', 'turn': turn})
+            elif said:
                 turn += 1
                 events.append({'text': said, 'kind': 'person', 'turn': turn})
             if isinstance(content, list):
@@ -120,22 +129,31 @@ def files_under_test():
 
 def main():
 
-    if len(sys.argv) != 4:
+    args = sys.argv[1:]
+    system = None
+    if '--system' in args:
+        i = args.index('--system')
+        system = args[i + 1]
+        del args[i:i + 2]
+    if len(args) != 3:
         sys.exit(__doc__)
-    source, scenario, name = sys.argv[1:]
+    source, scenario, run_dir = args
 
     lines = recordings.transcript_lines(source)
     home = recordings.find_home(lines)
-    run_dir = os.path.join(HERE, 'runs', name)
     if os.path.exists(run_dir):
         sys.exit('%s exists already' % run_dir)
     os.makedirs(os.path.join(run_dir, 'agents'))
 
-    ev = library.load_evals(scenario)[0]
-    ev = dict(ev, home=home, user=os.path.basename(home))
-    ev = library.expand(ev)
-
     events = events_of(lines)
+    platform = 'windows' if any(e['kind'] == 'action' and e['tool'] == 'PowerShell' for e in events) else 'macos'
+
+    ev = library.load_evals(scenario)[0]
+    ev = dict(ev, home=home, user=re.split(r'[\\/]', home)[-1], **({'system': system} if system else {}))
+    ev = library.expand(ev)
+    if ev.get('os', platform) != platform:
+        print('Note: the session ran on %s, but the system %s is for %s. Its checks may not apply: '
+              'use --system.' % (platform, ev.get('system'), ev['os']))
     with open(os.path.join(run_dir, 'events.jsonl'), 'w', encoding='utf-8') as f:
         for e in events:
             f.write(json.dumps(e, ensure_ascii=False) + '\n')
@@ -150,12 +168,13 @@ def main():
     with open(os.path.join(run_dir, 'agents', 'worker.session.jsonl'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines) + '\n')
 
-    run = {'eval_id': ev['id'], 'real': True, 'source': os.path.abspath(source), 'models': models_of(lines),
-           'home': home, 'turns': max([e['turn'] for e in events] or [0])}
+    run = {'eval_id': ev['id'], 'real': True, 'platform': platform, 'source': os.path.abspath(source),
+           'models': models_of(lines), 'home': home, 'turns': max([e['turn'] for e in events] or [0])}
     with open(os.path.join(run_dir, 'run.json'), 'w', encoding='utf-8') as f:
         json.dump(run, f, indent=2)
 
-    print('%s: %d events, %d turns, models %s' % (run_dir, len(events), run['turns'], ', '.join(run['models'])))
+    print('%s: %d events, %d turns, %s, models %s' % (run_dir, len(events), run['turns'], platform,
+                                                       ', '.join(run['models'])))
 
 
 if __name__ == '__main__':

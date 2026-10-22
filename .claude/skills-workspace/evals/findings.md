@@ -16,11 +16,14 @@ session can test it.
 | T5 | Oct 12 | Sonnet 5.5 | `~/jupylet` | "start the synthing notebook" |
 | T6 | Oct 12 | Sonnet 5.5 | `~/jupylet` (old copy) | install from GitHub into `~/jupylet2` |
 | T7 | Oct 12 evening | Haiku 5.5 | no folder | install into `~/jupylet3`, Miniforge exists, spaceship |
+| T8 | Oct 13 | Sonnet 5.5 | no folder | install into `~/jupylet`, clean, spaceship (graded: `runs/real-T8`) |
+| T9 | Oct 14 | Sonnet 5.5 | `~/jupylet2` | "can you open the spaceship notebook ?", stopped before the run (graded: `runs/real-open-spaceship-1`) |
 | T0 | Sep 23 | Sonnet 5 | `~/jupylet2` | old skills, before the current design. Not used. |
 
 Exports: T1 `session-export-1791784753463`, T2 `…1792193750`, T3
 `…1794339683`, T5 `…1800325852`, T6 `…1801619363`, T7 `…1822008055`. T4 is
-`~/.claude/projects/-Users-nir-jupylet/6b58731c-….jsonl`.
+`~/.claude/projects/-Users-nir-jupylet/6b58731c-….jsonl`. T8
+`…1923120091`, T9 `…1981724129`.
 
 ## Findings
 
@@ -127,6 +130,26 @@ Exports: T1 `session-export-1791784753463`, T2 `…1792193750`, T3
 
 Skill loading at the end of a turn, the file box, rewind, the browser pane
 being visible, and tool schemas. These stay with real sessions.
+
+25. **The browser pane keeps its sign-in per folder.** T9: the first chat in
+    `~/jupylet2` after the install asked for the token again. The Jupyter
+    logs of seven sessions (Oct 12 to 14) show why: each first check of the
+    page got `403`, and no log has "Clearing invalid/expired login cookie",
+    so the pane sent no cookie at all. Jupyter would have accepted an old
+    one: it signs the cookie with `~/Library/Jupyter/runtime/jupyter_cookie_secret`,
+    which stays the same when a server starts again, whatever the token.
+    With the pane option Keep cookies = "Until quit" (the default), Nir
+    tested it: a new chat in the same folder opens the page signed in; a
+    chat in another folder, or with no folder, asks for the token.
+    Open question, possibly a bug of the app: the install chat (Oct 14)
+    started with no folder, moved to `~/jupylet2` at 13:14, and signed in at
+    13:18. The next chat in `~/jupylet2` (13:23) still had no cookie. So a
+    chat that moves seems to keep the cookies of the folder it started in.
+    To confirm: start a no-folder chat, move it, sign in to a page, then
+    open a new chat in that folder. For Jupylet, this costs one more
+    sign-in after an install. The skills need no change: they check the
+    sign-in and ask for the token only on `403`. Keep cookies = "Shared"
+    would avoid it, but the skills cannot set it.
 
 ## Proposed evals
 

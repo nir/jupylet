@@ -57,14 +57,14 @@ Copy this checklist into your notes, and update it after each step:
 - [ ] 5. Choose the environment
 - [ ] 6. Install Jupylet
 - [ ] 7. Trust the example notebooks
-- [ ] 8. Open the spaceship example
+- [ ] 8. Open the spaceship example (optional)
 ```
 
 ## Step 1. Check the system
 
 1. Read the reference file for this computer, `references/macos.md` or
    `references/windows.md`, with the Read tool.
-2. Run "Read the version" from the reference file. It gives `{version}`.
+2. Run "Read the version" from the reference file to get `{version}`.
 3. Run the system check from the reference file.
 
 - **macOS with an Apple chip, or Windows 11 on Intel or AMD:** tell the
@@ -220,7 +220,7 @@ Run these from the reference file, in this order:
    the Jupyter settings that Jupylet needs to run in a notebook with you:
    - It turns off `jupyter_server_nbmodel`, which can make a cell that runs
      a game or a widget stop responding.
-   - It makes the page show the cells that you add to a notebook.
+   - It makes the web page show the cells that you add to a notebook.
 
    If it prints anything else, the step failed. Find the cause. Tell the
    person in one sentence what happened, and how you want to solve the
@@ -251,7 +251,12 @@ If the person says no, tell the person that the graphics and animations will
 not show in the examples, and that they can ask you to trust the notebooks at
 any time. Then continue.
 
-## Step 8. Open the spaceship example
+## Step 8. Open the spaceship example (optional)
+
+Do this step only when the person asked to install Jupylet. Skip it when
+the installation was a detour, for example because the person asked to
+open a notebook and Jupylet was not installed yet. Then go back to what
+they asked for.
 
 The installation is complete only when an example runs. Ask, for example:
 
@@ -263,11 +268,11 @@ After a clear yes, do these, with the environment folder
 `{miniforge}/envs/{env}`, the folder `{code}/examples` and the notebook
 `11-spaceship.ipynb`:
 
-1. "Start a Jupyter server", "Open a page in the Claude app" and "Attach to the
-   notebook", tasks of the skill `running-jupylet-notebooks`.
+1. "Start a Jupyter server", "Open a web page" and "Attach to the notebook",
+   tasks of the skill `running-jupylet-notebooks`.
 2. Tell the person that this first run may be slow, for example: "It can take
    up to a minute the first time, while Jupylet gets everything ready." Then
-   do "Run the notebook" in the skill `running-jupylet-notebooks`. The page
+   do "Run the notebook" in the skill `running-jupylet-notebooks`. The web page
    can show `[*]` for half a minute. Then the spaceship should show up in a
    canvas at the end of the notebook. The person should be able to click the
    canvas, and then steer the spaceship with the arrow keys.

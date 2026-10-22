@@ -1,9 +1,9 @@
-# Wait for the person
+# Monitor the notebook
 
-This file is the whole task "Wait for the person" of `SKILL.md`. It explains
-how you follow what the person does in the notebook, and stay free to answer
-the chat at the same time. Command names in quotes are commands in the
-reference file for this computer.
+This file is the whole task "Monitor the notebook" of `SKILL.md`. It
+explains how you see what the person does in the notebook, and stay free
+to answer the chat at the same time. Command names in quotes are commands
+in the reference file for this computer.
 
 While the person works in the notebook, you must see what they do there, for
 example which cell they ran and what it printed. At the same time, you must
@@ -45,7 +45,7 @@ for longer or shorter times, ask if you can remember them. After a yes, write
 the global setting `wait-times` in this form with the skill
 `configuring-jupylet`.
 
-"Wait for the page to open" uses 90 seconds, then 5 minutes.
+"Wait for the web page to open" uses 90 seconds, then 5 minutes.
 
 After the last time, do not start the command again. Wait for the person to
 write. Each stop wakes you and uses the quota of the person, so do not use
@@ -57,7 +57,7 @@ command that still runs (`TaskStop`). Your own run also stops it.
 
 The monitoring commands, in the reference file:
 
-- **"Wait for the page to open":** for the notebook to open after the person
+- **"Wait for the web page to open":** for the notebook to open after the person
   signs in. It prints `open` or `timeout`. If you did not run "Check the
   sign-in" just before, run it once right after you start the command. **It
   prints `200`:** the person signed in already. Stop the command, and

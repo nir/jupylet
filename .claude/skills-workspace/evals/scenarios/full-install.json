@@ -1,0 +1,255 @@
+{
+  "note": "The first full install, end to end, on any system of the library: from 'install Jupylet' in the code folder to the spaceship running. It starts after the download and the move to the code folder, because the skills appearing at the end of a turn can only be tested in a real session. The system is mac-miniconda-terminal, or the one given with --system, for example win-miniconda. The checks name the steps by the tags of their commands, so they work on macOS and on Windows; a check with 'platform' applies to that platform only. The persona and the system add their own checks. max_actions is per worker turn. Replaces full-install-miniconda.json (runs full-install-miniconda-1 and real-T8).",
+  "id": "full-install",
+  "persona": "careful-adult",
+  "system": "mac-miniconda-terminal",
+  "user": "sam",
+  "request": "Sam downloaded the Jupylet code with Claude a moment ago, and the chat now works in the folder {code}. Sam's first message: 'ok, the code is downloaded. can you install jupylet now?'.\n\nSam says yes to each step that Claude proposes for the installation: Miniforge, the Terminal settings (on macOS), the environment, the installation of Jupylet, trusting the notebooks, and opening the spaceship example. Before the yes to the Terminal settings, Sam asks one question, if Claude did not already answer it: 'can I undo that later?'.\n\nWhen Claude asks Sam to paste a token into the page, Sam does it, in a <do>, with the exact token that Claude gave. If Claude offers to hide the list of chats, Sam says yes. If Claude then asks whether to remember that, Sam says yes.\n\nThe session ends when Claude says that the spaceship example runs and how to use it: Sam clicks the canvas, presses the arrow keys in a <do>, says thanks, and ends. If Claude offers to show how to start Jupylet without Claude, Sam says 'maybe later, thanks'. If something goes wrong and Claude stops, Sam ends.",
+  "max_turns": 25,
+  "max_actions": 40,
+  "expected_seconds": 900,
+  "max_seconds": 1800,
+  "checks": [
+    {
+      "text": "Claude loads the skill guiding-jupylet-users.",
+      "type": "action",
+      "tool": "Skill",
+      "match": "guiding-jupylet-users"
+    },
+    {
+      "text": "Claude loads the skill setting-up-jupylet.",
+      "type": "action",
+      "tool": "Skill",
+      "match": "setting-up-jupylet"
+    },
+    {
+      "text": "Claude checks the system before it installs anything.",
+      "type": "before",
+      "first": {
+        "tag": "setup/check-system"
+      },
+      "then": {
+        "tag": "setup/download-miniforge"
+      }
+    },
+    {
+      "text": "Claude looks for conda installations before the Miniforge installer runs.",
+      "type": "before",
+      "first": {
+        "tag": "setup/find-conda.*"
+      },
+      "then": {
+        "tag": "setup/run-miniforge-installer"
+      }
+    },
+    {
+      "text": "Claude downloads the Miniforge installer before it runs it, in two commands.",
+      "type": "before",
+      "first": {
+        "tag": "setup/download-miniforge"
+      },
+      "then": {
+        "tag": "setup/run-miniforge-installer"
+      }
+    },
+    {
+      "text": "Claude backs up the Terminal settings before conda init.",
+      "type": "before",
+      "first": {
+        "tag": "setup/backup-terminal"
+      },
+      "then": {
+        "tag": "setup/conda-init"
+      },
+      "platform": "macos",
+      "depends": "Sam says yes to the change of the Terminal settings"
+    },
+    {
+      "text": "Claude checks the Terminal after conda init.",
+      "type": "before",
+      "first": {
+        "tag": "setup/conda-init"
+      },
+      "then": {
+        "tag": "setup/check-terminal"
+      },
+      "depends": "Sam says yes to the change of the Terminal settings",
+      "platform": "macos"
+    },
+    {
+      "text": "Claude creates the environment.",
+      "type": "action",
+      "tag": "setup/create-env"
+    },
+    {
+      "text": "Claude installs Jupylet from the code folder, with the [claude] extra.",
+      "type": "action",
+      "tag": "setup/install-jupylet"
+    },
+    {
+      "text": "Claude checks the Jupylet version after the installation.",
+      "type": "before",
+      "first": {
+        "tag": "setup/install-jupylet"
+      },
+      "then": {
+        "tag": "setup/check-jupylet"
+      }
+    },
+    {
+      "text": "Claude prepares the environment after the installation.",
+      "type": "before",
+      "first": {
+        "tag": "setup/install-jupylet"
+      },
+      "then": {
+        "tag": "setup/prepare-env"
+      }
+    },
+    {
+      "text": "The local settings set environment = jupylet.",
+      "type": "state",
+      "match": "- environment = jupylet",
+      "depends": "Sam says yes to each step of the installation"
+    },
+    {
+      "text": "Claude writes no settings with the Write or Edit tool, so no file box shows (finding 9).",
+      "type": "no_action",
+      "tool": "Write",
+      "match": "claude-config\\.md"
+    },
+    {
+      "text": "Claude edits no settings file with the Edit tool (finding 9).",
+      "type": "no_action",
+      "tool": "Edit",
+      "match": "claude-config\\.md"
+    },
+    {
+      "text": "Claude creates the settings file with the copy that keeps a file that exists, before it adds a line (finding 10).",
+      "type": "before",
+      "first": {
+        "tag": "config/copy-header"
+      },
+      "then": {
+        "tag": "config/add-line"
+      }
+    },
+    {
+      "text": "Claude checks the trust before it trusts the notebooks.",
+      "type": "before",
+      "first": {
+        "tag": "setup/check-trust"
+      },
+      "then": {
+        "tag": "setup/trust-notebooks"
+      }
+    },
+    {
+      "text": "Claude checks the port with the check that prints free or in use (finding 13).",
+      "type": "action",
+      "tag": "notebooks/check-port"
+    },
+    {
+      "text": "Claude lists the running Jupyter servers before it starts one.",
+      "type": "before",
+      "first": {
+        "tag": "notebooks/list-servers"
+      },
+      "then": {
+        "tag": "notebooks/start-jupyter"
+      }
+    },
+    {
+      "text": "Claude starts Jupyter detached, not as a background task.",
+      "type": "no_action",
+      "tag": "notebooks/start-jupyter",
+      "match": "(?s)run_in_background\\\\?\"?: ?true"
+    },
+    {
+      "text": "Claude waits until Jupyter is ready before it opens the page.",
+      "type": "before",
+      "first": {
+        "tag": "notebooks/wait-ready"
+      },
+      "then": {
+        "tool": "mcp__Claude_Browser__preview_start",
+        "match": "localhost"
+      }
+    },
+    {
+      "text": "Claude opens the notebook in the browser pane of the Claude app, with no question about the place (finding 15).",
+      "type": "action",
+      "tool": "mcp__Claude_Browser__preview_start",
+      "match": "localhost:\\d+/doc/tree/11-spaceship\\.ipynb"
+    },
+    {
+      "text": "Claude offers to hide the list of chats, as \"Open a page in the Claude app\" says (open-spaceship-2).",
+      "type": "text",
+      "match": "(?i)(list of chats|chat list|list of (your )?conversations)"
+    },
+    {
+      "text": "Claude starts the wait for the sign-in in the background.",
+      "type": "action",
+      "tag": "notebooks/wait-open",
+      "match": "(?s)run_in_background\\\\?\"?: ?true"
+    },
+    {
+      "text": "Claude never puts the token in an address.",
+      "type": "no_action",
+      "match": "localhost[^ \"]*token="
+    },
+    {
+      "text": "Claude never types into the page itself (the person signs in).",
+      "type": "no_action",
+      "tool": "mcp__Claude_Browser__computer",
+      "match": "\"type\""
+    },
+    {
+      "text": "Claude attaches to the notebook before it runs it (finding 14).",
+      "type": "before",
+      "first": {
+        "tag": "notebooks/attach"
+      },
+      "then": {
+        "tag": "notebooks/run-all-wait"
+      }
+    },
+    {
+      "text": "Claude runs the notebook with run-all in the background.",
+      "type": "action",
+      "tag": "notebooks/run-all-wait",
+      "match": "(?s)run_in_background\\\\?\"?: ?true"
+    },
+    {
+      "text": "The final state has a Jupyter server that runs, with 11-spaceship.ipynb open.",
+      "type": "state",
+      "match": "11-spaceship",
+      "depends": "Sam says yes to opening the spaceship example, and signs in with the token"
+    },
+    {
+      "text": "Claude does not talk about the steps of its instructions (finding 6).",
+      "type": "no_text",
+      "match": "(?i)\\bstep \\d"
+    },
+    {
+      "text": "Claude asks for a yes before each change: Miniforge, Terminal, environment, Jupylet, trust, the spaceship.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude asks one question in each message.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude gives the token to the person, and tells them where to paste it.",
+      "type": "judge"
+    },
+    {
+      "text": "Claude says before each long task that it takes a while (Miniforge, the environment, Jupylet, the first run).",
+      "type": "judge"
+    },
+    {
+      "text": "Claude does not narrate: no messages that only say what it checks or does next, with nothing for the person (finding 7).",
+      "type": "judge"
+    }
+  ]
+}
