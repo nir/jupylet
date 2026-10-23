@@ -64,8 +64,23 @@ def command_of(e):
     return e['input'].get('command', '') if isinstance(e['input'], dict) else str(e['input'])
 
 
+#
+# The Terminal panel takes no `#` in a command, so its commands carry no tag.
+# The skills use it only to start Jupyter and to read its output, so these
+# stand for the tags of the same steps with detach.
+#
+TERMINAL_TAGS = {
+    'mcp__terminal__run_in_terminal': (r'start_jupyter\.', 'notebooks/start-jupyter'),
+    'mcp__terminal__read_terminal': (r'', 'notebooks/wait-ready'),
+}
+
+
 def tag_of(e):
     """The tag `group/name` of a shell command of Claude, or None."""
+    if e['tool'] in TERMINAL_TAGS:
+        pattern, tag = TERMINAL_TAGS[e['tool']]
+        return tag if re.search(pattern, json.dumps(e.get('input', {}))) else None
+
     if e['tool'] not in SHELLS:
         return None
     m = TAG.search(command_of(e).rstrip())
@@ -243,7 +258,7 @@ def commands_unchanged(events, known):
     bad, n = [], 0
     for e in actions(events):
         tag = tag_of(e)
-        if not tag or tag not in known:
+        if not tag or tag not in known or e['tool'] not in SHELLS:
             continue
         n += 1
         cmd = command_of(e).strip()

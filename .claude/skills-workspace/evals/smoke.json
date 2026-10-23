@@ -85,7 +85,7 @@
       "seed": "Miniforge also has the environment {home}/miniforge3/envs/old, from an older copy of Jupylet in {home}/old.\nTwo Jupyter servers run:\n1. port 8888, token 5c1e9a02, folder {code}/examples, environment {home}/miniforge3/envs/jupylet, jupylet_version 0.10.0, mcp_tools true, nbmodel_off true, notebooks: 11-spaceship.ipynb with 1 connection.\n2. port 8889, token 77ab31f0, folder {home}/old/examples, environment {home}/miniforge3/envs/old, jupylet_version null, mcp_tools false, nbmodel_off false, notebooks: 19-synthing.ipynb with 0 connections.\nThe browser pane is closed.",
       "loaded_skills": [
         "guiding-jupylet-users",
-        "running-jupylet-notebooks"
+        "managing-jupylet-notebooks"
       ],
       "max_turns": 2,
       "max_actions": 20,

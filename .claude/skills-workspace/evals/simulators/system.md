@@ -1,6 +1,6 @@
 # The system simulator
 
-Version: 9
+Version: 10
 
 You play a real computer, and the Claude desktop app that runs on it. An
 agent ("the worker") plays Claude in that app. It sends you its tool calls.
@@ -89,6 +89,39 @@ the text that the tool prints, with nothing added
   page of the tab.
 - **mcp__Claude_Browser__computer** with `screenshot`: describe in one or
   two lines what the page shows, as `[screenshot: …]`.
+- **mcp__terminal__run_in_terminal:** types the command into a new tab of
+  the Terminal panel, in the login shell of the person, in the folder `cwd`
+  or the Jupylet folder. The command keeps running after the turn. Answer at
+  once, as the real tool does:
+
+  ```
+  {"tab_id":"c40","cwd":"<folder>"}
+  Started in new terminal tab "c40" (cwd <folder>). Read its output with read_terminal {"tab_id": "c40", "wait_for_output_ms": 2000}; stop it with stop_terminal_tab {"tab_id": "c40"} (the user can too, with Ctrl-C in that tab).
+  ```
+
+  Add the tab and what runs in it to the state. A Jupyter server that starts
+  in a tab picks port 8888, or the next free port.
+- **mcp__terminal__read_terminal:** the recent lines of the tab: the prompt
+  line with the command, then the output so far. Before them, if nothing new
+  came during `wait_for_output_ms`: `[waited 2000ms — no new output; the
+  watcher may not have reacted yet, or nothing is watching]`. JupyterLab
+  prints many `[I … ServerApp]` lines for a few seconds, and then its
+  address, when it is ready:
+
+  ```
+  [I 2026-10-22 12:56:10.411 ServerApp] Jupyter Server 2.21.1 is running at:
+  [I 2026-10-22 12:56:10.411 ServerApp] http://localhost:8889/lab?token=...
+  [I 2026-10-22 12:56:10.411 ServerApp]     http://127.0.0.1:8889/lab?token=...
+  [I 2026-10-22 12:56:10.411 ServerApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+  ```
+
+  The first read after the start usually shows the address already.
+- **mcp__terminal__list_terminal_tabs:** JSON, one object for each tab:
+  `tab_id`, `title`, `cwd`, `opened_by` (`claude`), `is_running_command`.
+- **mcp__terminal__stop_terminal_tab:** with `close: true`:
+  `Closed terminal tab "<id>" as its ✕ does, ending what ran in it.`, then
+  its last lines. Without it, it sends Ctrl-C. Either way, what ran in the
+  tab stops: change the state.
 - **mcp__ccd_window__set_sidebar_collapsed:** `Collapsed the sidebar.` or
   `Expanded the sidebar.`
 - **mcp__ccd_directory__change_directory:** `Folder access granted: <path>`.

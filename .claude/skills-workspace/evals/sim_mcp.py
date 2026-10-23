@@ -7,7 +7,7 @@ tool's result. Nothing runs on the real computer.
 
 Environment:
     SIM_SOCKET  the harness's socket.
-    SIM_SERVER  the server name: computer, browser, ccd_window or
+    SIM_SERVER  the server name: computer, browser, terminal, ccd_window or
                 ccd_directory. It selects the tools. The browser server has
                 the tools of the browser pane of the Claude app. It cannot
                 have the name Claude_Browser: the CLI keeps that name for the
@@ -52,6 +52,19 @@ TOOLS = {
         'computer': ('Mouse, keyboard and screenshots in the browser pane.',
                      obj({'action': S, 'coordinate': {'type': 'array'}, 'text': S}, ['action'])),
         'tabs_close': ('Closes a tab of the browser pane.', obj({'tabId': S}, ['tabId'])),
+    },
+    'terminal': {
+        'run_in_terminal': ('Types a shell command into a new tab of the Terminal panel of the Claude app, '
+                            'and presses Enter. The tab is added without opening the panel. The command '
+                            'stays running after the turn ends. Returns the tab_id at once.',
+                            obj({'command': S, 'cwd': S, 'title': S}, ['command'])),
+        'read_terminal': ('Reads the recent lines of a tab of the Terminal panel. With wait_for_output_ms, '
+                          'waits up to that long for new output first.',
+                          obj({'tab_id': S, 'lines': N, 'wait_for_output_ms': N})),
+        'stop_terminal_tab': ('Sends Ctrl-C to a tab that Claude opened, or with close: true closes the tab, '
+                              'which ends what runs in it.',
+                              obj({'tab_id': S, 'close': B}, ['tab_id'])),
+        'list_terminal_tabs': ('Lists the tabs of the Terminal panel of this chat.', obj({})),
     },
     'ccd_window': {
         'set_sidebar_collapsed': ('Hides or shows the list of chats of the Claude app.',

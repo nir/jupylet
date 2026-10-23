@@ -305,6 +305,7 @@
     {
       "error": true,
       "input": "cd \"{home}/jupylet\" && \"{home}/miniforge3/envs/jupylet/bin/python\" -m jupylet.claude run-all 8888 4d6685eb 11-spaceship.ipynb 90  # jupylet: notebooks/run-all-wait   (run in the background; its output file)",
+      "outdated": "2026-10-23: run-all now prints finished / still running / not started",
       "output": "error Error executing tool: Timeout waiting for result",
       "platform": "macos",
       "source": "T8"
@@ -312,6 +313,7 @@
     {
       "error": false,
       "input": "Set-Location \"{home}\\jupylet\"; & \"{home}\\miniforge3\\envs\\jupylet\\python.exe\" -m jupylet.claude run-all 8888 f97add68 11-spaceship.ipynb 90  # jupylet: notebooks/run-all-wait   (run in the background; its output file)",
+      "outdated": "2026-10-23: run-all now prints finished / still running / not started",
       "output": "ran 7117831f.a198e936",
       "platform": "windows",
       "source": "W1"
@@ -319,6 +321,7 @@
     {
       "error": false,
       "input": "Set-Location \"{home}\\jupylet\"; & \"{home}\\miniforge3\\envs\\jupylet\\python.exe\" -m jupylet.claude run-all 8888 80e6d24d7865c9abdca38765760076c48c58f4a6b197bc41 11-spaceship.ipynb 90  # jupylet: notebooks/run-all-wait   (run in the background; its output file)",
+      "outdated": "2026-10-23: run-all now prints finished / still running / not started",
       "output": "ran 0c09b684.165e893f",
       "platform": "windows",
       "source": "W2"
@@ -326,6 +329,7 @@
     {
       "error": false,
       "input": "Set-Location \"{home}\\jupylet\"; & \"{home}\\miniforge3\\envs\\jupylet\\python.exe\" -m jupylet.claude run-all 8888 4f89074d 11-spaceship.ipynb 90  # jupylet: notebooks/run-all-wait   (run in the background; its output file)",
+      "outdated": "2026-10-23: run-all now prints finished / still running / not started",
       "output": "ran 90672dcd.671c83a1",
       "platform": "windows",
       "source": "W3"

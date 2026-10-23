@@ -17,10 +17,10 @@
       "match": "guiding-jupylet-users"
     },
     {
-      "text": "Claude loads the skill running-jupylet-notebooks.",
+      "text": "Claude loads the skill managing-jupylet-notebooks.",
       "type": "action",
       "tool": "Skill",
-      "match": "running-jupylet-notebooks"
+      "match": "managing-jupylet-notebooks"
     },
     {
       "text": "Claude lists the running Jupyter servers before it starts one.",
@@ -33,12 +33,7 @@
       }
     },
     {
-      "text": "Claude checks the port with the check that prints free or in use (finding 13).",
-      "type": "action",
-      "tag": "notebooks/check-port"
-    },
-    {
-      "text": "Claude starts Jupyter detached.",
+      "text": "Claude starts Jupyter with the start file of the skills: in a Terminal tab, or detached.",
       "type": "action",
       "tag": "notebooks/start-jupyter"
     },
@@ -66,7 +61,7 @@
       "match": "localhost:\\d+/doc/tree/11-spaceship\\.ipynb"
     },
     {
-      "text": "Claude offers to hide the list of chats, as \"Open a page in the Claude app\" says (open-spaceship-2).",
+      "text": "Claude offers to hide the list of chats, as \"Open a web page\" says (open-spaceship-2).",
       "type": "text",
       "match": "(?i)(list of chats|chat list|list of (your )?conversations)"
     },

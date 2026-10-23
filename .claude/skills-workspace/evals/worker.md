@@ -17,8 +17,8 @@ these tools.
   skill or a file names a tool `mcp__Claude_Browser__{name}`, use
   `mcp__browser__{name}`, for example `mcp__browser__preview_start`.
 
-The app tools (`mcp__ccd_window__…`, `mcp__ccd_directory__…`) have their
-usual names.
+The app tools (`mcp__ccd_window__…`, `mcp__ccd_directory__…`, and the
+Terminal panel tools `mcp__terminal__…`) have their usual names.
 
 ## Environment
 

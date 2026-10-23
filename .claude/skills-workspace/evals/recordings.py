@@ -232,8 +232,12 @@ def add(path, source):
 
 def examples(key, data=None, platform='macos'):
     """The recorded outputs of a key on a platform, as a block for the system simulator, or ''."""
+    #
+    # An outdated output has a form that the command no longer prints: leave
+    # it out, so that the simulator does not copy it.
+    #
     items = [x for x in (data if data is not None else load()).get(key, [])
-             if x.get('platform', 'macos') == platform]
+             if x.get('platform', 'macos') == platform and not x.get('outdated')]
     #
     # An error alone would be copied as the normal output: show errors only
     # next to a normal output (the first run of run-all timed out in T8).

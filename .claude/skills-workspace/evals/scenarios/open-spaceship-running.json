@@ -1,11 +1,11 @@
 {
-  "note": "A Jupyter server already runs, with the spaceship open in a page of the default browser, and the person asks to open it. The case of W2, on Windows: Claude opened the page in the app, but did not hide the list of chats (fixed in 'Use a running Jupyter server', which now always does 'Open a page'). The global setting hide-chat-list = yes. max_actions is per worker turn.",
+  "note": "A Jupyter server already runs, with the spaceship open in a web page of the default browser, and the person asks to open it. The case of W2, on Windows: Claude opened the page in the app, but did not hide the list of chats (fixed in 'Use a running Jupyter server', which now always does 'Open a web page'). The global setting hide-chat-list = yes. max_actions is per worker turn.",
   "id": "open-spaceship-running",
   "persona": "careful-adult",
   "system": "mac-jupyter-in-browser",
   "user": "sam",
   "seed": "- The file `{home}/.jupylet/claude-config.md` has the header of the settings files and the line `- hide-chat-list = yes`. Sam said yes to it in an earlier session.",
-  "request": "Sam started Jupyter alone yesterday, and the spaceship notebook is still open in a tab of the web browser. Today Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you open the spaceship demo?'.\n\nWhen Claude asks about the page in the web browser, or where to open the notebook, Sam says 'open it here, in the app'. When Claude asks Sam to paste a token into the page, Sam does it, in a <do>, with the exact token that Claude gave. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. When Claude asks whether to run the notebook, Sam says yes, run it.\n\nThe session ends when Claude says that the notebook ran: Sam clicks the canvas and presses the arrow keys, in a <do>, says thanks, and ends. If something goes wrong and Claude stops, Sam ends.",
+  "request": "Sam started Jupyter alone yesterday, and the spaceship notebook is still open in a tab of the web browser. In an earlier session with Claude, Sam asked Claude to hide the list of chats each time it opens a notebook, and to remember that. So Sam expects Claude to hide the list by itself, without asking, and does not ask for it. Today Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you open the spaceship demo?'.\n\nWhen Claude asks Sam to close the page in the web browser, Sam closes it, in a <do>. If Claude asks where to open the notebook, Sam says 'here, in the app'. When Claude asks Sam to paste a token into the page, Sam does it, in a <do>, with the exact token that Claude gave. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. When Claude asks whether to run the notebook, Sam says yes, run it.\n\nThe session ends when Claude says that the notebook ran: Sam clicks the canvas and presses the arrow keys, in a <do>, says thanks, and ends. If something goes wrong and Claude stops, Sam ends.",
   "max_turns": 14,
   "max_actions": 40,
   "expected_seconds": 150,
@@ -18,10 +18,10 @@
       "match": "guiding-jupylet-users"
     },
     {
-      "text": "Claude loads the skill running-jupylet-notebooks.",
+      "text": "Claude loads the skill managing-jupylet-notebooks.",
       "type": "action",
       "tool": "Skill",
-      "match": "running-jupylet-notebooks"
+      "match": "managing-jupylet-notebooks"
     },
     {
       "text": "Claude starts no new Jupyter server: one already runs with the notebook.",
@@ -33,13 +33,13 @@
       "type": "action",
       "tool": "mcp__Claude_Browser__preview_start",
       "match": "localhost:8888/doc/tree/11-spaceship\\.ipynb",
-      "depends": "Sam asks for the notebook in the app"
+      "depends": "Sam closes the page in the web browser"
     },
     {
       "text": "Claude gives the token of the running server.",
       "type": "text",
       "match": "a41f0c9e27b3d58e6c1f",
-      "depends": "Sam asks for the notebook in the app"
+      "depends": "Sam closes the page in the web browser"
     },
     {
       "text": "Claude never puts the token in an address.",
@@ -57,7 +57,7 @@
       "type": "action",
       "tool": "mcp__Claude_Browser__javascript_tool",
       "match": "jp-left-stack",
-      "depends": "Sam asks for the notebook in the app"
+      "depends": "Sam closes the page in the web browser"
     },
     {
       "text": "Claude hides the list of chats before it runs the notebook, because the setting says yes (W2).",
@@ -69,7 +69,7 @@
       "then": {
         "tag": "notebooks/run-all-wait"
       },
-      "depends": "Sam asks for the notebook in the app, and says yes to the run"
+      "depends": "Sam closes the page in the web browser, and says yes to the run"
     },
     {
       "text": "Claude does not ask whether to hide the list of chats: the setting already says yes.",
@@ -114,6 +114,10 @@
       "text": "Claude does not talk about a game window: Jupylet draws in the page (open-spaceship-1 to -4).",
       "type": "no_text",
       "match": "(?i)(game window|(close|its|the) window)"
+    },
+    {
+      "text": "Claude asks the person to close the page in the web browser, and says why (in-app only, 2026-10-20).",
+      "type": "judge"
     }
   ]
 }

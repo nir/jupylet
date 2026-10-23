@@ -389,6 +389,22 @@ def git_stamp(args):
             'changed': [line[3:] for line in changed.splitlines()] + new.splitlines()}
 
 
+def claude_docs(code):
+    """The documentation of the commands of jupylet/claude.py: its USAGE
+    text, from the code under test. The system simulator gives the outputs
+    that it describes, so the docstring is the one source of the commands'
+    outputs (Nir, 2026-10-21)."""
+    import ast
+    path = os.path.join(code, 'jupylet', 'claude.py')
+    if not os.path.isfile(path):
+        return ''
+    for node in ast.parse(read(path)).body:
+        if isinstance(node, ast.Assign) and any(getattr(t, 'id', '') == 'USAGE' for t in node.targets):
+            return ast.literal_eval(node.value).strip()
+
+    return ''
+
+
 def frontmatter(text):
 
     m = re.match(r'---\n(.*?)\n---\n', text, re.S)
@@ -591,6 +607,7 @@ class Session:
         system_prompt = '\n\n'.join([
             read(os.path.join(sims, 'system.md')),
             read(os.path.join(sims, 'commands.md')),
+            '# The documentation of jupylet/claude.py\n\n' + claude_docs(self.code),
             '# The computer at the start\n\n' + self.state,
         ])
         human_prompt = (read(os.path.join(sims, 'human.md')) + '\n\n## Your persona\n\n'
@@ -683,7 +700,7 @@ class Session:
                       '  it is.',
     }
 
-    SERVERS = ('computer', 'browser', 'ccd_window', 'ccd_directory')
+    SERVERS = ('computer', 'browser', 'terminal', 'ccd_window', 'ccd_directory')
     #
     # The names of the tools in the records, as the skills name them. The CLI
     # drops a server named Claude_Browser (it keeps the name for the real

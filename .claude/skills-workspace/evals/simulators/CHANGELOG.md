@@ -204,3 +204,62 @@ the problem), and the run that shows the effect.
   such line, so Claude could not do what the skill says: check whether the
   pane is visible.
 - Effect: to be shown by `open-spaceship-running-3`.
+
+## Commands: wait-open waits for a new web page (2026-10-21)
+
+- `commands.md`: `wait-open` prints `open` only when a new web page opens
+  the notebook: its first session, or one more connection to its kernel
+  than at the start. This follows the fix of `wait_open()` in
+  `jupylet/claude.py`. The entry of 2026-10-14 described the old behavior
+  (W2), which printed `open` at once when another web page had the notebook.
+
+## Commands: claude.py's own documentation (2026-10-21)
+
+- The harness adds the USAGE text of `jupylet/claude.py`, from the code
+  under test, to the prompt of the system simulator, as "The documentation
+  of jupylet/claude.py". `commands.md` no longer describes the commands of
+  `claude.py` itself: only what the documentation does not say (how a
+  Jupylet app runs, a few outputs of the Jupyter MCP tools, the rule against
+  usage errors).
+- Why: Nir: one source for the commands' outputs, so that the simulator
+  cannot drift from the code. The docstring now documents every command.
+- Effect: to be shown by the next run.
+
+## Commands: Browse notebooks (2026-10-21)
+
+- `commands.md`: the output of the new command "Browse notebooks"
+  (`notebooks/browse-notebooks`): the full path of the chosen file, or
+  `canceled`.
+- Why: the running skill now opens a file window when it cannot find the
+  notebook that the person names. Without this line, the simulator would
+  make up an output.
+- Effect: to be shown by a run that uses the command.
+
+## System version 10: the Terminal panel (2026-10-22)
+
+- `system.md`: the tools of the Terminal panel, `run_in_terminal`,
+  `read_terminal`, `list_terminal_tabs` and `stop_terminal_tab`, with the
+  real outputs of a test tab, and the real start output of JupyterLab from a
+  test server.
+- Also, in the harness: a simulated server `terminal` with these tools, and
+  the grader takes the start and the read of the Jupyter tab as the steps
+  `notebooks/start-jupyter` and `notebooks/wait-ready`. The checks of
+  `notebooks/check-port` are gone with the command.
+- Why: in the Claude app, the skills now start Jupyter in a hidden tab of
+  the Terminal panel, so that it lives as long as the chat (Nir tested it),
+  and read the port from its output. Jupyter picks a free port itself.
+- Effect: to be shown by the next run of `open-spaceship`.
+
+## Commands: plain answers of run-all and wait-change (2026-10-23)
+
+- `commands.md`: `run-all` ends with `finished: the run is over.
+  Fingerprint: …`, not `ran …`. The other answers come from `claude.py`'s
+  own documentation, which has them: `still running`, `not started`, and
+  for `wait-change` `finished` and `not finished`.
+- Why: Nir asked for answers that read clearly. Also, `run-all` no longer
+  ends with `error` when the web page says "Timeout waiting for result":
+  the run did start (seen 2026-10-22, first run in a fresh environment).
+- The run-all recordings in `recordings.json` (T8, W1, W2, W3) have the
+  old answers. They are real outputs, so they stay, marked `outdated`, and
+  `recordings.examples()` leaves out each outdated recording.
+- Effect: to be shown by the next run of `open-spaceship`.

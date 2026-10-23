@@ -7,7 +7,8 @@ Read it before you change or run anything in this folder.
 ## What we want
 
 The Jupylet skills (`guiding-jupylet-users`, `setting-up-jupylet`,
-`running-jupylet-notebooks`, `configuring-jupylet`, and `CLAUDE.md` with
+`managing-jupylet-notebooks`, `working-in-notebooks`,
+`running-background-monitors`, `configuring-jupylet`, and `CLAUDE.md` with
 `CLAUDE_SETUP.md`) guide Claude when it installs Jupylet and works in
 notebooks with a beginner. Until now, Nir tested them by hand: a real
 session, an export, and a review. Each test took long, changed the
@@ -54,7 +55,8 @@ the model of every call.
      `mcp__computer__Read`, `mcp__computer__Write`, `mcp__computer__Edit`,
      the browser pane tools as `mcp__browser__…`, and the app tools with
      their real names (`mcp__ccd_window__set_sidebar_collapsed`,
-     `mcp__ccd_directory__change_directory`). The CLI keeps the server name
+     `mcp__ccd_directory__change_directory`, and the Terminal panel tools
+     `mcp__terminal__…`). The CLI keeps the server name
      `Claude_Browser` for the real pane, and drops another server with that
      name. Until run `open-spaceship-1`, the worker had no browser tools at
      all, and used the default browser. Now `worker.md` maps the names, and
