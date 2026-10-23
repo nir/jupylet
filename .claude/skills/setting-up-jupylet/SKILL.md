@@ -1,6 +1,6 @@
 ---
 name: setting-up-jupylet
-description: Installs Jupylet on the computer of a person, step by step, from the Jupylet code that is already on disk. Supports macOS with an Apple chip and Windows 11 on Intel or AMD. Use this skill when the person asks to install or set up Jupylet. Also use it when the person asks to install only a part of the installation, for example Miniforge, the Jupylet environment, or the Terminal settings for Miniforge. Also use it when the person says that they downloaded Jupylet and asks what to do next. Also use it when CLAUDE_SETUP.md hands over after the download, or when running-jupylet-notebooks finds that Jupylet is not set up for this folder. Use it together with guiding-jupylet-users.
+description: Installs Jupylet on the computer of a person, step by step, from the Jupylet code that is already on disk. Supports macOS with an Apple chip and Windows 11 on Intel or AMD. Use this skill when the person asks to install or set up Jupylet. Also use it when the person asks to install only a part of the installation, for example Miniforge, the Jupylet environment, or the Terminal settings for Miniforge. Also use it when the person says that they downloaded Jupylet and asks what to do next. Also use it when CLAUDE_SETUP.md hands over after the download, or when managing-jupylet-notebooks finds that Jupylet is not set up for this folder. Use it together with guiding-jupylet-users.
 ---
 
 # Setting up Jupylet
@@ -228,7 +228,7 @@ Run these from the reference file, in this order:
    stop, as in "Rules for this skill".
 
 Then write boxless the local setting `environment` = `{env}` with the skill
-`configuring-jupylet`. The skill `running-jupylet-notebooks` reads it to find
+`configuring-jupylet`. The skill `managing-jupylet-notebooks` reads it to find
 the environment of this folder.
 
 Then tell the person in one line, for example "Jupylet is installed."
@@ -269,17 +269,17 @@ After a clear yes, do these, with the environment folder
 `11-spaceship.ipynb`:
 
 1. "Start a Jupyter server", "Open a web page" and "Attach to the notebook",
-   tasks of the skill `running-jupylet-notebooks`.
+   tasks of the skill `managing-jupylet-notebooks`.
 2. Tell the person that this first run may be slow, for example: "It can take
    up to a minute the first time, while Jupylet gets everything ready." Then
-   do "Run the notebook" in the skill `running-jupylet-notebooks`. The web page
+   do "Run the notebook" in the skill `working-in-notebooks`. The web page
    can show `[*]` for half a minute. Then the spaceship should show up in a
    canvas at the end of the notebook. The person should be able to click the
    canvas, and then steer the spaceship with the arrow keys.
 3. Offer once to show how to start Jupylet without Claude, for example: "By
    the way, you can also start Jupylet on your own, without me. Whenever
    you'd like, just ask and I'll show you how." When the person asks, do
-   "Start Jupylet without Claude" in the skill `running-jupylet-notebooks`.
+   "Start Jupylet without Claude" in the skill `managing-jupylet-notebooks`.
 
 The Jupyter server continues to run, so that the person can continue in the
 notebook.

@@ -1,8 +1,8 @@
 # Briefs for monitors
 
 The tasks in `SKILL.md` start monitors with the skill
-`monitoring-jupylet-work`, and name a brief of this file. Give the brief to
-the monitor as it is.
+`running-background-monitors`, and name a brief of this file. Give the
+brief to the monitor as it is.
 
 ## The pane brief
 
@@ -43,7 +43,7 @@ how it ends.
    ({status: (await fetch('/api/status', {credentials: 'same-origin'})).status,
      failed: document.body.innerText.includes('Invalid credentials'),
      loaded: performance.timeOrigin,
-     minutes: Math.floor((Date.now() - sessionStorage['jupylet-monitor-start']) / 60000)})
+     minutes: Math.floor((Date.now() - sessionStorage['background-monitor-start']) / 60000)})
    The check returns four values:
    - `status`: 200 when the web page is signed in, 403 when it is not.
    - `failed`: true when the web page says that the token was wrong.

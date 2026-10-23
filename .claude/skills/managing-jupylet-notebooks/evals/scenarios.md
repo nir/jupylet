@@ -1,4 +1,4 @@
-# Test scenarios for running-jupylet-notebooks
+# Test scenarios for managing-jupylet-notebooks
 
 Method as in the other skills:
 

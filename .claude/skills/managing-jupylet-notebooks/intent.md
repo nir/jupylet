@@ -1,4 +1,4 @@
-# running-jupylet-notebooks: intent and interview decisions
+# managing-jupylet-notebooks (formerly running-jupylet-notebooks): intent and interview decisions
 
 ## Captured intent (confirmed)
 

@@ -1,9 +1,9 @@
 ---
-name: monitoring-jupylet-work
-description: Monitors work that the person does outside the chat, in the browser pane of the Claude app or in a Jupyter notebook. A background agent checks the work and reports when it has something worth knowing, so Claude stays free to talk with the person. Use this skill when another Jupylet skill tells Claude to monitor something. Also use it when Claude needs to know when the person did an action outside the chat, for example an action that Claude asked for, or that the person said they will do.
+name: running-background-monitors
+description: Starts, briefs, retasks and stops background monitors. A monitor is a small background agent, the subagent background-monitor, that watches work outside the chat, in the browser pane of the Claude app or in a Jupyter notebook. It sends notes and a report to the chat, so Claude stays free to talk with the person. Use this skill when another skill tells Claude to monitor something. Also use it when Claude needs to know when the person did an action outside the chat, for example an action that Claude asked for, or that the person said they will do.
 ---
 
-# Monitoring Jupylet work
+# Running background monitors
 
 Much of the work with the person happens outside the chat. They unhide the
 browser pane, edit and run cells, or try something on their own. When you
@@ -21,7 +21,7 @@ Call the tool `Agent` with these inputs:
 
 - `name`: a short name, for example `pane-monitor`. You use it to reach the
   monitor later.
-- `subagent_type`: `jupylet-monitor`. Its agent file gives it a short
+- `subagent_type`: `background-monitor`. Its agent file gives it a short
   prompt and only the tools that a monitor needs, so it costs about a fifth
   of a general agent.
 - `run_in_background`: `true`.
@@ -57,7 +57,7 @@ tool calls and its time. Tell them to the person.
 ## The brief of the monitor
 
 The monitor knows four methods from its agent file,
-`.claude/agents/jupylet-monitor.md`: "Start the clock", "Wait N seconds",
+`.claude/agents/background-monitor.md`: "Start the clock", "Wait N seconds",
 "Send a note" and "Report". The file also has its rules: only look, and a
 new goal replaces the old one. So the brief gives only what belongs to
 this goal:
@@ -74,4 +74,4 @@ N = 5. The monitor reads the brief without the context of the chat, so
 write out every step.
 
 For a full example, see "The pane brief" in
-`running-jupylet-notebooks/references/briefs.md`.
+`managing-jupylet-notebooks/references/briefs.md`.

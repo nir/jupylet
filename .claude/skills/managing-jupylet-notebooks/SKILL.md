@@ -1,16 +1,17 @@
 ---
-name: running-jupylet-notebooks
-description: Opens, runs and closes Jupyter notebooks of a Jupylet folder, together with a person. Starts a Jupyter server, and opens the notebook in the browser pane of the Claude app, next to the chat. Connects to the notebook with the Jupyter MCP tools, to read, change and run cells with the person. Also stops the Jupyter server, and solves known problems. Use this skill when the person asks to open, run or try a notebook or an example. Also use it when the person asks for help with an open notebook or cannot find a notebook web page that they closed. Also use it when the person asks to stop Jupyter. Use it together with guiding-jupylet-users.
+name: managing-jupylet-notebooks
+description: Opens and closes Jupyter notebooks of a Jupylet folder for a person. Finds the environment, starts a Jupyter server, opens the notebook in the browser pane of the Claude app, next to the chat, and connects to it with the Jupyter MCP tools. Then hands the work in the notebook to working-in-notebooks. Also stops the Jupyter server, and solves known problems. Use this skill when the person asks to open, run or try a notebook or an example. Also use it when the person asks for help with an open notebook or cannot find a notebook web page that they closed. Also use it when the person asks to stop Jupyter. Use it together with guiding-jupylet-users.
 ---
 
-# Running Jupylet notebooks
+# Managing Jupylet notebooks
 
-With this skill you work together with the person in a Jupyter notebook. You
-open the notebook in the Claude web browser, where the person sees it, attach
-to the notebook, and then read, change and run its cells with the person. This
-file has the tasks for that. "Understand the request" says which tasks to do,
-and in which order. Use the skill `guiding-jupylet-users` for how to talk with
-the person and when to ask.
+With this skill you open a Jupyter notebook for the person, and close it at
+the end. You open the notebook in the Claude web browser, where the person
+sees it, and attach to it. The work in the notebook itself, reading,
+changing and running cells, is in the skill `working-in-notebooks`.
+"Understand the request" says which tasks to do, and in which order. Use
+the skill `guiding-jupylet-users` for how to talk with the person and when
+to ask.
 
 ## Tasks
 
@@ -39,13 +40,6 @@ Open a notebook:
 - "Attach to the notebook": connect to the notebook, so that you can read
   and run its cells.
 
-Work with the notebook:
-
-- "Work in the notebook": read and change cells together with the person.
-- "Run the notebook": run all cells, and tell the person the result.
-- "Monitor the notebook": wait for an action of the person in the notebook,
-  and react to it.
-
 End:
 
 - "Stop the Jupyter server": stop Jupyter, and close its web page.
@@ -57,7 +51,7 @@ End:
 Values in `{braces}` are blanks that you fill in.
 
 - `{code}`: the Jupylet folder. It is the folder that contains
-  `.claude/skills/running-jupylet-notebooks`. Use its full path.
+  `.claude/skills/managing-jupylet-notebooks`. Use its full path.
 - `{version}`: the Jupylet version of the code in `{code}`.
 - `{miniforge}`: the folder `miniforge3` in the home folder of the person.
 - `{conda_python}`: the Python of a conda installation. "Find a Python" finds
@@ -114,19 +108,11 @@ strangely, read `references/troubleshooting.md`.
 
 ## Rules for this skill
 
-- **Run cells only when the person asks for it, or when another skill tells
-  you to.** Opening a web page or attaching runs nothing.
-- **Add, change, move or delete cells only when the person asks for it, or
-  after a yes.** Do this only with the Jupyter MCP tools, never in the `.ipynb`
-  file on the disk. You can read the saved file.
+- **Opening a web page or attaching runs no cell.** Cells run only in the
+  skill `working-in-notebooks`.
 - **Start, stop or restart a Jupyter server only when the person asks for it,
   or after a yes.** Stop only a Jupyter server that you started, or that the
   person chose.
-- **Work on notebooks together only in the Claude web browser.** Read, change
-  and run cells only in a notebook that the Claude web browser shows. There
-  you can see what the person sees, and check it. A web page in the default
-  web browser is out of your reach. If the person works there and only asks
-  for advice, answer, and read the saved notebook file when you need its code.
 - **One web page per server.** A few Jupyter MCP tools, such as
   `notebook_run-all-cells`, work like a click in the menu of the web page:
   they act on whatever notebook the web page shows. If two web pages are open
@@ -164,11 +150,8 @@ To open the notebook for the person, first do "Choose a notebook". Then:
   order.
 
 When the notebook is open in the Claude web browser, and you are attached to
-it, do what the person asked:
-
-- **If the person wants to run the notebook,** do "Run the notebook".
-- **If the person wants to work on the code together,** do "Work in the
-  notebook".
+it, use the skill `working-in-notebooks` for what the person asked, for
+example to run the notebook, or to work on its code together.
 
 For example, the person says "run the spaceship" and no Jupyter server runs.
 Choose `11-spaceship.ipynb`, find the environment, start a Jupyter server,
@@ -452,7 +435,7 @@ the notebook, which fits the narrow pane. The browser tools below are
    - **If it is displayed,** continue to step 3.
    - **If it is hidden,** ask the person to click the globe icon in the
      upper right corner of the Claude app. Then monitor the pane with the
-     skill `monitoring-jupylet-work`, with "The pane brief" in
+     skill `running-background-monitors`, with "The pane brief" in
      `references/briefs.md`, and end your turn. While the pane is hidden,
      the monitor sends a note every minute. On each note, offer the person
      help. If the monitor reports that the pane is displayed, continue to
@@ -465,7 +448,7 @@ the notebook, which fits the narrow pane. The browser tools below are
      person the token, for example: "This web page wants a special token
      just for this session. Please paste this into the box on the web
      page, and press Enter: `{token}`." Then monitor the sign-in with the
-     skill `monitoring-jupylet-work`, with "The sign-in brief" in
+     skill `running-background-monitors`, with "The sign-in brief" in
      `references/briefs.md`, and end your turn. While the web page is not
      signed in, the monitor sends a note every minute. On each note, offer the
      person help. If the monitor reports that the web page is signed in,
@@ -532,64 +515,6 @@ Run "Attach" from the reference file.
 - **If the output says that there is no kernel,** follow "The notebook has
   no kernel" in `references/troubleshooting.md`.
 - **If it says anything else,** see `references/troubleshooting.md`.
-
-## Work in the notebook
-
-In this task you read, edit and run the notebook together with the person.
-Before the first tool call, read `references/jupyter-mcp-tools.md`, and
-invoke every tool through "Call a tool" in the reference file.
-
-- **Verify before you describe.** Never tell the person what is on their
-  screen until you have confirmed it.
-- **Recheck that the notebook is still open.** If a notebook tool fails,
-  or the person suggests that the notebook or its web page closed, for
-  example "I'm back" or "it closed", use "Find the Jupyter servers that
-  run" to confirm that the notebook is still open and that a web page
-  shows it.
-- **Match the evidence to the output.** Graphical output, such as a canvas
-  or an image, calls for a screenshot of the web page before you describe
-  what changed. Text output calls for `read_cell`, and a screenshot adds
-  nothing to it.
-- **Diagnose from the full output.** When a cell fails, read its entire
-  output and locate the underlying cause. The last line often shows only
-  a symptom.
-- **Clean up temporary code.** When you add code to verify something or
-  to try an idea, clean up afterwards. This needs no yes. If you keep
-  something, tell the person.
-- **Monitor the notebook when you expect the person to act in it.**
-  Whether you asked the person to do something there, or the person says
-  that they are about to, do "Monitor the notebook".
-
-## Run the notebook
-
-This task runs all cells of the notebook. Do it only when the person asks for
-it, or when a path tells you to.
-
-1. Tell the person in one line, for example: "Running the notebook now."
-2. Start "Run all cells and wait" from the reference file in the background,
-   with 90 seconds, as `references/waiting.md` says. It starts the run, and
-   sends you a message when the run ends. End your turn.
-3. When it stops, read the notebook with "Call a tool": `read_notebook`, with
-   `{"notebook_name": "{notebook name}", "response_format": "detailed", "limit": 0}`.
-   - **If the wait printed `ran`, and no cell shows an error,** the run
-     worked.
-   - **If a cell shows an error,** read its output, to find the real error.
-   - **If the wait printed `timeout`, and cells still show `[*]`,** a cell can
-     run for a long time. Start "Wait for a run" with the fingerprint that it
-     printed, and with the times in `references/waiting.md`. After the last
-     time, tell the person that a cell still runs, and stop waiting.
-   - **If it printed `error` with "Timeout waiting for result" or "Not
-     Found",** see `references/troubleshooting.md`.
-4. Tell the person the result in plain words. If you already know what the
-   notebook should show, describe that. Otherwise, read its cells first, to
-   find out what it should show, and describe that.
-
-## Monitor the notebook
-
-This task lets you see what the person does in the notebook, and stay
-free to answer in the chat. Before you ask the person to do something in
-the notebook, and before you start a monitoring command, read
-`references/waiting.md`.
 
 ## Stop the Jupyter server
 

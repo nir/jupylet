@@ -3,7 +3,9 @@
 This file is the whole task "Monitor the notebook" of `SKILL.md`. It
 explains how you see what the person does in the notebook, and stay free
 to answer the chat at the same time. Command names in quotes are commands
-in the reference file for this computer.
+in the reference file for this computer of the skill
+`managing-jupylet-notebooks`: `references/macos.md` or
+`references/windows.md`.
 
 While the person works in the notebook, you must see what they do there, for
 example which cell they ran and what it printed. At the same time, you must
@@ -62,9 +64,9 @@ The monitoring commands, in the reference file:
   sign-in" just before, run it once right after you start the command. **It
   prints `200`:** the person signed in already. Stop the command, and
   continue.
-- **"Wait for a run":** for a run in the notebook. It prints
-  `ran {fingerprint}` when the kernel ran something and is idle again, or
-  `timeout {fingerprint}`. Typing alone does not stop it. Give the fingerprint
+- **"Wait for a run":** for a run in the notebook. It prints `finished: ...`
+  when the kernel ran something and is idle again, or `not finished: ...`
+  when its time ends. Both end with the fingerprint. Typing alone does not stop it. Give the fingerprint
   that it printed as `{since}` to the next "Wait for a run", so that a run
   between the two is not missed. Leave out `{since}` the first time, and after
   you changed or ran something yourself.
@@ -74,12 +76,12 @@ background `sleep` of a few seconds. Never use a `sleep` in the foreground.
 
 To find which cell the person ran: before the first "Wait for a run", read the
 notebook with `read_notebook`, and keep the execution count of each cell.
-After `ran`, read it again. The cell whose count changed is the one that the
+After `finished`, read it again. The cell whose count changed is the one that the
 person ran. Read it with its output (`read_cell`). Do not use the highest
 count: cells keep the counts of earlier runs.
 
-- **No count changed:** a Tab completion also counts as `ran`. Start "Wait
+- **No count changed:** a Tab completion also counts as `finished`. Start "Wait
   for a run" again with the fingerprint.
-- **`timeout`, and the person wrote code that they did not run yet, and it
+- **`not finished`, and the person wrote code that they did not run yet, and it
   will fail:** show the problem in your question.
-- **`timeout`, other cases:** let the person run it first.
+- **`not finished`, other cases:** let the person run it first.

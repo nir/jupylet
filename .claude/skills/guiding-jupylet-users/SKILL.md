@@ -1,6 +1,6 @@
 ---
 name: guiding-jupylet-users
-description: Guides how to talk with a person who uses Jupylet, and how to work with that person. The person is most often a beginner, a kid or a parent. Sometimes the person is a developer who acts as a beginner. Use this skill from the first message of every conversation in a Jupylet folder. Use it together with setting-up-jupylet and running-jupylet-notebooks. Those skills say what to do. This skill says how to say it and when to ask. Also use it when the person does not understand something, is afraid of an error, or asks how something works.
+description: Guides how to talk with a person who uses Jupylet, and how to work with that person. The person is most often a beginner, a kid or a parent. Sometimes the person is a developer who acts as a beginner. Use this skill from the first message of every conversation in a Jupylet folder. Use it together with setting-up-jupylet, managing-jupylet-notebooks and working-in-notebooks. Those skills say what to do. This skill says how to say it and when to ask. Also use it when the person does not understand something, is afraid of an error, or asks how something works.
 ---
 
 # Guiding Jupylet users

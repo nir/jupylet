@@ -32,4 +32,7 @@ skill for the task:
 
 - `setting-up-jupylet`: install Jupylet, or a part of the installation, for
   example Miniforge or the environment of Jupylet.
-- `running-jupylet-notebooks`: everything with Jupyter and notebooks.
+- `managing-jupylet-notebooks`: open and close notebooks: start Jupyter,
+  open the notebook next to the chat, and stop Jupyter at the end.
+- `working-in-notebooks`: everything in an open notebook: read, change and
+  run its cells with the person.

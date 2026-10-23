@@ -17,10 +17,12 @@ folder, a folder named `jupylet` can hide the installed Jupylet.
 Some blanks appear only here:
 
 - `{tool}`, `{json arguments}`: a notebook tool and its arguments, from
-  `jupyter-mcp-tools.md`.
+  `references/jupyter-mcp-tools.md` of this skill, or of the skill
+  `working-in-notebooks`.
 - `{cell index}`: the place of a cell in the notebook, from 0.
 - `{start of its source}`: the first words of the source of that cell.
-- `{seconds}`: how long a monitoring command waits, from `waiting.md`.
+- `{seconds}`: how long a monitoring command waits, from the task that
+  runs it.
 - `{since}`, `{fingerprint}`: the fingerprint that the last "Wait for a run"
   printed.
 - `{file}`: a file in the scratchpad.
@@ -259,8 +261,11 @@ a second or two. The cells can still run after that.
 
 Run it in the background. It starts to watch the notebook, then runs all
 cells, as Run > Run All Cells in the web page does, and waits until the run ends.
-Prints `ran {fingerprint}`, `timeout {fingerprint}`, or `error` and the
-message of the tool. It must watch before the run starts: a fresh kernel
+Prints `finished: ...` when the run is over, `still running: ...` when it
+is not over after {seconds}, or `not started: ...` with the message of the
+web page. The first two end with the fingerprint. When the web page says
+"Timeout waiting for result", the run did start, and the command keeps
+waiting. It must watch before the run starts: a fresh kernel
 gives the same execution counts as the saved notebook, so a watch that starts
 after the run sees no change.
 
@@ -284,8 +289,9 @@ or `timeout`.
 
 `cd "{code}" && "{python}" -m jupylet.claude wait-change {port} {token} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
 
-Run it in the background. Prints `ran {fingerprint}` when the kernel ran
-something and is idle again, or `timeout {fingerprint}`.
+Run it in the background. Prints `finished: ...` when the kernel ran
+something and is idle again, or `not finished: ...` after {seconds}. Both
+end with the fingerprint.
 
 ## Replace the kernel
 

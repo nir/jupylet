@@ -127,17 +127,18 @@ wait-open <port> <token> <notebook path> <seconds>
     count.
 
 wait-change <port> <token> <notebook path> <seconds> [<since>]
-    `ran <fingerprint>` once the kernel ran something and is idle again, or
-    `timeout <fingerprint>`, for example `ran 3c9d07e5.5f2a81b4`. Give the
-    fingerprint as <since> to the next wait-change, so that a run between
-    the two is not missed. A Tab completion counts as a run too. Edits
-    without a run do not end it.
+    `finished: ...` once the kernel ran something and is idle again, or
+    `not finished: ...` after <seconds>. Each ends with the fingerprint,
+    for example `Fingerprint: 3c9d07e5.5f2a81b4`. Give the fingerprint as
+    <since> to the next wait-change, so that a run between the two is not
+    missed. A Tab completion counts as a run too. Edits without a run do
+    not end it.
 
 run-all <port> <token> <notebook path> <seconds>
     Runs all cells through the web page, and waits until the run is over:
-    `ran <fingerprint>` or `timeout <fingerprint>`, as wait-change prints
-    them, or `error <message>` if the run did not start, for example
-    `error Timeout waiting for result`.
+    `finished: ...` or `still running: ...`, each with the fingerprint, or
+    `not started: ...` with the message of the page if the run did not
+    start.
 
 replace-kernel <port> <token> <notebook path>
     The id of the new kernel, once it is idle and the web page is attached
@@ -643,6 +644,9 @@ def run_all(port, token, path, timeout):
         2026-10-12, macOS: Claude ran the run-all first and started the watch
         after it; the watch timed out, and Claude reported success from a
         screenshot only.
+        2026-10-22, macOS: the first run in a fresh environment took longer
+        than 30 seconds; the tool said "Timeout waiting for result", and
+        run_all reported an error although the run went on.
     """
     result = {}
 
@@ -657,10 +661,14 @@ def run_all(port, token, path, timeout):
     #
     time.sleep(1)
 
-    out = call(port, token, 'notebook_run-all-cells')
+    out = str(call(port, token, 'notebook_run-all-cells')).strip()
 
-    if str(out).strip() != 'True':
-        return 'error', str(out).strip()
+    #
+    # The tool waits for the run to end, and gives up after about 30
+    # seconds with this message, while the run goes on.
+    #
+    if out != 'True' and 'Timeout waiting for result' not in out:
+        return 'error', out
 
     watcher.join()
 
@@ -1568,10 +1576,10 @@ def main(argv):
         print('open' if wait_open(*args[:3], float(args[3])) else 'timeout')
 
     elif cmd == 'run-all' and len(args) == 4:
-        print(*run_all(*args[:3], float(args[3])))
+        print(_plain('run-all', *run_all(*args[:3], float(args[3])), args[3]))
 
     elif cmd == 'wait-change' and len(args) in (4, 5):
-        print(*wait_change(*args[:3], float(args[3]), *args[4:]))
+        print(_plain('wait-change', *wait_change(*args[:3], float(args[3]), *args[4:]), args[3]))
 
     elif cmd == 'replace-kernel' and len(args) == 3:
         print(replace_kernel(*args))
@@ -1610,6 +1618,26 @@ def main(argv):
     else:
         print(USAGE)
         return 1
+
+
+_PLAIN = {
+    'run-all': {
+        'ran': 'finished: the run is over. Fingerprint: %(v)s',
+        'timeout': 'still running: the run is not over after %(t)s seconds.'
+                   ' Fingerprint: %(v)s',
+        'error': 'not started: the page did not start the run. It said: %(v)s',
+    },
+    'wait-change': {
+        'ran': 'finished: the kernel ran something, and is idle again.'
+               ' Fingerprint: %(v)s',
+        'timeout': 'not finished: no run ended in %(t)s seconds. Fingerprint: %(v)s',
+    },
+}
+
+
+def _plain(cmd, kind, value, seconds):
+    """The answer of run_all() or wait_change() as a keyword and a sentence."""
+    return _PLAIN[cmd][kind] % {'v': value, 't': seconds}
 
 
 def _json_arg(arg):

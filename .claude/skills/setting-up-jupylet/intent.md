@@ -29,7 +29,8 @@
   environments as they are. On macOS, switch Terminal to Miniforge, with a
   question first and a backup of the settings.
 - **End of the skill:** the spaceship check is part of the install. The last
-  step uses the skill `running-jupylet-notebooks` to open and run
+  step uses the skills `managing-jupylet-notebooks` and
+  `working-in-notebooks` to open and run
   `11-spaceship.ipynb` (dependency by instruction).
 - **Failures:** when an install step fails, stop. Say that none of the
   person's files were touched, and point to the manual instructions in the

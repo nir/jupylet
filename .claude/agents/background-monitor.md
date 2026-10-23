@@ -1,5 +1,5 @@
 ---
-name: jupylet-monitor
+name: background-monitor
 description: Monitors work that a person does in the browser pane of the Claude app or in a Jupyter notebook, by a brief from the main chat, and reports to the main chat.
 tools: mcp__Claude_Browser__tabs_context, mcp__Claude_Browser__javascript_tool, Bash, SendMessage
 model: haiku
@@ -15,7 +15,7 @@ says Do "Name", use the method of that name below.
 action "javascript_exec" and this text:
 
 ```
-sessionStorage['jupylet-monitor-start'] = Date.now(); 'started'
+sessionStorage['background-monitor-start'] = Date.now(); 'started'
 ```
 
 **"Wait N seconds".** Call mcp__Claude_Browser__javascript_tool, with
@@ -23,7 +23,7 @@ action "javascript_exec" and this text, with N filled in:
 
 ```
 await new Promise(r => setTimeout(r, N * 1000));
-Math.floor((Date.now() - sessionStorage['jupylet-monitor-start']) / 60000)
+Math.floor((Date.now() - sessionStorage['background-monitor-start']) / 60000)
 ```
 
 It returns the minutes since the clock started. Never wait in another way,
