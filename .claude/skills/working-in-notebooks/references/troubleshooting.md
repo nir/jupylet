@@ -1,12 +1,8 @@
 # Known problems in the notebook
 
 What to do when a cell, a run or the notebook does not behave as expected.
-Each problem has the same form: what you see, why, and what to do. Task
-names in quotes are tasks of `SKILL.md` or of the skill
-`managing-jupylet-notebooks`. Command names in quotes are commands in the
-reference file for this computer of `managing-jupylet-notebooks`. For
-problems with the Jupyter server, the web page or the sign-in, see
-`references/troubleshooting.md` of `managing-jupylet-notebooks`.
+Each problem has the same form: what you see, why, and what to do. Command
+names in quotes are commands in the reference file for this computer.
 
 When a solution fails, follow rule 3 of `guiding-jupylet-users`: tell the
 person, and ask before the next attempt.
@@ -66,14 +62,15 @@ the real error.
 **What you see:** a cell stays at `[*]`, but the kernel is idle, and newer
 cells wait behind it.
 
-**Why:** `jupyter_server_nbmodel` is on. "Prepare the environment" turns it
-off, but the change applies only to a Jupyter server that started after it.
+**Why:** `jupyter_server_nbmodel` is on. The Jupylet settings of the
+environment turn it off, but the change applies only to a Jupyter server that
+started after it.
 
 **What to do,** in this order:
 
-1. **"Prepare the environment" did not print `off` or `turned off`, or the
-   Jupyter server started before it:** ask for a yes to stop and start the
-   Jupyter server again. That solves it.
+1. **"Check the environment" does not print `ready`, or the Jupyter server
+   started before the settings changed:** ask for a yes to stop and start
+   the Jupyter server again. That solves it.
 2. **The person wants to keep the variables of the kernel:** send the missing
    `idle` message of the stuck cell, with `execute_code`:
 
@@ -83,8 +80,7 @@ off, but the change applies only to a Jupyter server that started after it.
    started keeps it in `kernel._shell_parent`. Send it only for the stuck
    cell.
 3. **Step 2 does not help:** "Replace the kernel" solves it, after a yes. The
-   variables are lost. Then call `unuse_notebook`, and do "Attach to the
-   notebook" again.
+   variables are lost. Then call `unuse_notebook`, and run "Attach" again.
 
 ## Cells that you added do not show in the web page
 
@@ -92,20 +88,19 @@ off, but the change applies only to a Jupyter server that started after it.
 web page shows fewer cells, or the cell as one empty line.
 
 **Why:** the Jupyter server built its live copy of the notebook again from an
-old log of changes. "Prepare the environment" sets the Jupyter server so that
-this does not happen.
+old log of changes. The Jupylet settings of the environment prevent this.
 
 **What to do:**
 
 1. Check the copy in the web page, not only `read_cell`: count its cells, or
    scroll to the cell and read its text.
 2. Ask for a yes to stop the Jupyter server, and to move two files of
-   Jupyter out of `{folder}`. Then close the web page, and do "Stop the Jupyter
-   server".
+   Jupyter out of `{folder}`. Then close the web page, and stop the Jupyter
+   server.
 3. Move `.jupyter_ystore.db` and `.jupyter/collaboration_sessions.json` from
    `{folder}` to a new folder in `{scratchpad}`. Keep them: they hold
    the log of changes, which can help to recover cells.
-4. Do "Start a Jupyter server" again, with the same `{folder}` and token, so
+4. Start the Jupyter server again, with the same `{folder}` and token, so
    that the person does not need to sign in again.
 
 ## The canvas shows as text

@@ -62,10 +62,8 @@ Copy this checklist into your notes, and update it after each step:
 
 ## Step 1. Check the system
 
-1. Read the reference file for this computer, `references/macos.md` or
-   `references/windows.md`, with the Read tool.
-2. Run "Read the version" from the reference file to get `{version}`.
-3. Run the system check from the reference file.
+1. Run "Read the version" from the reference file to get `{version}`.
+2. Run the system check from the reference file.
 
 - **macOS with an Apple chip, or Windows 11 on Intel or AMD:** tell the
   person in one line what system you found, and that Jupylet supports it.

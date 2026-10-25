@@ -1,6 +1,6 @@
 ---
 name: configuring-jupylet
-description: Reads, writes and deletes settings in the Jupylet configuration files. Each file is .jupylet/claude-config.md. The global file is in the home folder of the person (for all Jupylet folders). The local file is in a Jupylet folder (for that folder only). Each setting is one key and one value. Use this skill when another Jupylet skill tells Claude to read, write or delete a setting.
+description: Reads, writes and deletes settings in the Jupylet configuration files. Each file is .jupylet/claude-config.md. The global file is in the home folder of the person (for all Jupylet folders). The local file is in a Jupylet folder (for that folder only). Each setting is one key and one value. Use this skill when another Jupylet skill asks to read, write or delete a setting.
 ---
 
 # Configuring Jupylet

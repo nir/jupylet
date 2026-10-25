@@ -1,38 +1,45 @@
 ---
 name: working-in-notebooks
-description: Reads, changes and runs the cells of an open Jupyter notebook together with the person, and monitors what the person does in it. Use this skill once a notebook is open in the browser pane of the Claude app and attached, for example by managing-jupylet-notebooks, and the person wants to run it, work on its code, or try something in it. Also use it when Claude expects the person to act in the notebook, for example after Claude asked them to try something, or when they say that they are about to. Use it together with guiding-jupylet-users.
+description: Reads, changes and runs the cells of an open Jupyter notebook together with the person, and monitors what the person does in it. Use this skill when a notebook is open in the browser pane of the Claude app, the Jupyter MCP tools are connected to it, and the person wants to run it, work on its code, or try something in it. Also use it when you need to monitor what the person does in the attached notebook, to see how they progress and whether they need help. Use it together with guiding-jupylet-users.
 ---
 
 # Working in notebooks
 
 With this skill you work in a Jupyter notebook together with the person:
-you read, change and run its cells, and you see what the person does in
-it. The skill starts where `managing-jupylet-notebooks` ends: the notebook
-is open in the Claude web browser, and you are attached to it. When the
-work is done, or the person wants to stop Jupyter, go back to that skill.
+you read, change and run its cells, and you monitor what the person does
+in it. The notebook is open in the Claude web browser, and you are connected
+to it with the Jupyter MCP tools.
 
 ## Tasks
 
 - "Work in the notebook": read and change cells together with the person.
 - "Run the notebook": run all cells, and tell the person the result.
-- "Monitor the notebook": see what the person does in the notebook, and
+- "Monitor the notebook": monitor what the person does in the notebook, and
   react to it.
 
 ## Names and values
 
-This skill uses the values, the terms and the reference files of
-`managing-jupylet-notebooks`, for example `{port}`, `{token}` and
-`{notebook name}`:
+Values in `{braces}` are blanks that you fill in. You know them from when
+the notebook was opened:
 
-- **Do "Name":** a task of this file, or of `managing-jupylet-notebooks`,
-  for example "Find the Jupyter servers that run".
+- `{code}`: the full path of the Jupylet folder, the folder that contains
+  `.claude/skills/working-in-notebooks`.
+- `{python}`: the Python of the environment that runs Jupylet.
+- `{port}`, `{token}`: the port and the token of the Jupyter server.
+- `{folder}`: the folder that the Jupyter server serves.
+- `{notebook}`: the path of the notebook, from `{folder}`, for example
+  `11-spaceship.ipynb`.
+- `{notebook name}`: the file name without `.ipynb`, for example
+  `11-spaceship`.
+- `{scratchpad}`: your scratchpad folder.
+
+Names in quotes:
+
+- **Do "Name":** a task of this file, for example: do "Run the notebook".
 - **Run "Name" from the reference file:** a command in the reference file
-  for this computer of `managing-jupylet-notebooks`:
-  `references/macos.md` or `references/windows.md`.
-- **The troubleshooting file:** `references/troubleshooting.md` of this
-  skill, for problems with cells and runs. Problems with the Jupyter
-  server, the web page or the sign-in are in the troubleshooting file of
-  `managing-jupylet-notebooks`.
+  for this computer, `references/macos.md` or `references/windows.md`.
+- **The troubleshooting file:** `references/troubleshooting.md`, for
+  problems with cells and runs.
 
 ## Rules for this skill
 
@@ -43,23 +50,24 @@ This skill uses the values, the terms and the reference files of
   file on the disk. You can read the saved file.
 - **Work on notebooks together only in the Claude web browser.** Read, change
   and run cells only in a notebook that the Claude web browser shows. There
-  you can see what the person sees, and check it. A web page in the default
+  you can monitor what the person sees, and check it. A web page in the default
   web browser is out of your reach. If the person works there and only asks
   for advice, answer, and read the saved notebook file when you need its code.
 
 ## Work in the notebook
 
 In this task you read, edit and run the notebook together with the person.
-Before the first tool call, read `references/jupyter-mcp-tools.md`, and
-invoke every tool through "Call a tool" from the reference file.
+Before the first tool call, read `references/jupyter-mcp-tools.md`. When you
+use a Jupyter MCP tool, run it with "Call a tool" from the reference file.
 
 - **Verify before you describe.** Never tell the person what is on their
   screen until you have confirmed it.
-- **Recheck that the notebook is still open.** If a notebook tool fails,
-  or the person suggests that the notebook or its web page closed, for
-  example "I'm back" or "it closed", use "Find the Jupyter servers that
-  run" to confirm that the notebook is still open and that a web page
-  shows it.
+- **Check that the person still sees the notebook.** When you have reason
+  to think that the web page or the browser pane closed, for example a
+  notebook tool fails or the person says so, call `tabs_context` of the
+  browser pane. If no tab has the origin `http://localhost:{port}`, or the
+  pane does not show, tell the person, and continue once they see the
+  notebook again.
 - **Match the evidence to the output.** Graphical output, such as a canvas
   or an image, calls for a screenshot of the web page before you describe
   what changed. Text output calls for `read_cell`, and a screenshot adds
@@ -104,14 +112,7 @@ tells you to.
 
 ## Monitor the notebook
 
-This task lets you see what the person does in the notebook, and stay
-free to answer in the chat. Before you ask the person to do something in
-the notebook, and before you start a monitoring command, read
-`references/waiting.md`. It has the whole task.
-
-*Developer note, not an instruction: the plan is a command in
-`jupylet/claude.py` that waits for any change in the notebook, an edit or a
-run, and returns a short diff of the changed lines. A `background-monitor`,
-started with the skill `running-background-monitors` and a brief from this
-skill, runs that command, judges each diff, and sends the main chat a note
-only when something deserves a look.*
+When you ask the person to do something in the notebook, or they say that
+they are about to, start a `notebook-monitor` in the same turn, as
+`references/monitoring.md` says. It monitors the notebook in the background
+and sends you notes, so that you remain free to talk with the person.

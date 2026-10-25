@@ -1,6 +1,6 @@
 ---
 name: running-background-monitors
-description: Starts, briefs, retasks and stops background monitors. A monitor is a small background agent, the subagent background-monitor, that watches work outside the chat, in the browser pane of the Claude app or in a Jupyter notebook. It sends notes and a report to the chat, so Claude stays free to talk with the person. Use this skill when another skill tells Claude to monitor something. Also use it when Claude needs to know when the person did an action outside the chat, for example an action that Claude asked for, or that the person said they will do.
+description: Starts, briefs, retasks and stops background monitors. A monitor is a small background agent, the subagent background-monitor, that watches work outside the chat, in the browser pane of the Claude app. It sends you notes and a report, so you stay free to talk with the person. Use this skill when another skill asks you to monitor something. Also use it when you need to know when the person did something outside the chat, for example something that you asked them to do, or that they said they will do.
 ---
 
 # Running background monitors
@@ -14,6 +14,9 @@ often as it needs, and reports to you when it has something worth knowing.
 Meanwhile you remain free to talk with the person and to handle new
 requests. If the goal changes, tell the monitor. If you no longer need it,
 stop it.
+
+The work of the person in a Jupyter notebook has its own monitor, the
+`notebook-monitor`, with the skill `working-in-notebooks`.
 
 ## Start a monitor
 
@@ -70,8 +73,8 @@ this goal:
 - When to give up, for example after 5 minutes.
 
 Name each method with Do "Name", for example: Do "Wait N seconds", with
-N = 5. The monitor reads the brief without the context of the chat, so
-write out every step.
+N = 5. The monitor reads the brief without the context of your chat with
+the person, so write out every step.
 
 For a full example, see "The pane brief" in
 `managing-jupylet-notebooks/references/briefs.md`.

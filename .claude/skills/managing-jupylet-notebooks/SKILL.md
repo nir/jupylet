@@ -81,9 +81,6 @@ This file uses two kinds of names in quotes:
   or `references/windows.md`, for example: run "Make a token" from the
   reference file.
 
-Read the reference file for this computer, `references/macos.md` or
-`references/windows.md`, before the first command.
-
 When a command does not give the expected result, or something behaves
 strangely, read `references/troubleshooting.md`.
 
@@ -527,7 +524,8 @@ name the one that you want to stop, by its notebook, and wait for a clear
 yes. For example: "Shall I close the Jupyter server with your spaceship
 notebook?" A short word such as "shutdown" does not choose one.
 
-1. Stop each monitoring command that still runs, with the tool `TaskStop`.
+1. Stop each monitor and each monitoring command that still runs, with the
+   tool `TaskStop`.
 2. Tell the person in one line, for example "Closing Jupyter now."
 3. Close the web page in the Claude web browser with
    `mcp__Claude_Browser__tabs_close` (`tabs_context` gives its id): an open

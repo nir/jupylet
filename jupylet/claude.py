@@ -38,6 +38,8 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
     python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude run-all <port> <token> <notebook path> <seconds>
+    python -m jupylet.claude watch <port> <token> <notebook path> <seconds> <state file or new>
+    python -m jupylet.claude cell <port> <token> <notebook path> <cell id or index>
     python -m jupylet.claude replace-kernel <port> <token> <notebook path>
     python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
     python -m jupylet.claude shutdown <port> <token>
@@ -140,6 +142,30 @@ run-all <port> <token> <notebook path> <seconds>
     `not started: ...` with the message of the page if the run did not
     start.
 
+watch <port> <token> <notebook path> <seconds> <state file or new>
+    Waits for any change in the notebook, an edit or a run, until the
+    notebook is still for a few seconds and the kernel is idle. Prints
+    `changed: <n> cells.` and, for each changed cell, its index, its id
+    when it has one, its type, whether it ran or moved, the changed lines
+    of its source (`-` old, `+` new) and its new output, short. Or `no change: ...` after <seconds>. The state
+    file keeps the notebook of the last call, so each call reports only
+    what changed since the one before. A new state file starts from the
+    notebook as it is. When a cell runs for more than two reads, about 4
+    seconds, it prints `running: a cell is still running.` at once, with
+    the changes so far; the next call reports the output when the cell
+    ends. A cell that ends in an error is always shown with its error.
+    Each answer starts with `watching for <time>.`, the time since the
+    first call with this state file. With `new` in place of the state file,
+    it makes a new state file in the temporary folder, and the answer starts
+    with `state file: <path>.`: give that path to the next calls.
+
+cell <port> <token> <notebook path> <cell id or index>
+    Prints the source and the whole output of one cell, for example of a
+    cell whose block watch trimmed. An error comes with its whole
+    traceback. Give the id or the index that
+    watch prints. An id stays the same when cells are added or moved; an
+    index does not. A notebook older than nbformat 4.5 has no ids.
+
 replace-kernel <port> <token> <notebook path>
     The id of the new kernel, once it is idle and the web page is attached
     to it.
@@ -170,6 +196,7 @@ prepare --check
 """
 
 
+import difflib
 import glob
 import hashlib
 import json
@@ -180,9 +207,11 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from concurrent.futures import ThreadPoolExecutor
@@ -760,6 +789,469 @@ def _fingerprint(text):
     counts = ','.join(re.findall(r'\| execution count: ([^=]*)=', text))
     digest = lambda x: hashlib.md5(x.encode()).hexdigest()[:8]
     return digest(counts) + '.' + digest(text)
+
+
+def watch(port, token, path, timeout, state, every=2):
+    """Wait for any change in a notebook, an edit or a run, and describe it.
+
+    Checks the time of the last save of the notebook every `every` seconds,
+    reads the notebook when that time changes, and compares it with the
+    notebook of the last call, which it keeps in the file `state`. It
+    returns once something changed, two reads in a row were the same, and
+    the kernel is idle, so it does not return in the middle of typing or of
+    a run. Then it writes the new notebook to `state`, so the
+    next call describes only what changed after this one.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+        timeout (float): Seconds to wait at most.
+        state (str): The file that keeps the notebook of the last call. If
+            it does not exist, the notebook as it is now is the start. If it
+            is 'new', a new file in the temporary folder, whose path the
+            answer gives in its first line.
+        every (float): Seconds between two reads.
+
+    Returns:
+        str: A short report: `changed: ...` with one block for each changed
+            cell, `running: ...` when a cell runs for more than two reads,
+            or `no change: ...` at the timeout.
+
+    Notes:
+        It reads the notebook through the contents API, not through a web
+        page or the MCP tools, so it changes nothing. Most checks ask only
+        for the time of the last save, which is cheap; it reads the whole
+        notebook only when that time changes. The
+        Jupyter server saves each change of the web page within a few
+        seconds, so a change shows here a few seconds late.
+        Cells are matched by their id, so a moved cell is not a new one.
+    """
+    first = ''
+
+    if state == 'new':
+        fd, state = tempfile.mkstemp(prefix='notebook-monitor-', suffix='.json')
+        os.close(fd)
+        first = 'state file: %s. Give it to the next calls.\n' % state
+
+    start, reported, started = _watch_load(state)
+    started = started or time.time()
+    say = lambda text: first + _watch_elapsed(started) + '\n' + text
+    last = None
+    stamp = None
+    busy = 0
+    t0 = time.time()
+
+    while True:
+        saved = _watch_stamp(port, token, path)
+        now = last if saved is not None and saved == stamp else _watch_read(port, token, path)
+        stamp = saved
+
+        if now is not None:
+            start = start if start is not None else now
+            still = now == last
+            last = now
+
+            k = _notebook_kernel(port, token, path)
+            idle = not k or k['execution_state'] == 'idle'
+            busy = 0 if idle else busy + 1
+
+            if now != start and still and idle:
+                _watch_save(state, now, started)
+                return say(_watch_report(start, now))
+
+            #
+            # A cell that runs longer than two reads is reported as running,
+            # so that the chat hears of it at once; the next call reports
+            # its output when it ends. Once reported, the same run is not
+            # reported again, unless something else changed.
+            #
+            if busy >= 2 and (now != start or not reported):
+                _watch_save(state, now, started, running=True)
+                return say('running: a cell is still running.' + (
+                    '\n' + _watch_report(start, now) if now != start else ''))
+
+        if time.time() - t0 >= timeout:
+            break
+
+        time.sleep(every)
+
+    if last is None:
+        return say('no change: the notebook could not be read in %g seconds.' % timeout)
+
+    #
+    # A change that did not settle in time is still reported, so that a
+    # person who keeps typing is not missed; the next call goes on from it.
+    #
+    if last != start:
+        _watch_save(state, last, started)
+        return say(_watch_report(start, last, settled=False))
+
+    _watch_save(state, last, started)
+    return say('no change: nothing changed in %g seconds.' % timeout)
+
+
+def cell_text(port, token, path, which):
+    """The source and the whole output of one cell, as text.
+
+    For a monitor or Claude that wants more than the short report of
+    watch(), for example the whole output of a cell whose block `watch`
+    trimmed.
+
+    Args:
+        port (int): Jupyter's port.
+        token (str): Jupyter's token.
+        path (str): The notebook's path, relative to Jupyter's folder.
+        which (str): The cell's id, or its index from 0, as watch() prints
+            them. An id stays the same when cells are added or moved; an
+            index does not.
+
+    Returns:
+        str: The cell's type and count, its source, and its output, with an
+            image or a widget as one word, and an error with its traceback.
+    """
+    cells = _watch_read(port, token, path, lines=None, traceback=True)
+
+    if cells is None:
+        return 'not read: the notebook could not be read.'
+
+    index = next((i for i, c in enumerate(cells) if c['id'] and c['id'] == which), None)
+
+    if index is None and which.isdigit():
+        index = int(which)
+
+    if index is None or index >= len(cells):
+        return 'no cell %s: the notebook has %d cells, from 0.' % (which, len(cells))
+
+    c = cells[index]
+    count = '' if c['count'] is None else ', count %s' % c['count']
+
+    return '%s (%s%s):\n%s\n%s' % (
+        _watch_name(index, c), c['type'], count, c['source'], '\n'.join(_watch_yaml(c['output'])))
+
+
+def _watch_stamp(port, token, path):
+    """The time of the last save of the notebook, without its content."""
+    try:
+        return _api(port, token, '/api/contents/' + urllib.parse.quote(path) + '?content=0')['last_modified']
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _watch_read(port, token, path, lines=3, traceback=False):
+    """The notebook as a list of cells, each a dict with the id, the type,
+    the source, the execution count and a text of the outputs, with at most
+    `lines` lines of each text output, or all of them for None, and with
+    the traceback of each error if `traceback` is true."""
+    try:
+        nb = _api(port, token, '/api/contents/' + urllib.parse.quote(path) + '?content=1')
+    except (OSError, ValueError):
+        return None
+
+    return [{
+        'id': c.get('id', ''),
+        'type': c['cell_type'],
+        'source': ''.join(c['source']) if isinstance(c['source'], list) else c['source'],
+        'count': c.get('execution_count'),
+        'output': _watch_outputs(c.get('outputs', []), lines, traceback),
+    } for c in nb['content']['cells']]
+
+
+def _watch_outputs(outputs, lines=3, traceback=False):
+    """The outputs of a cell as a YAML list, one item for each output, with
+    its kind as the key: `stdout`, `stderr`, `result`, `display` or
+    `error`. Text is clipped to `lines` lines, or not for None, and an image
+    or a widget is one word. An error has its traceback if `traceback` is
+    true."""
+    out = []
+
+    for o in outputs:
+        kind = o.get('output_type')
+
+        if kind == 'error':
+            text = '%s: %s' % (o.get('ename', ''), o.get('evalue', ''))
+            if traceback:
+                #
+                # The traceback has the color codes of the terminal: take
+                # them out, so that it reads as plain text.
+                #
+                text += '\n' + re.sub(r'\x1b\[[0-9;]*m', '', '\n'.join(o.get('traceback', [])))
+            out += _yaml_item('error', text)
+            continue
+
+        if kind == 'stream':
+            label, text = o.get('name', 'stdout'), o.get('text', '')
+        else:
+            label, data = 'result' if kind == 'execute_result' else 'display', o.get('data', {})
+            if any(k.startswith('image/') for k in data):
+                out += _yaml_item(label, '[image]')
+                continue
+            if 'application/vnd.jupyter.widget-view+json' in data:
+                out += _yaml_item(label, '[widget]')
+                continue
+            text = data.get('text/plain', '')
+
+        text = ''.join(text) if isinstance(text, list) else text
+        rows = text.rstrip('\n').split('\n')
+        if lines is not None and len(rows) > lines:
+            rows = rows[:lines] + ['... %d more lines' % (len(rows) - lines)]
+        out += _yaml_item(label, '\n'.join(rows))
+
+    return '\n'.join(out)
+
+
+def _yaml_item(key, text):
+    """The lines of one item of a YAML list, `- key: text`, with a block
+    scalar for text of more than one line, and quotes for text that YAML
+    could read as something else."""
+    if '\n' in text:
+        return ['- %s: |' % key] + ['    ' + l if l else '' for l in text.split('\n')]
+
+    plain = re.fullmatch(r"[A-Za-z_(][^:#]*", text) and not re.fullmatch(r'(?i)true|false|null|yes|no|on|off|~', text)
+    return ['- %s: %s' % (key, text if plain and not text.endswith(' ') else json.dumps(text))]
+
+
+#
+# The most cells that ran between two reports and still show whole. More
+# is a run of many cells, such as Run All, and its report folds.
+#
+WHOLE = 3
+
+
+def _watch_report(old, new, settled=True):
+    """The changes from the cells `old` to the cells `new`, as text.
+
+    The two lists are aligned as sequences, as diff aligns lines, so an
+    inserted or deleted cell shows as that one cell, and not as a change of
+    every cell after it. With cell ids, a cell that moved shows as moved.
+    The report follows the order of the notebook. When up to `WHOLE`
+    cells ran, each shows whole, its source and its outputs: the person ran
+    them one by one, and works on them. When more ran, as with Run All,
+    cells in a row that ran with no output, and no other change, go into
+    one line, so that the report stays short.
+    """
+    pairs = []
+    added = []
+    deleted = []
+    opcodes, by_id = _watch_align(old, new)
+
+    for tag, i1, i2, j1, j2 in opcodes:
+        #
+        # Without ids, a 'replace' of cells by cells is an edit of those
+        # cells. With ids, it is other cells: added, deleted or moved.
+        #
+        p = list(zip(range(i1, i2), range(j1, j2))) if tag == 'equal' or not by_id else []
+        pairs += [(i, j) for i, j in p if old[i] != new[j]]
+        added += range(j1 + len(p), j2)
+        deleted += [(i, j1) for i in range(i1 + len(p), i2)]
+
+    gone = {old[i]['id']: (i, at) for i, at in deleted if by_id}
+    moved = {j: gone.pop(new[j]['id'])[0] for j in added if by_id and new[j]['id'] in gone}
+    deleted = list(gone.values()) if by_id else deleted
+
+    ran = [j for i, j in pairs if new[j]['count'] is not None and new[j]['count'] != old[i]['count']]
+    ran += [j for j in added if new[j]['count'] is not None]
+    whole = set(ran) if len(ran) <= WHOLE else set()
+
+    entries = []
+
+    for i, j in pairs:
+        o, c = old[i], new[j]
+        if j in whole:
+            entries.append(((j, 1), _watch_whole(j, c)))
+        elif j in ran and o['source'] == c['source'] and o['type'] == c['type'] and not c['output']:
+            entries.append(((j, 1), j))
+        else:
+            entries.append(((j, 1), _watch_changed(j, o, c)))
+
+    for j in added:
+        c = new[j]
+        extra = 'moved from %d' % moved[j] if j in moved else 'new'
+        if j in whole:
+            entries.append(((j, 1), _watch_whole(j, c, extra)))
+        elif j in moved:
+            entries.append(((j, 1), _watch_changed(j, old[moved[j]], c, moved=moved[j])))
+        else:
+            entries.append(((j, 1), _watch_new(j, c)))
+
+    for i, at in deleted:
+        entries.append(((at, 0), _watch_deleted(i, old[i])))
+
+    #
+    # A blank line before each block, so that the lines of one cell do not
+    # read as part of the next.
+    #
+    rows = []
+    quiet = []
+
+    for key, e in sorted(entries, key=lambda x: x[0]):
+        if isinstance(e, int):
+            quiet.append(e)
+            continue
+
+        rows += _watch_quiet(quiet) + [''] + e
+        quiet = []
+
+    rows += _watch_quiet(quiet)
+
+    n = len(entries)
+    head = 'changed: %d cell%s%s.' % (n, '' if n == 1 else 's', '' if settled else ', still changing')
+    return '\n'.join([head] + rows)
+
+
+def _watch_whole(j, c, extra=''):
+    """The block of a cell with its whole source, and its outputs."""
+    state = ', '.join(x for x in (c['type'], extra, 'ran, count %s' % c['count']) if x)
+    lines = ['%s (%s):' % (_watch_name(j, c), state)]
+
+    if '\n' in c['source']:
+        lines += ['source: |'] + _watch_clip(['  ' + l if l else '' for l in c['source'].split('\n')], 30)
+    else:
+        lines += [_yaml_item('source', c['source'])[0][2:]]
+
+    lines += _watch_yaml(c['output'])
+    return _watch_trimmed(lines, j, c)
+
+
+def _watch_quiet(ran):
+    """The line for cells in a row that ran with no output, or nothing."""
+    if not ran:
+        return []
+
+    return ['', '%s %s ran, with no output.' % ('cell' if len(ran) == 1 else 'cells', _watch_ranges(ran))]
+
+
+def _watch_ranges(numbers):
+    """Sorted numbers as short ranges, for example '3, 5-9, 12'."""
+    out = []
+
+    for n in sorted(numbers):
+        if out and out[-1][1] == n - 1:
+            out[-1][1] = n
+        else:
+            out.append([n, n])
+
+    return ', '.join('%d' % a if a == b else '%d-%d' % (a, b) for a, b in out)
+
+
+def _watch_align(old, new):
+    """The opcodes of difflib that turn the cells `old` into `new`, and
+    whether the cells were matched by their ids.
+
+    Cells are matched by their ids when every cell has one, and the ids are
+    unique. A notebook of nbformat 4.4, such as most of the examples, has no
+    ids: then cells are matched by their type and source, and an edited cell
+    is a 'replace' of one cell by one cell.
+    """
+    ids = [c['id'] for c in old + new]
+
+    by_id = all(ids) and len(set(c['id'] for c in old)) == len(old) and len(set(c['id'] for c in new)) == len(new)
+    key = (lambda c: c['id']) if by_id else (lambda c: (c['type'], c['source']))
+
+    m = difflib.SequenceMatcher(None, [key(c) for c in old], [key(c) for c in new], autojunk=False)
+    return m.get_opcodes(), by_id
+
+
+def _watch_changed(j, o, c, moved=None):
+    if c['count'] is None and o['count'] is not None and c['type'] == 'code':
+        state = ', running'
+    elif c['count'] != o['count'] and c['count'] is not None:
+        state = ', ran, count %s' % c['count']
+    else:
+        state = ''
+
+    if moved is not None:
+        state += ', moved from %d' % moved
+
+    lines = ['%s (%s%s):' % (_watch_name(j, c), c['type'], state)]
+
+    if c['source'] != o['source']:
+        #
+        # An empty source has no lines, not one empty line, so that a cell
+        # that was empty shows only the new lines.
+        #
+        a = o['source'].split('\n') if o['source'] else []
+        b = c['source'].split('\n') if c['source'] else []
+        diff = difflib.unified_diff(a, b, lineterm='', n=0)
+        lines += _watch_clip([l[0] + ' ' + l[1:] for l in diff if l[:1] in '+-' and l[:3] not in ('+++', '---')])
+
+    #
+    # The outputs show when they changed, or when the cell ran; an edit
+    # alone leaves the old outputs, so they do not show.
+    #
+    if c['output'] != o['output'] or (c['count'] != o['count'] and c['count'] is not None):
+        lines += _watch_yaml(c['output'])
+
+    return _watch_trimmed(lines, j, c)
+
+
+def _watch_error(c):
+    """True if the outputs of the cell `c` have an error."""
+    return any(l.startswith('- error: ') for l in c['output'].split('\n'))
+
+
+def _watch_yaml(output):
+    """The outputs of a cell, from _watch_outputs(), under the key
+    `outputs`, or `outputs: []` for none."""
+    return ['outputs:'] + ['  ' + l if l else '' for l in output.split('\n')] if output else ['outputs: []']
+
+
+def _watch_new(j, c):
+    ran = ', ran, count %s' % c['count'] if c['count'] is not None else ''
+    lines = ['%s (%s, new%s):' % (_watch_name(j, c), c['type'], ran)]
+    lines += _watch_clip(['+ ' + l for l in c['source'].split('\n')])
+    lines += _watch_yaml(c['output']) if c['output'] else []
+    return _watch_trimmed(lines, j, c)
+
+
+def _watch_deleted(i, o):
+    return ['%s (%s, deleted):' % (_watch_name(i, o), o['type'])] + ['- ' + l for l in o['source'].split('\n')[:3]]
+
+
+def _watch_clip(lines, limit=10):
+    """At most `limit` lines of a source, and a line that says how many
+    more there are."""
+    return lines if len(lines) <= limit else lines[:limit] + ['... %d more lines' % (len(lines) - limit)]
+
+
+def _watch_trimmed(lines, index, c):
+    """The lines of a cell's block, and a last line that tells how to read
+    the whole cell, if a part of the block was clipped."""
+    if not any(l.lstrip().startswith('... ') and l.endswith(' more lines') for l in lines):
+        return lines
+
+    return lines + ['(trimmed: `cell %s` prints the whole cell)' % (c['id'] or index)]
+
+
+def _watch_name(index, c):
+    """'cell 3', with the id of the cell when it has one: 'cell 3, id 1a2b'."""
+    return 'cell %d, id %s' % (index, c['id']) if c['id'] else 'cell %d' % index
+
+
+def _watch_load(state):
+    """The cells of the last call, whether it reported a running cell, and
+    the time of the first call, or None."""
+    try:
+        with open(state) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None, False, None
+
+    if isinstance(data, list):
+        return data, False, None
+
+    return data['cells'], data['running'], data.get('started')
+
+
+def _watch_save(state, cells, started, running=False):
+    with open(state, 'w') as f:
+        json.dump({'cells': cells, 'running': running, 'started': started}, f)
+
+
+def _watch_elapsed(started):
+    """'watching for 1 min 35 s.': the time since the first call."""
+    m, sec = divmod(int(time.time() - started), 60)
+    return 'watching for %s.' % ('%d min %d s' % (m, sec) if m else '%d s' % sec)
 
 
 def replace_kernel(port, token, path, timeout=60):
@@ -1580,6 +2072,12 @@ def main(argv):
 
     elif cmd == 'wait-change' and len(args) in (4, 5):
         print(_plain('wait-change', *wait_change(*args[:3], float(args[3]), *args[4:]), args[3]))
+
+    elif cmd == 'watch' and len(args) == 5:
+        print(watch(*args[:3], float(args[3]), args[4]))
+
+    elif cmd == 'cell' and len(args) == 4:
+        print(cell_text(*args))
 
     elif cmd == 'replace-kernel' and len(args) == 3:
         print(replace_kernel(*args))

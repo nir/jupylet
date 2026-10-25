@@ -1,7 +1,7 @@
 # The Jupyter MCP tools
 
 The Jupyter MCP tools read, change and run the cells of the attached notebook.
-Call each one with "Call a tool", as `SKILL.md` says.
+When you use one, run it with "Call a tool" from the reference file.
 
 ## Contents
 
@@ -17,7 +17,7 @@ Call each one with "Call a tool", as `SKILL.md` says.
 
 Tested on macOS, with `jupyter_server_nbmodel` off:
 
-- `use_notebook` (through "Attach to the notebook"), `list_kernels`,
+- `use_notebook` (through "Attach"), `list_kernels`,
   `list_notebooks`, `list_files`
 - `read_notebook`, `read_cell`
 - `insert_cell`, `edit_cell_source`, `overwrite_cell_source`, `move_cell`,
@@ -46,7 +46,8 @@ The other tools, for example `read_notebook`, `insert_cell` and
 ## Tools that do not work
 
 `execute_cell` and `insert_execute_code_cell` need `jupyter_server_nbmodel`,
-which "Prepare the environment" turns off. Without it, they fail at once.
+which the Jupylet settings of the environment turn off. Without it, they fail
+at once.
 With it, they stopped responding for minutes. Use `notebook_run-all-cells`,
 "Run one cell", or `execute_code` for a short check.
 
@@ -85,15 +86,15 @@ With it, they stopped responding for minutes. Use `notebook_run-all-cells`,
 ## Run cells
 
 - **All cells:** "Run all cells".
-- **One cell, as the person does:** "Run one cell". It needs the option for
-  web page commands that "Start JupyterLab" gives. A Jupyter server that
-  the person started does not have it: there, run all cells, or ask the
-  person to run the cell.
-- **Code that is not in a cell:** `execute_code`. Stop a monitoring command
-  first: your own run also stops it.
+- **One cell, as the person does:** "Run one cell". It needs an option of
+  the Jupyter server for web page commands. A Jupyter server that Jupylet
+  started has it. One that the person started does not: there, run all
+  cells, or ask the person to run the cell.
+- **Code that is not in a cell:** `execute_code`. Stop the
+  `notebook-monitor` first, as `references/monitoring.md` says: otherwise it
+  reports your run as the work of the person.
 
 ## After the person restarts the kernel
 
 Attach keeps the old kernel. Call `unuse_notebook` with
-`{"notebook_name": "{notebook name}"}`, then do "Attach to the notebook"
-again.
+`{"notebook_name": "{notebook name}"}`, then run "Attach" again.
