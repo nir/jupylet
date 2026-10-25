@@ -36,3 +36,7 @@ skill for the task:
   open the notebook next to the chat, and stop Jupyter at the end.
 - `working-in-notebooks`: everything in an open notebook: read, change and
   run its cells with the person.
+- `running-background-monitors`: start a background monitor when another
+  skill's step asks for one, for example while the person shows the browser
+  pane or signs in. The monitor is part of that step, so the person's
+  request covers it.
