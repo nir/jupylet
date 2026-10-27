@@ -90,8 +90,8 @@ With it, they stopped responding for minutes. Use `notebook_run-all-cells`,
   the Jupyter server for web page commands. A Jupyter server that Jupylet
   started has it. One that the person started does not: there, run all
   cells, or ask the person to run the cell.
-- **Code that is not in a cell:** `execute_code`. Stop the
-  `notebook-monitor` first, as `references/monitoring.md` says: otherwise it
+- **Code that is not in a cell:** `execute_code`. If a `notebook-monitor`
+  runs, tell it first, as `references/monitoring.md` says: otherwise it
   reports your run as the work of the person.
 
 ## After the person restarts the kernel

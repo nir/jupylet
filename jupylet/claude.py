@@ -36,6 +36,8 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude tools <port> <token>
     python -m jupylet.claude call <port> <token> <tool> ['<json arguments>']
     python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
+    python -m jupylet.claude context <scratchpad or session log>
+    python -m jupylet.claude wait-compact <scratchpad or session log> <seconds>
     python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds> [<since>]
     python -m jupylet.claude run-all <port> <token> <notebook path> <seconds>
     python -m jupylet.claude watch <port> <token> <notebook path> <seconds> <state file or new>
@@ -127,6 +129,17 @@ wait-open <port> <token> <notebook path> <seconds>
     `open` when a new web page opens the notebook, signed in, or `timeout`.
     A web page that had the notebook open before the wait started does not
     count.
+
+context <scratchpad or session log>
+    `context: <n>k tokens.`, the size of the context of a Claude Code session
+    at its last call, from its log: ~/.claude/projects/<project>/<session
+    id>.jsonl. The scratchpad folder of the session, .../<project>/<session
+    id>/scratchpad, names the same log.
+
+wait-compact <scratchpad or session log> <seconds>
+    `compacted: from <n>k to <m>k tokens.` once the session is compacted,
+    or `no compaction: none in <seconds> seconds.` A compaction before the
+    wait started does not count.
 
 wait-change <port> <token> <notebook path> <seconds> [<since>]
     `finished: ...` once the kernel ran something and is idle again, or
@@ -1320,6 +1333,87 @@ def _answers(port):
         return s.connect_ex(('127.0.0.1', int(port))) == 0
 
 
+def _session_log(path):
+    """The log of a Claude Code session, from its log or its scratchpad.
+
+    A scratchpad folder is .../<project>/<session id>/scratchpad, and the log
+    of that session is ~/.claude/projects/<project>/<session id>.jsonl.
+    """
+    path = os.path.expanduser(path.rstrip('/\\'))
+
+    if not os.path.isdir(path):
+        return path
+
+    session = os.path.dirname(path)
+    project = os.path.basename(os.path.dirname(session))
+    return os.path.join(os.path.expanduser('~'), '.claude', 'projects', project, os.path.basename(session) + '.jsonl')
+
+
+def context_size(log):
+    """The size of the context of a Claude Code session, at its last call.
+
+    Args:
+        log (str): The session's log, ~/.claude/projects/<project>/<session
+            id>.jsonl.
+
+    Returns:
+        int: Tokens: the cache read, the cache write and the input of the
+            last call that the log records, or 0 if it records none.
+
+    Notes:
+        Each call sends the whole context, so its three input counts add up
+        to the context at that call. The call in progress is not in the log
+        yet; it differs only by the latest messages.
+    """
+    size = 0
+
+    with open(log) as f:
+        for line in f:
+            if '"usage"' not in line:
+                continue
+
+            u = json.loads(line).get('message', {}).get('usage') or {}
+            n = sum(u.get(k, 0) for k in ('input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'))
+            size = n or size
+
+    return size
+
+
+def wait_compact(log, timeout):
+    """Wait until a Claude Code session is compacted.
+
+    Args:
+        log (str): The session's log, ~/.claude/projects/<project>/<session
+            id>.jsonl.
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        tuple: (tokens before, tokens after) of the compaction, or None on
+            timeout.
+
+    Notes:
+        A compaction writes a line with the subtype `compact_boundary` to the
+        log. Only the part of the log written after the wait started is read,
+        so an older compaction does not count.
+    """
+    found = []
+
+    with open(log) as f:
+        f.seek(0, os.SEEK_END)
+
+        def compacted():
+            for line in f.readlines():
+                if '"compact_boundary"' in line:
+                    m = json.loads(line).get('compactMetadata') or {}
+                    found.append((m.get('preTokens', 0), m.get('postTokens', 0)))
+            return bool(found)
+
+        if not _wait_until(compacted, timeout):
+            return None
+
+    return found[0]
+
+
 def _wait_until(check, timeout):
     t0 = time.time()
 
@@ -2066,6 +2160,14 @@ def main(argv):
 
     elif cmd == 'wait-open' and len(args) == 4:
         print('open' if wait_open(*args[:3], float(args[3])) else 'timeout')
+
+    elif cmd == 'context' and len(args) == 1:
+        print('context: %dk tokens.' % round(context_size(_session_log(args[0])) / 1000))
+
+    elif cmd == 'wait-compact' and len(args) == 2:
+        r = wait_compact(_session_log(args[0]), float(args[1]))
+        print('compacted: from %dk to %dk tokens.' % tuple(round(n / 1000) for n in r) if r
+              else 'no compaction: none in %s seconds.' % args[1])
 
     elif cmd == 'run-all' and len(args) == 4:
         print(_plain('run-all', *run_all(*args[:3], float(args[3])), args[3]))

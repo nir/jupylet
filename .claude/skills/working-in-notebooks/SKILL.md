@@ -1,6 +1,6 @@
 ---
 name: working-in-notebooks
-description: Reads, changes and runs the cells of an open Jupyter notebook together with the person, and monitors what the person does in it. Use this skill when a notebook is open in the browser pane of the Claude app, the Jupyter MCP tools are connected to it, and the person wants to run it, work on its code, or try something in it. Also use it when you need to monitor what the person does in the attached notebook, to see how they progress and whether they need help. Use it together with guiding-jupylet-users.
+description: Reads, changes and runs the cells of an open Jupyter notebook together with the person, and monitors what the person does in it. Use this skill as soon as a notebook is open in the browser pane of the Claude app and the Jupyter MCP tools are connected to it, whether the person asked only to open it, or to run it, work on its code, or try something in it. Also use it when you need to monitor what the person does in the attached notebook, to see how they progress and whether they need help. Use it together with guiding-jupylet-users.
 ---
 
 # Working in notebooks
@@ -112,7 +112,9 @@ tells you to.
 
 ## Monitor the notebook
 
-When you ask the person to do something in the notebook, or they say that
-they are about to, start a `notebook-monitor` in the same turn, as
-`references/monitoring.md` says. It monitors the notebook in the background
+Once in a conversation, when a notebook is open and you are attached to it,
+offer the person a helper that follows along in the notebook. Also, when
+you ask the person to do something in the notebook, or they say that they
+are about to, start a `notebook-monitor` in the same turn. For both, follow
+`references/monitoring.md`. The monitor reads the notebook in the background
 and sends you notes, so that you remain free to talk with the person.

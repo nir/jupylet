@@ -147,8 +147,10 @@ To open the notebook for the person, first do "Choose a notebook". Then:
   order.
 
 When the notebook is open in the Claude web browser, and you are attached to
-it, use the skill `working-in-notebooks` for what the person asked, for
-example to run the notebook, or to work on its code together.
+it, load the skill `working-in-notebooks`, also when the person asked only
+to open the notebook. It offers the person a helper for their work in the
+notebook, and it does what the person asked, for example to run the
+notebook, or to work on its code together.
 
 For example, the person says "run the spaceship" and no Jupyter server runs.
 Choose `11-spaceship.ipynb`, find the environment, start a Jupyter server,
@@ -508,7 +510,8 @@ It can take up to a minute. Tell the person in one line first, for example:
 Run "Attach" from the reference file.
 
 - **If the output contains `Successfully activate notebook`,** the task is
-  complete.
+  complete. Then load `working-in-notebooks`, as "Understand the request"
+  says.
 - **If the output says that there is no kernel,** follow "The notebook has
   no kernel" in `references/troubleshooting.md`.
 - **If it says anything else,** see `references/troubleshooting.md`.

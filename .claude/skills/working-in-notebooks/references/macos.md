@@ -38,6 +38,8 @@ Some blanks appear only here:
 - Wait for a run
 - Replace the kernel
 - Trust the notebooks
+- Measure the context
+- Wait for a compaction
 
 ## Check the environment
 
@@ -120,3 +122,18 @@ Marks each notebook in `{folder}` as trusted, so that the cells show the
 canvas. Run it from inside `{folder}`. In the folder above `examples`, Python
 finds the code folder, also named `jupylet`, instead of the installed
 Jupylet, and the command fails.
+
+## Measure the context
+
+`cd "{code}" && "{python}" -m jupylet.claude context "{scratchpad}"  # jupylet: notebooks/measure-context`
+
+Prints the size of the context of this chat, for example `context: 132k
+tokens.`, from the log of the chat. `{scratchpad}` names the chat.
+
+## Wait for a compaction
+
+`cd "{code}" && "{python}" -m jupylet.claude wait-compact "{scratchpad}" 600  # jupylet: notebooks/wait-compact`
+
+Run it in the background. Prints `compacted: from 356k to 20k tokens.` when
+the person compacts this chat with /compact, or `no compaction: none in 600
+seconds.` A compaction before the command started does not count.

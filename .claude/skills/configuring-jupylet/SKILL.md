@@ -58,15 +58,15 @@ file. The lines above it that set the same key do not count.
 
 ## Read a setting
 
-Read the files with the Read tool, in the order of the steps below. When a
-file does not exist, the Read tool gives an error. That error is normal: a file does not exist until you write
-the first setting to it.
+Read the files with the Read tool. When a file does not exist, the Read
+tool gives an error. That error is normal: a file does not exist until you
+write the first setting to it.
 
-1. If the local file exists and a line in it sets the key, the last line
-   that sets the key gives the value of the setting. Stop.
-2. If the global file exists and a line in it sets the key, the last line
-   that sets the key gives the value of the setting. Stop.
-3. The setting has no value.
+1. Read the local file. If a line in it sets the key, the last such line
+   gives the value. Stop.
+2. Otherwise, read the global file. If a line in it sets the key, the last
+   such line gives the value. Stop.
+3. Otherwise, the setting has no value.
 
 ## Write a setting
 
