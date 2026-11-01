@@ -329,6 +329,7 @@ def skills_folder(args):
         archive = subprocess.run(['git', '-C', REPO, 'archive', args.ref, '--'] + keep,
                                  capture_output=True, check=True)
         subprocess.run(['tar', '-x', '-C', d], input=archive.stdout, check=True)
+        sim_agents(d)
         return d
 
     src = os.path.abspath(args.skills) if args.skills else REPO
@@ -339,8 +340,48 @@ def skills_folder(args):
             shutil.copy2(s, os.path.join(d, rel))
 
     shutil.copytree(os.path.join(src, '.claude', 'skills'), os.path.join(d, '.claude', 'skills'), dirs_exist_ok=True)
+    if os.path.isdir(os.path.join(src, '.claude', 'agents')):
+        shutil.copytree(os.path.join(src, '.claude', 'agents'), os.path.join(d, '.claude', 'agents'), dirs_exist_ok=True)
+    sim_agents(d)
 
     return d
+
+
+#
+# The simulated names of the tools that the agent files of .claude/agents
+# name. A subagent of the worker has the worker's simulated tools, so its
+# commands reach the system simulator too, never the real computer.
+#
+SIM_TOOL_NAMES = {'Bash': 'mcp__computer__Bash', 'PowerShell': 'mcp__computer__PowerShell',
+                  'Read': 'mcp__computer__Read', 'Write': 'mcp__computer__Write',
+                  'Edit': 'mcp__computer__Edit'}
+
+AGENT_NOTE = '''
+
+## This session
+
+In this session, the shell and file tools have simulated names:
+`mcp__computer__Bash` (or `mcp__computer__PowerShell` on Windows),
+`mcp__computer__Read`, `mcp__computer__Write` and `mcp__computer__Edit`. When
+this file or a file that it names says "the Bash tool", "the PowerShell
+tool", "Read", "Write" or "Edit", use these tools. When a file names a tool
+`mcp__Claude_Browser__{name}`, use `mcp__browser__{name}`, for example
+`mcp__browser__tabs_context`. The other tools have their usual names.
+'''
+
+
+def sim_agents(d):
+    """Give the agent files of the copy the worker's simulated tools."""
+    for path in glob.glob(os.path.join(d, '.claude', 'agents', '*.md')):
+        text = read(path)
+        m = re.search(r'(?m)^tools:(.*)$', text)
+        if not m:
+            continue
+        names = [n.strip() for n in m.group(1).split(',') if n.strip()]
+        names = [SIM_TOOL_NAMES.get(n, n.replace('mcp__Claude_Browser__', 'mcp__browser__')) for n in names]
+        text = text[:m.start()] + 'tools: ' + ', '.join(names) + text[m.end():]
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(text.rstrip('\n') + AGENT_NOTE)
 
 
 TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)')
@@ -633,7 +674,8 @@ class Session:
             self.start_socket()
 
         self.worker = Agent('worker', self.worker_prompt(), self.run_dir, model, fakes.get('worker'),
-                            cwd=self.code, tools='Skill', append=True, extra=self.mcp_args(), effort=EFFORT)
+                            cwd=self.code, tools=','.join(self.WORKER_TOOLS), append=True, extra=self.mcp_args(),
+                            effort=EFFORT)
         self.system = Agent('system', system_prompt, self.run_dir, model, fakes.get('system'), effort=EFFORT)
         self.human = Agent('human', human_prompt, self.run_dir, model, fakes.get('human'), effort=EFFORT)
 
@@ -702,6 +744,12 @@ class Session:
 
     SERVERS = ('computer', 'browser', 'terminal', 'ccd_window', 'ccd_directory')
     #
+    # The worker's own tools. Agent, SendMessage and TaskStop let it start,
+    # message and stop the agents of .claude/agents, as in the app: the
+    # skills open each notebook with the notebook-opener (2026-11-01).
+    #
+    WORKER_TOOLS = ('Skill', 'Agent', 'SendMessage', 'TaskStop')
+    #
     # The names of the tools in the records, as the skills name them. The CLI
     # drops a server named Claude_Browser (it keeps the name for the real
     # pane), so the browser server has another name (run open-spaceship-1).
@@ -719,7 +767,7 @@ class Session:
                    for name in self.SERVERS}
 
         return ['--mcp-config', json.dumps({'mcpServers': servers}),
-                '--allowedTools', ' '.join(['Skill'] + ['mcp__' + n for n in self.SERVERS])]
+                '--allowedTools', ' '.join(list(self.WORKER_TOOLS) + ['mcp__' + n for n in self.SERVERS])]
 
     def start_socket(self):
 
@@ -815,18 +863,105 @@ class Session:
     LIVE_ROWS = 40
 
     def watch_worker(self, stop):
-        """With --live, show Claude's messages and skill loads while its turn runs."""
-        start = self.worker.seen_lines
+        """Follow the worker's session file while its turn runs.
+
+        A background agent of the worker, such as the notebook-opener, keeps
+        the worker's claude -p call alive, and the worker writes to the
+        person inside that call. So each new message goes to the human
+        simulator at once, as in the app, and what the person does happens
+        at once too, while the agent waits for it (run smoke-open-new-1).
+        """
         while True:
             ended = stop.wait(0.5)
-            items, start = self.worker.items_since(start)
-            for item in items:
-                if item[0] == 'text':
-                    self.progress('CLAUDE:', item[1])
-                elif item[0] == 'tool_use' and item[2] == 'Skill':
-                    self.progress('Skill: %s' % item[3].get('skill', item[3]))
+            texts = self.follow_worker()
+            if texts and not ended:
+                self.person_during_turn(texts)
+            elif texts:
+                self.unseen.extend(texts)
             if ended:
+                self.unseen.extend(self.follow_worker(final=True))
                 return
+
+    def person_during_turn(self, texts):
+        """Show the person the new messages of a running worker turn.
+
+        What the person does goes to the system simulator now. What they say
+        waits for the next worker message: a running claude -p takes no new
+        input.
+        """
+        page = self.page_for_human()
+        if page:
+            self.log('page', text=page)
+            self.progress('PAGE for the person: the cells of %s' % ', '.join(self.pages_shown[-1:]))
+        reply = parse_human(self.human.send('\n\n'.join(texts + ([page] if page else []))))
+        for d in reply['do']:
+            self.log('person_does', text=d)
+            self.progress('PERSON DOES: ' + d, d if len(d) > 100 else None)
+            with self.lock:
+                self.ask_system('<event>\nThe person %s\n</event>' % d)
+        for said in reply['say']:
+            self.progress('PERSON (for the next turn):', said) if self.live else self.progress(
+                'PERSON (for the next turn): ' + said)
+        self.held['say'] += reply['say']
+        self.held['did'] = self.held['did'] or bool(reply['do'])
+        self.held['wait'] = self.held['wait'] or reply['wait']
+        self.held['end'] = self.held['end'] or reply['end']
+
+    def follow_worker(self, final=False):
+        """Log what the worker's session file added, in order, and return its
+        new messages.
+
+        A simulated tool call of the worker is logged with its record. The
+        CLI writes the tool call to the session file before it runs it, so a
+        record with no tool call in the file is a call of a subagent. A tool
+        call whose record has not come yet stops the logging until the next
+        time, to keep the order; at the end of the turn, it is logged
+        without one.
+        """
+        with self.lock:
+            records = list(self.records)
+        items, self.worker.seen_lines = self.worker.items_since(self.worker.seen_lines)
+        self.backlog += items
+
+        uses = [b[3] for b in self.backlog if b[0] == 'tool_use' and b[2].startswith('mcp__')]
+        for rec in records:
+            if rec[1] in uses:
+                uses.remove(rec[1])
+                continue
+            with self.lock:
+                self.records.remove(rec)
+            tool, inp, out, served = rec
+            self.log('action', tool=tool, input=inp, by='agent')
+            self.log('machine', tool=tool, output=out, served=served, by='agent')
+
+        texts = []
+        while self.backlog:
+            item = self.backlog[0]
+            if item[0] == 'text':
+                texts.append(item[1])
+                self.log('claude', text=item[1])
+                self.progress('CLAUDE:', item[1]) if self.live else self.progress('CLAUDE: ' + item[1])
+            elif item[0] == 'tool_use' and item[2] == 'Skill':
+                self.log('action', tool='Skill', input=item[3], real=True)
+                self.progress('Skill: %s' % item[3].get('skill', item[3]))
+            elif item[0] == 'tool_use' and item[2].startswith('mcp__') and self.take_record(item[3]):
+                tool, inp, out, served = self.take_record(item[3], pop=True)
+                self.log('action', tool=tool, input=inp)
+                self.log('machine', tool=tool, output=out, served=served)
+            elif item[0] == 'tool_use' and item[2].startswith('mcp__') and not final:
+                break
+            elif item[0] == 'tool_use':
+                self.log('action', tool=item[2], input=item[3], real=True)
+            self.backlog.pop(0)
+
+        if final:
+            with self.lock:
+                records, self.records = self.records, []
+            for tool, inp, out, served in records:
+                self.log('action', tool=tool, input=inp, by='agent')
+                self.log('machine', tool=tool, output=out, served=served, by='agent')
+
+        return texts
 
     def costs(self):
 
@@ -971,43 +1106,36 @@ class Session:
         return notes
 
     def worker_turn(self, message):
-
+        """Run one worker turn. Returns the messages that the person has not
+        seen yet; self.held has what the person did and said during it."""
         if self.fake:
             return self.worker_turn_blocks(message)
 
-        self.records = []
         self.turn_actions = 0
-        if self.live:
-            stop = threading.Event()
-            watcher = threading.Thread(target=self.watch_worker, args=(stop,), daemon=True)
-            watcher.start()
+        self.backlog, self.unseen = [], []
+        self.held = {'say': [], 'did': False, 'wait': False, 'end': False}
+        stop = threading.Event()
+        watcher = threading.Thread(target=self.watch_worker, args=(stop,), daemon=True)
+        watcher.start()
         try:
             self.worker.send(message)
         finally:
-            if self.live:
-                stop.set()
-                watcher.join()
+            stop.set()
+            watcher.join()
 
-        visible = []
-        records = list(self.records)
-        for item in self.worker.new_items():
-            if item[0] == 'text':
-                visible.append(item[1])
-                self.log('claude', text=item[1])
-                if not self.live:
-                    self.progress('CLAUDE: ' + item[1])
-            elif item[0] == 'tool_use' and item[2] == 'Skill':
-                self.log('action', tool='Skill', input=item[3], real=True)
-                if not self.live:
-                    self.progress('Skill: %s' % item[3].get('skill', item[3]))
-            elif item[0] == 'tool_use' and item[2].startswith('mcp__') and records:
-                tool, inp, out, served = records.pop(0)
-                self.log('action', tool=tool, input=inp)
-                self.log('machine', tool=tool, output=out, served=served)
-            elif item[0] == 'tool_use':
-                self.log('action', tool=item[2], input=item[3], real=True)
+        return self.unseen
 
-        return visible
+    def take_record(self, inp, pop=False):
+        """The first record of a simulated tool call with this input.
+
+        The worker's subagents use the same simulated tools, and their calls
+        come in between the worker's, so a record is found by its input, not
+        by its place.
+        """
+        with self.lock:
+            for i, rec in enumerate(self.records):
+                if rec[1] == inp:
+                    return self.records.pop(i) if pop else rec
 
     def worker_turn_blocks(self, message):
         """The worker turn of --fake, with tool blocks in the text."""
@@ -1096,12 +1224,21 @@ class Session:
 
             visible = self.worker_turn(message)
             self.costs()
+            held = getattr(self, 'held', None) or {'say': [], 'did': False, 'wait': False, 'end': False}
             page = self.page_for_human()
             if page:
                 self.log('page', text=page)
                 self.progress('PAGE for the person: the cells of %s' % ', '.join(self.pages_shown[-1:]))
-            reply = parse_human(self.human.send('\n\n'.join(visible + ([page] if page else []))
-                                                or '(Claude wrote nothing.)'))
+            if held['end'] or not (visible or page) and (held['say'] or held['did'] or held['wait']):
+                #
+                # The person saw every message during the turn, and answered
+                # then: what they did already happened.
+                #
+                reply = {'say': held['say'], 'do': [], 'wait': held['did'] or held['wait'], 'end': held['end']}
+            else:
+                reply = parse_human(self.human.send('\n\n'.join(visible + ([page] if page else []))
+                                                    or '(Claude wrote nothing.)'))
+                reply['say'] = held['say'] + reply['say']
             if not (reply['say'] or reply['do'] or reply['wait'] or reply['end']):
                 reply['say'] = ['(no answer)']
 

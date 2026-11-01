@@ -421,8 +421,9 @@ setting` or `no tool`.
   example below.
 - **`no setting`:** ask, once in a conversation, for example:
 
-  > The notebook is a bit cramped. Want me to tuck the list of chats on
-  > the left out of the way, so there's more room for it?
+  > The notebook is a bit cramped. Shall I hide the list of chats on the
+  > left, to give the notebook more room? I'll remember your answer for
+  > next time.
 
   After a yes, hide it with the tool
   `mcp__ccd_window__set_sidebar_collapsed`, with `collapsed` set to true.
@@ -433,9 +434,8 @@ setting` or `no tool`.
   > in the top-left corner of the Claude app, just right of the three
   > lines.
 
-  After the answer, ask if you can remember it. After a yes, write boxless
-  the global setting `hide-chat-list` (`yes` or `no`) with the skill
-  `configuring-jupylet`.
+  After the answer, yes or no, write boxless the global setting
+  `hide-chat-list` (`yes` or `no`) with the skill `configuring-jupylet`.
 
 Do not show the list of chats again yourself.
 

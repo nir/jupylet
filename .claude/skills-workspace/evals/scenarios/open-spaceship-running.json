@@ -24,6 +24,12 @@
       "match": "managing-jupylet-notebooks"
     },
     {
+      "text": "Claude opens the notebook with the notebook-opener agent (2026-11-01).",
+      "type": "action",
+      "tool": "Agent",
+      "match": "notebook-opener"
+    },
+    {
       "text": "Claude starts no new Jupyter server: one already runs with the notebook.",
       "type": "no_action",
       "tag": "notebooks/start-jupyter"
@@ -94,7 +100,7 @@
       "depends": "Sam says yes to the run"
     },
     {
-      "text": "Claude checks the sign-in in the page before it says that the page is signed in: an 'open' of the wait is not enough when another page has the notebook (W2).",
+      "text": "Claude says that the page is signed in only after the opener reports ready.",
       "type": "judge"
     },
     {

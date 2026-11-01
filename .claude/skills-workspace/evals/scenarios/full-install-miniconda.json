@@ -157,6 +157,13 @@
       "match": "in use' if socket"
     },
     {
+      "text": "Claude opens the notebook with the notebook-opener agent (2026-11-01).",
+      "type": "action",
+      "tool": "Agent",
+      "match": "notebook-opener",
+      "depends": "Sam says yes to opening the spaceship example"
+    },
+    {
       "text": "Claude starts Jupyter detached, not as a background task.",
       "type": "action",
       "tool": "Bash",

@@ -108,7 +108,10 @@ as `{code}`.
      the outputs of a new export: `python3 recordings.py add <export.zip>
      <name>`, for example `T9`. `recordings.py list` shows what is there.
      Each output has its platform, macOS or Windows (`W1`), and the system
-     simulator gets only the outputs of its own platform.
+     simulator gets only the outputs of its own platform. `add` also reads
+     the transcripts of the session's subagents, such as the
+     notebook-opener, and a newer session replaces the oldest outputs of a
+     full key (T9).
    - **Known limitation:** no command runs for real. When a command uses
      the content of a real file of the copy to make an imagined one, for
      example `cp -n "…/header.md" ~/.jupylet/claude-config.md`, the system
@@ -170,6 +173,35 @@ A run writes these files into its folder:
 - `agents/`: the prompts and the raw messages of each agent, and the
   worker's CLI session file (`worker.session.jsonl`).
 - `grading.json`: written by `grade.py`.
+
+## Subagents (2026-11-01)
+
+The skills open each notebook with an agent, the `notebook-opener`
+(`.claude/agents/notebook-opener.md`), so the worker must be able to start
+agents as in the app:
+
+- The worker has the native tools `Agent`, `SendMessage` and `TaskStop`
+  (`WORKER_TOOLS` in `run_eval.py`), besides `Skill` and the simulated tools.
+- The copy of the code gets `.claude/agents`, also its files that git does
+  not track yet. `sim_agents()` rewrites the `tools:` line of each agent file
+  to the simulated names (`Bash` becomes `mcp__computer__Bash`,
+  `mcp__Claude_Browser__…` becomes `mcp__browser__…`), and adds a short note
+  with these names. The real agent files are not changed. So an agent's
+  commands reach the system simulator too, never the real computer.
+- An agent's simulated calls come in between the worker's, and they are not
+  in the worker's own log. So `take_record()` pairs each record with the
+  worker's call by its input, not by its place, and `follow_worker()` logs
+  the rest as the agent's actions, with `by: agent`. The checks see them as
+  any other action.
+- `claude -p` keeps a background agent alive: the worker's call ends only
+  after the agent's report, and the agent's notes reach the worker inside
+  that call (run `smoke-open-new-1`). So during a worker turn,
+  `watch_worker()` reads the worker's session file every half second. Each
+  new message of the worker goes to the human simulator at once, and what
+  the person does goes to the system simulator at once, while the opener
+  waits for it. What the person says waits for the next worker message: a
+  running `claude -p` takes no new input. Before this, the person could act
+  only after the opener stopped waiting, with `still waiting`.
 
 ## How to run
 
@@ -267,7 +299,10 @@ Never start a long eval (about 20 minutes) on a machine that is not tested.
 1. **Fake run, free,** after each change of `run_eval.py` or `grade.py`:
    `python3 run_eval.py smoke.json smoke-hello <scratch folder> --fake`.
    It tests the turns, background commands, notifications, the output files
-   and the grader. It does not test MCP.
+   and the grader. It does not test MCP. The grader grades only the check of
+   the served files, and marks the checks of Claude "fake run", since the
+   scripted agents call no model and use no skills. So a FAIL in a fake run
+   is a problem of the harness.
 2. **Smoke runs.** The sessions in `smoke.json` are tiny by design: one small
    request and a few turns, so each one ends by itself in 20 to 30 seconds
    (`expected_seconds`). `loaded_skills` starts a session with skills

@@ -23,6 +23,12 @@
       "match": "managing-jupylet-notebooks"
     },
     {
+      "text": "Claude opens the notebook with the notebook-opener agent (2026-11-01).",
+      "type": "action",
+      "tool": "Agent",
+      "match": "notebook-opener"
+    },
+    {
       "text": "Claude lists the running Jupyter servers before it starts one.",
       "type": "before",
       "first": {
@@ -66,10 +72,10 @@
       "match": "(?i)(list of chats|chat list|list of (your )?conversations)"
     },
     {
-      "text": "Claude starts the wait for the sign-in in the background.",
+      "text": "The opener waits in the page until the person shows the pane and signs in.",
       "type": "action",
-      "tag": "notebooks/wait-open",
-      "match": "(?s)run_in_background\\\\?\"?: ?true"
+      "tool": "mcp__Claude_Browser__javascript_tool",
+      "match": "notebook-opener-start"
     },
     {
       "text": "Claude never puts the token in an address.",

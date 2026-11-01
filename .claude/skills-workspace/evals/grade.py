@@ -27,6 +27,11 @@ Check types, in each check of the eval:
 A real session, from import_export.py, is graded the same way, except the
 checks of the final state, the models, the skills seen and the served files.
 
+A fake run (run_eval.py --fake) tests the harness, not Claude: its
+scripted agents call no model and use no skills. So only the check of the
+served files is graded. The other checks still run, to test the grader,
+but each one is marked "fake run", not passed or failed.
+
 A check with "platform" ("macos" or "windows") is graded only on that
 platform: the platform of the system, or of the real session.
 
@@ -370,12 +375,18 @@ def main():
                      evidence='applies only if %s. Review the simulator. Evidence: %s' % (c['depends'], evidence))
         expectations.append(x)
 
+    if run.get('fake'):
+        for x in expectations:
+            if x['text'] != files_served(events)['text'] and x['passed'] is not None:
+                x.update(passed=None, fake=True, evidence='fake run, not graded: %s' % x['evidence'])
+
     graded = [x for x in expectations if x['passed'] is not None]
     n_pass = sum(1 for x in graded if x['passed'])
     summary = {'passed': n_pass, 'failed': len(graded) - n_pass, 'total': len(graded),
                'pass_rate': round(n_pass / len(graded), 3) if graded else 0.0,
                'not_graded': len(expectations) - len(graded),
-               'to_review': sum(1 for x in expectations if x.get('review'))}
+               'to_review': sum(1 for x in expectations if x.get('review')),
+               'fake': sum(1 for x in expectations if x.get('fake'))}
 
     with open(os.path.join(run_dir, 'grading.json'), 'w') as f:
         json.dump({'expectations': expectations, 'summary': summary}, f, indent=2)
@@ -383,8 +394,10 @@ def main():
     for x in expectations:
         mark = 'REVW' if x.get('review') else {True: 'PASS', False: 'FAIL', None: '----'}[x['passed']]
         print('\n%s  %s\n      %s' % (mark, x['text'], x['evidence']))
-    print('\n%d/%d passed, %d to review, %d need judgment' % (
-        n_pass, len(graded), summary['to_review'], summary['not_graded'] - summary['to_review']))
+    print('\n%d/%d passed, %d to review, %d need judgment%s' % (
+        n_pass, len(graded), summary['to_review'],
+        summary['not_graded'] - summary['to_review'] - summary['fake'],
+        ', %d not graded (fake run)' % summary['fake'] if summary['fake'] else ''))
 
 
 if __name__ == '__main__':

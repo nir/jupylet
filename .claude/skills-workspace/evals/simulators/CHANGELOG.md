@@ -263,3 +263,23 @@ the problem), and the run that shows the effect.
   old answers. They are real outputs, so they stay, marked `outdated`, and
   `recordings.examples()` leaves out each outdated recording.
 - Effect: to be shown by the next run of `open-spaceship`.
+
+## Recordings: T9, with the notebook-opener (2026-11-01)
+
+- `recordings.json`: 29 outputs of T9 (`session-export-1793568223431`), a
+  fresh install on Nir's Mac with Sonnet 5.5 and the Haiku notebook-opener:
+  the download, the setup, the opener's commands, its Terminal tab, the
+  real wait for the person (403, then the script cut off by the sign-in
+  reload, then 200), and the fold of the JupyterLab side bar.
+- Harness: `recordings.py` also reads the subagents' transcripts of an
+  export (the opener's calls are there, not in the main chat), also keeps
+  the `mcp__terminal__…` tools, and leaves out the app's task-list tools
+  (`mcp__ccd_turn__…`). A newer session now replaces the oldest outputs of
+  a full key; within one session, its first outputs are kept. The
+  JavaScript tool keeps 6 outputs, not 3, since it runs several different
+  scripts.
+- Why: before, `add` would have skipped all of the opener's calls, and the
+  first sessions (T8, W1) kept their places, so the examples could not
+  follow the skills.
+- Replaced: the 403 and the 200 of T8 in `tool:mcp__Claude_Browser__javascript_tool`.
+- Effect: to be shown by the next run of `smoke-open-new` or `open-spaceship`.

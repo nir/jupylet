@@ -13,10 +13,13 @@ Usage:
 
 - each Bash or PowerShell command with a tag `# jupylet: {group}/{name}`,
   under its tag;
-- each call of an app tool (`mcp__Claude_Browser__…`, `mcp__ccd_…`), under
-  `tool:{name}`;
+- each call of an app tool (`mcp__Claude_Browser__…`, `mcp__ccd_…`,
+  `mcp__terminal__…`), under `tool:{name}`;
 - the output of a background command, which the real app writes into a file:
   when Claude reads that file, the output goes under the tag of the command.
+
+The calls of the session's subagents count too, for example those of the
+notebook-opener: the export has them in `subagents/*.jsonl`.
 
 Each output has its platform: `macos` (Bash) or `windows` (PowerShell). The
 macOS and the Windows command of a step have the same tag, so the system
@@ -24,9 +27,12 @@ simulator gets only the outputs of its own platform.
 
 The home folder of the session becomes `{home}`, and the session's own
 folders become `{scratchpad}`. At most MAX outputs are kept for each key and
-platform, and long outputs are shortened.
+platform. A newer session replaces the oldest outputs of a full key, so the
+examples follow the skills; within one session, its first outputs are kept.
+Long outputs are shortened.
 """
 
+import glob
 import json
 import os
 import re
@@ -39,6 +45,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STORE = os.path.join(HERE, 'simulators', 'recordings.json')
 TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)\s*$')
 MAX = 3
+#
+# The JavaScript tool runs several different scripts: the sign-in check, the
+# wait for the person, the fold of the side bar. Three outputs were too few
+# for all of them (T9 replaced the 200 of T8 with its own 403).
+#
+MAX_FOR = {'tool:mcp__Claude_Browser__javascript_tool': 6}
 SHELLS = {'Bash': 'macos', 'PowerShell': 'windows'}
 TASK_FILE = re.compile(r'[/\\]tasks[/\\](\w+)\.output')
 HEAD, TAIL = 40, 10
@@ -60,15 +72,24 @@ def save(data):
 
 
 def transcript_lines(path):
-    """The lines of the session's transcript, from a zip or a jsonl file."""
+    """The lines of the session's transcript, from a zip or a jsonl file,
+    followed by the lines of its subagents' transcripts."""
     if not path.endswith('.zip'):
-        with open(path, encoding='utf-8') as f:
-            return f.read().splitlines()
+        lines = []
+        subagents = os.path.join(os.path.splitext(path)[0], 'subagents')
+        for name in [path] + sorted(glob.glob(os.path.join(subagents, '*.jsonl'))):
+            with open(name, encoding='utf-8') as f:
+                lines += f.read().splitlines()
+        return lines
 
     with zipfile.ZipFile(path) as z:
-        name = 'transcript.jsonl' if 'transcript.jsonl' in z.namelist() else next(
-            n for n in z.namelist() if n.endswith('.jsonl') and '/' not in n)
-        return z.read(name).decode('utf-8').splitlines()
+        names = z.namelist()
+        name = 'transcript.jsonl' if 'transcript.jsonl' in names else next(
+            n for n in names if n.endswith('.jsonl') and '/' not in n)
+        lines = z.read(name).decode('utf-8').splitlines()
+        for sub in sorted(n for n in names if '/subagents/' in n and n.endswith('.jsonl')):
+            lines += z.read(sub).decode('utf-8').splitlines()
+        return lines
 
 
 def text_of(content):
@@ -194,7 +215,8 @@ def collect(lines):
                     continue
                 if tag:
                     found.append((tag.group(1), cmd, out, bool(b.get('is_error')), SHELLS[name]))
-            elif name.startswith(('mcp__Claude_Browser__', 'mcp__ccd_')):
+            elif name.startswith(('mcp__Claude_Browser__', 'mcp__ccd_', 'mcp__terminal__')) and \
+                    not name.startswith('mcp__ccd_turn__'):
                 found.append(('tool:' + name, json.dumps(inp, ensure_ascii=False), out, bool(b.get('is_error')),
                               platform))
 
@@ -209,7 +231,7 @@ def add(path, source):
     scratch = find_scratch([c[1] + '\n' + c[2] for c in calls])
 
     data = load()
-    added = 0
+    added, replaced, taken = 0, 0, {}
     for key, cmd, out, err, platform in calls:
         #
         # An error can be in the output of a command that ran, for example
@@ -221,13 +243,18 @@ def add(path, source):
         item['platform'] = platform
         items = data.setdefault(key, [])
         same = [x for x in items if x.get('platform', 'macos') == platform]
-        if any(x['output'] == item['output'] for x in same) or len(same) >= MAX:
+        if any(x['output'] == item['output'] for x in same) or taken.get((key, platform), 0) >= MAX_FOR.get(key, MAX):
             continue
+        if len(same) >= MAX_FOR.get(key, MAX):
+            items.remove(same[0])
+            replaced += 1
         items.append(item)
+        taken[key, platform] = taken.get((key, platform), 0) + 1
         added += 1
 
     save(data)
-    print('%s: %d outputs added, %d keys in %s' % (source, added, len(data), STORE))
+    print('%s: %d outputs added (%d of them replace older ones), %d keys in %s' % (
+        source, added, replaced, len(data), STORE))
 
 
 def examples(key, data=None, platform='macos'):
