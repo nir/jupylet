@@ -262,12 +262,13 @@ The installation is complete only when an example runs. Ask, for example:
 > ship you steer with the arrow keys. It opens in a notebook right next to
 > our chat. May I open it?
 
-After a clear yes, do these, with the environment folder
-`{miniforge}/envs/{env}`, the folder `{code}/examples` and the notebook
-`11-spaceship.ipynb`:
+After a clear yes, do these:
 
-1. "Start a Jupyter server", "Open a web page" and "Attach to the notebook",
-   tasks of the skill `managing-jupylet-notebooks`.
+1. "Open the notebook", a task of the skill `managing-jupylet-notebooks`,
+   with the job `a notebook in a new Jupyter server,
+   {code}/examples/11-spaceship.ipynb`. The opener chooses the environment
+   `{env}` by the local setting `environment`, which you wrote above.
+   Continue once it reports `ready:`.
 2. Tell the person that this first run may be slow, for example: "It can take
    up to a minute the first time, while Jupylet gets everything ready." Then
    do "Run the notebook" in the skill `working-in-notebooks`. The web page

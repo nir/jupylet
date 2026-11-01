@@ -2,8 +2,8 @@
 
 Use this procedure in two cases:
 
-- **Follow along:** the person agreed that a helper follows their work in
-  the notebook. "Offer to follow along" below says when to ask.
+- **Follow along:** the person asked for a helper that follows their work
+  in the notebook.
 - **A task:** you asked the person to do something in the notebook, or they
   said they would.
 
@@ -13,6 +13,10 @@ calls for your attention. In the meantime, you remain free to talk with the
 person.
 
 ## Offer to follow along
+
+Do not offer the helper for now: the offer is turned off until a later
+release of Jupylet. When the person asks for a helper that follows along,
+start at step 2.
 
 Once in a conversation, when a notebook is open and you are attached to it:
 

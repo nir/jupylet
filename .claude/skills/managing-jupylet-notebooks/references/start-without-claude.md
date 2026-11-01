@@ -3,8 +3,9 @@
 This file explains how the person starts Jupylet alone, in Terminal on macOS
 or in the Miniforge Prompt on Windows. Command names in quotes are commands
 in the reference file for this computer. You need `{env name}` and `{code}`.
-**You do not know the environment yet:** do "Find the environment" in
-`SKILL.md` first. These instructions work for an environment in
+**You do not know the environment yet:** take it from the report of the
+`notebook-opener` in this chat, or else read the setting `environment` with
+the skill `configuring-jupylet`. These instructions work for an environment in
 `{miniforge}`. **The environment is in another conda installation:** tell the
 person that its own Prompt or Terminal setup is necessary, and that you can
 help with it.

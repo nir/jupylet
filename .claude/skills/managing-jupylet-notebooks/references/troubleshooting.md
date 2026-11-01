@@ -72,7 +72,7 @@ Offer to install it.
 
 **What to do:** check that a web page shows the notebook, that the pane is
 visible, and that the person signed in ("Check the sign-in" says `200`). Then
-do "Attach to the notebook" again.
+run "Attach" from the reference file again.
 
 ## The web page shows the login page
 
@@ -82,7 +82,7 @@ do "Attach to the notebook" again.
 server, and with a browser that did not sign in to this Jupyter server
 before. After a restart of a Jupyter server, a web page usually stays signed in.
 
-**What to do:** give the token to the person, as in "Open a web page".
+**What to do:** give the token to the person, as in "Open the notebook".
 
 ## The Jupyter server stopped by itself
 
@@ -93,10 +93,9 @@ more.
 JupyterLab" starts it apart from your task, so the end of your task does not
 stop it.
 
-**What to do:** tell the person, and ask for a yes to start it again. Do
-"Start a Jupyter server" with the same `{folder}` and token, so that the web page
-stays signed in. Then do "Open a web page" (the old web page shows an error) and
-"Attach to the notebook".
+**What to do:** tell the person, and ask for a yes to start it again. Then do
+"Open the notebook" with the job `a notebook in a new Jupyter server`. The
+opener opens a new web page: the old one shows an error.
 
 ## The Jupyter server does not stop correctly
 
@@ -115,8 +114,8 @@ environment.
 
 **Why:** the Jupyter server started without the environment activated.
 
-**What to do:** stop it after a yes, and do "Start a Jupyter server", which
-activates the environment.
+**What to do:** stop it after a yes, and do "Open the notebook". Its opener
+starts a new Jupyter server, which activates the environment.
 
 ## Something behaves strangely: reset the Jupyter server
 
@@ -147,4 +146,4 @@ After a yes:
    files of Jupyter, never a notebook. Check the list. Then run "Delete the
    state files". This also signs the web pages out, so the person must paste the
    token again.
-3. Do "Start a Jupyter server", "Open a web page" and "Attach to the notebook".
+3. Do "Open the notebook", with the job `a notebook in a new Jupyter server`.

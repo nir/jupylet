@@ -33,7 +33,10 @@ skill for the task:
 - `setting-up-jupylet`: install Jupylet, or a part of the installation, for
   example Miniforge or the environment of Jupylet.
 - `managing-jupylet-notebooks`: open and close notebooks: start Jupyter,
-  open the notebook next to the chat, and stop Jupyter at the end.
+  open the notebook next to the chat, and stop Jupyter at the end. It opens
+  each notebook with the agent `notebook-opener`, which runs in the
+  background. The agent is how the skill opens a notebook, so the person's
+  request to open one covers it.
 - `working-in-notebooks`: everything in an open notebook: read, change and
   run its cells with the person.
 - `running-background-monitors`: start a background monitor when another

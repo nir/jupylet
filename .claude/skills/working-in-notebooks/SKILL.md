@@ -112,9 +112,7 @@ tells you to.
 
 ## Monitor the notebook
 
-Once in a conversation, when a notebook is open and you are attached to it,
-offer the person a helper that follows along in the notebook. Also, when
-you ask the person to do something in the notebook, or they say that they
-are about to, start a `notebook-monitor` in the same turn. For both, follow
+When you ask the person to do something in the notebook, or they say that
+they are about to, start a `notebook-monitor` in the same turn. Follow
 `references/monitoring.md`. The monitor reads the notebook in the background
 and sends you notes, so that you remain free to talk with the person.

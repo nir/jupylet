@@ -15,7 +15,7 @@ the skill `working-in-notebooks`.
 
 Tested on macOS, with `jupyter_server_nbmodel` off:
 
-- `use_notebook` (through "Attach to the notebook"), `list_kernels`,
+- `use_notebook` (through "Attach"), `list_kernels`,
   `list_notebooks`, `list_files`
 
 A change shows in the web page in less than a second.
@@ -37,5 +37,5 @@ The other tools, for example `read_notebook`, `insert_cell` and
 ## After the person restarts the kernel
 
 Attach keeps the old kernel. Call `unuse_notebook` with
-`{"notebook_name": "{notebook name}"}`, then do "Attach to the notebook"
-again.
+`{"notebook_name": "{notebook name}"}`, then run "Attach" from the reference
+file again.
