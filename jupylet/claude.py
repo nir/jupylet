@@ -29,6 +29,9 @@ Helpers for Claude Code sessions that work with a person in a live Jupyter
 notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
 
     python -m jupylet.claude find-env [--all] <version>
+    python -m jupylet.claude serve <state file> <notebook path>
+    python -m jupylet.claude serve <state file> --new <name>
+    python -m jupylet.claude wait-ready <state file>
     python -m jupylet.claude detach <log file> <command> [<argument> ...]
     python -m jupylet.claude wait <log file> <token>
     python -m jupylet.claude attach <port> <token> <notebook path>
@@ -93,6 +96,23 @@ inside it. For example:
     ]
 
 What the other commands print:
+
+serve <state file> <notebook path>
+serve <state file> --new <name>
+    Runs in a terminal tab, by file path with any Python 3. Finds this
+    folder's environment, checks and prepares it, and becomes JupyterLab,
+    serving the notebook's folder, until the tab closes. With --new, it
+    first creates the empty notebook examples/<name>.ipynb (or <name>-2...).
+    It prints only Jupyter's own output, or a problem if it did not start.
+
+wait-ready <state file>
+    Also by file path with any Python 3. Once the server of serve answers:
+    `ready: <notebook>, folder <folder>, port <port>, token <token>, python
+    <the environment's python>, hide chat list <yes, no or no setting>.`,
+    then, if there is something to tell the person, `Tell the person:` and
+    one `- ` line each. Or `problem: ...` (exit code 1), for example
+    `problem: not installed: ...` or `problem: the Jupyter server ended:
+    read its terminal tab`.
 
 detach <log file> <command> [<argument> ...]
     The process id of the started command, for example `23413`, at once.
@@ -215,6 +235,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import signal
 import socket
@@ -410,23 +431,28 @@ def wait(log, token, timeout=60):
 
     while time.time() - t0 < timeout:
         for port in reversed(_ports_in(log)):
-            try:
-                _api(port, token, '/api/status')
-
-                req = urllib.request.Request(
-                    'http://localhost:%s/mcp/healthz' % port,
-                    headers={'Authorization': 'Bearer ' + token},
-                )
-
-                if b'healthy' in urllib.request.urlopen(req, timeout=5).read():
-                    return port
-
-            except Exception:
-                pass
+            if _ready(port, token):
+                return port
 
         time.sleep(2)
 
     return None
+
+
+def _ready(port, token):
+    """True if the Jupyter on port accepts token and its MCP server is healthy."""
+    try:
+        _api(port, token, '/api/status')
+
+        req = urllib.request.Request(
+            'http://localhost:%s/mcp/healthz' % port,
+            headers={'Authorization': 'Bearer ' + token},
+        )
+
+        return b'healthy' in urllib.request.urlopen(req, timeout=5).read()
+
+    except Exception:
+        return False
 
 
 def _ports_in(log):
@@ -438,6 +464,254 @@ def _ports_in(log):
 
     ports = re.findall(r'https?://(?:localhost|127\.0\.0\.1|\[::1\]):(\d+)/', text)
     return list(dict.fromkeys(int(p) for p in ports))
+
+
+# The MCP tools of the web page that Claude may use, besides running all cells.
+PAGE_TOOLS = (
+    'notebook_run-all-cells,notebook_get-selected-cell,notebook_run-cell,'
+    'notebook_move-cursor-down,notebook_move-cursor-up'
+)
+
+# Run by the environment's python before Jupyter starts: the parts that must
+# be there, what prepare() would change, Jupyter's runtime folder, and the
+# folder that jupylet is imported from.
+_SERVE_PROBE = """
+import json, jupyterlab, jupyter_mcp_server, jupylet
+from jupyter_core.paths import jupyter_runtime_dir
+from jupylet.claude import prepare_needs
+print(json.dumps([prepare_needs(), jupyter_runtime_dir(), jupylet.__file__]))
+"""
+
+CONFIG_HEADER = """# Claude configuration for Jupylet
+
+Settings for Claude when it works with Jupylet. One setting on each line,
+as `- key = value`. When several lines set the same key, the last of these
+lines counts.
+
+"""
+
+
+def serve(state, notebook, new=False):
+    """Start Jupyter for one notebook, in the terminal tab that runs this.
+
+    In one process, does what the notebook opener did in many steps: finds the
+    environment of this jupylet folder by its local setting `environment`
+    (or searches for it, and saves the setting), checks that JupyterLab, the
+    [claude] extra and this folder's jupylet are there, prepares the
+    environment if it needs it, makes a token, and then becomes JupyterLab,
+    serving the notebook's folder. The state file tells wait_ready() how it
+    went.
+
+    Args:
+        state (str): The state file, a JSON file, usually in the scratchpad.
+        notebook (str): The notebook's full path, or with new, a short name
+            for a new notebook in the folder examples.
+        new (bool): Create a new, empty notebook.
+
+    Returns:
+        str: A problem, if Jupyter did not start. On success it does not
+            return: this process becomes JupyterLab.
+
+    Notes:
+        It replaces itself with bash and then JupyterLab (exec), so the server
+        keeps the process id that the state file records, and it ends with its
+        terminal tab: the tab, the chat, or the Claude app closing ends it.
+        It never detaches the server.
+    """
+    folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    info = {'pid': os.getpid(), 'started': time.time(), 'tell': []}
+
+    def problem(message):
+        info['problem'] = message
+        _write_json(state, info)
+        return message
+
+    _write_json(state, info)
+
+    if sys.platform == 'win32':
+        return problem('not on Windows yet: serve runs on macOS only')
+
+    env = _serve_env(folder, info)
+    if not env:
+        return problem('not installed: no conda environment runs the jupylet in %s' % folder)
+
+    python = _python_of(env)
+
+    out = subprocess.run([python, '-c', _SERVE_PROBE], capture_output=True, text=True, cwd=env)
+    if out.returncode:
+        return problem('missing part in %s: %s' % (env, (out.stderr.strip().splitlines() or ['?'])[-1]))
+
+    needs, runtime, imported = json.loads(out.stdout.strip().splitlines()[-1])
+
+    if not os.path.realpath(imported).startswith(os.path.join(os.path.realpath(folder), '')):
+        return problem('wrong jupylet: %s imports it from %s' % (env, imported))
+
+    if needs:
+        out = subprocess.run([python, '-m', 'jupylet.claude', 'prepare'], capture_output=True, text=True, cwd=env)
+        if out.returncode:
+            return problem('not prepared: ' + out.stdout.strip())
+
+        info['tell'].append("I fixed a Jupyter setting first, so the notebook doesn't freeze.")
+
+    if new:
+        notebook = _new_notebook(os.path.join(folder, 'examples'), notebook)
+
+    info.update(
+        hide=_setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'hide-chat-list')
+            or _setting(os.path.expanduser(os.path.join('~', '.jupylet', 'claude-config.md')), 'hide-chat-list')
+            or 'no setting',
+        token=secrets.token_hex(4),
+        environment=env,
+        runtime=runtime,
+        folder=os.path.dirname(notebook),
+        notebook=os.path.basename(notebook),
+    )
+    _write_json(state, info)
+
+    conda = os.path.dirname(os.path.dirname(env)) if os.path.basename(os.path.dirname(env)) == 'envs' else env
+    script = (
+        'source "$1/bin/activate" "$2" && cd "$3" && exec jupyter lab --no-browser '
+        '--IdentityProvider.token="$4" '
+        '--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=' + PAGE_TOOLS
+    )
+    sys.stdout.flush()
+    os.execv('/bin/bash', ['/bin/bash', '-c', script, 'serve', conda, env, info['folder'], info['token']])
+
+
+def _serve_env(folder, info):
+    """The environment that runs the jupylet in folder, or None.
+
+    The local setting `environment` names it. Without a setting, or if the
+    environment it names is gone, it is the best one find_env() finds, which
+    becomes the setting.
+    """
+    root = os.path.expanduser(os.path.join('~', 'miniforge3'))
+    name = _setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'environment')
+
+    for env in _candidates(root, folder) if name else []:
+        base = os.path.basename(os.path.dirname(env)) != 'envs'
+        if (name == 'base' and base or os.path.basename(env) == name) and _python_of(env):
+            return env
+
+    with open(os.path.join(folder, 'jupylet', '__init__.py')) as f:
+        version = re.search(r"^VERSION = '([^']+)'", f.read(), re.M).group(1)
+
+    found = [env for env, _, kind, source in find_env(version, root, folder) if kind == 'conda' and source == 'this folder']
+    if not found:
+        return None
+
+    env = found[0]
+    name = 'base' if os.path.basename(os.path.dirname(env)) != 'envs' else os.path.basename(env)
+    _add_setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'environment', name)
+
+    return env
+
+
+def _setting(path, key):
+    """The value of key in a settings file, from its last line that sets it, or None."""
+    try:
+        with open(path) as f:
+            values = re.findall(r'^- %s = (.*?)\s*$' % re.escape(key), f.read(), re.M)
+    except OSError:
+        return None
+
+    return values[-1] if values else None
+
+
+def _add_setting(path, key, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    text = '' if os.path.exists(path) else CONFIG_HEADER
+
+    with open(path, 'a') as f:
+        f.write('%s- %s = %s\n' % (text, key, value))
+
+
+def _new_notebook(folder, name):
+    """Create an empty notebook named name in folder, with -2, -3... if taken; its path."""
+    path, n = os.path.join(folder, name + '.ipynb'), 1
+
+    while os.path.exists(path):
+        n += 1
+        path = os.path.join(folder, '%s-%d.ipynb' % (name, n))
+
+    _write_json(path, {
+        'cells': [],
+        'metadata': {'kernelspec': {'name': 'python3', 'display_name': 'Python 3 (ipykernel)', 'language': 'python'}},
+        'nbformat': 4,
+        'nbformat_minor': 5,
+    })
+
+    return path
+
+
+def _write_json(path, data):
+    with open(path, 'w') as f:
+        json.dump(data, f, indent=1)
+
+
+def wait_ready(state, timeout=60):
+    """Wait until the Jupyter that serve() started answers, and describe it.
+
+    Args:
+        state (str): The state file given to serve.
+        timeout (float): Seconds to wait at most.
+
+    Returns:
+        tuple: (ok, text). text is `ready: ...` with the notebook, its folder,
+            the port, the token, the environment's python and the setting
+            hide-chat-list, and the sentences to tell the person,
+            or `problem: ...`.
+
+    Notes:
+        Jupyter writes jpserver-<process id>.json into its runtime folder once
+        it listens, with its port. serve() replaced itself with Jupyter, so
+        that process id is the one in the state file.
+    """
+    t0 = time.time()
+    info = {}
+
+    while time.time() - t0 < timeout:
+        try:
+            with open(state) as f:
+                info = json.load(f)
+        except (OSError, ValueError):
+            info = {}
+
+        if not info and time.time() - t0 > 10:
+            return False, 'problem: no state file %s: did serve start?' % state
+
+        if info.get('problem'):
+            return False, 'problem: ' + info['problem']
+
+        if info.get('token') and not _alive(info['pid']):
+            return False, 'problem: the Jupyter server ended: read its terminal tab'
+
+        record = os.path.join(info.get('runtime') or '', 'jpserver-%s.json' % info.get('pid'))
+
+        if info.get('token') and os.path.exists(record):
+            with open(record) as f:
+                port = json.load(f)['port']
+
+            if _ready(port, info['token']):
+                tell = ''.join('\n- ' + t for t in info['tell'])
+                return True, 'ready: %s, folder %s, port %s, token %s, python %s, hide chat list %s.%s' % (
+                    info['notebook'], info['folder'], port, info['token'], _python_of(info['environment']),
+                    info.get('hide', 'no setting'),
+                    '\nTell the person:' + tell if tell else '')
+
+        time.sleep(0.5)
+
+    return False, 'problem: not ready after %d seconds' % timeout
+
+
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
 
 
 def detach(log, command):
@@ -2137,6 +2411,19 @@ def main(argv):
     if cmd == 'find-env' and len(args) in (1, 2) and args[:-1] in ([], ['--all']):
         for env, python, kind, source in find_env(args[-1], any_version=args[0] == '--all'):
             print('%s\t%s\t%s' % (env, kind, source))
+
+    elif cmd == 'serve' and len(args) == 2:
+        print(serve(*args))
+        return 1
+
+    elif cmd == 'serve' and len(args) == 3 and args[1] == '--new':
+        print(serve(args[0], args[2], new=True))
+        return 1
+
+    elif cmd == 'wait-ready' and len(args) == 1:
+        ok, text = wait_ready(args[0])
+        print(text)
+        return 0 if ok else 1
 
     elif cmd == 'detach' and len(args) >= 2:
         print(detach(args[0], args[1:]))

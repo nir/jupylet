@@ -24,6 +24,8 @@ which order.
 Open a notebook:
 
 - "Choose a notebook": decide which notebook to open, and from which folder.
+- "Open the notebook directly": open it yourself, in a few steps, on macOS
+  with the Terminal panel.
 - "Open the notebook": have the opener open it, and act on its notes and
   its report.
 - "Use a running Jupyter server": when the notebook is already open in a
@@ -135,8 +137,12 @@ To open the notebook for the person, first do "Choose a notebook". Then:
   in the Claude app. The notebook keeps its variables.
 - If you know that an incompatible Jupyter server has it open, do "Move the
   notebook to a new Jupyter server".
-- Otherwise, do "Open the notebook". The opener checks the Jupyter servers
-  that run, and reports when one of them already has the notebook open.
+- Otherwise, on macOS, when the tool list has
+  `mcp__terminal__run_in_terminal`, loaded or only by its name, do "Open
+  the notebook directly".
+- In other cases, do "Open the notebook". The opener checks the Jupyter
+  servers that run, and reports when one of them already has the notebook
+  open.
 
 When the notebook is open in the Claude web browser, and you are attached to
 it, load the skill `working-in-notebooks`, also when the person asked only
@@ -212,6 +218,93 @@ If the chosen notebook is not under `{code}`, and its folder is not in
 list, then `;`, then the new folder. Write the global setting with the skill
 `configuring-jupylet`. Next time, you will find notebooks in that folder
 without asking.
+
+## Open the notebook directly
+
+This task opens the notebook yourself, without the opener, on macOS when the
+tool list has `mcp__terminal__run_in_terminal`, loaded or only by its name.
+One command checks the environment and starts the Jupyter server, and the
+Jupyter server tells when the person has signed in, so it takes only a few
+steps. Its commands are in `references/open-directly-macos.md`. Each step
+is one reply: do the calls of a step together.
+
+1. Get ready. In one reply:
+   - Read `references/open-directly-macos.md`.
+   - Load the tools that the task needs, if the tool list shows them only by
+     their names: call `ToolSearch` with the query
+     `select:mcp__terminal__run_in_terminal,mcp__terminal__list_terminal_tabs,mcp__terminal__stop_terminal_tab,mcp__ccd_window__set_sidebar_collapsed`.
+2. Look for a Jupyter server of this chat. Look back in this conversation:
+   if you did not do "Start the Jupyter server" before, this is the first
+   one, so skip this step and continue at step 3. Only after an earlier
+   start, or after a summary of the conversation that does not say, call
+   `mcp__terminal__list_terminal_tabs`.
+   - **If a tab with the title `Jupyter` runs a command,** run "Wait for
+     the Jupyter server". It prints `ready:` at once. If the notebook is in
+     its `folder`, continue at step 4. If not, a Jupyter server cannot
+     change its folder: ask the person to save their notebook, do "Stop the
+     Jupyter server" after a yes, and continue at step 3.
+   - **Otherwise,** continue at step 3.
+3. Start the Jupyter server, and wait until it is ready. In one reply, tell
+   the person in one line what happens, for example "Starting Jupyter now,
+   one second.", do "Start the Jupyter server", and run "Wait for the
+   Jupyter server". Keep the `tab_id` of the tab: it is `{tab_id}`.
+   - **`ready:`** keep `{notebook}`, `{folder}`, `{port}`, `{token}`,
+     `{python}`, and the setting `hide-chat-list`. Pass on to the person
+     each line under `Tell the person:`.
+   - **`problem: not installed: ...`:** close the tab with
+     `mcp__terminal__stop_terminal_tab`, with `close` set to `true`, and do
+     "Install Jupylet first".
+   - **Another `problem:`:** close the tab in the same way, and follow "The
+     Jupyter server does not become ready" in
+     `references/troubleshooting.md`, with the problem.
+4. Open the web page, at `http://localhost:{port}/doc/tree/{notebook}`. On
+   the first start of this conversation, as in step 2, open it with
+   `preview_start`. After an earlier start, call
+   `mcp__Claude_Browser__tabs_context` first: if a tab already shows
+   `localhost:{port}`, open the address in that tab with `navigate`, and
+   otherwise with `preview_start`.
+5. Check the web page. In one reply, call `tabs_context` (its last line says
+   whether the pane is displayed or hidden), and run "Check the sign-in" in
+   the web page, with `javascript_tool`.
+   - **`200`:** the web page is already signed in, for example by a
+     sign-in to an earlier Jupyter server on the same port. Continue at step
+     7. If the pane is hidden, ask the person in the same reply to click the
+     globe icon in the upper right corner of the Claude app, to see the
+     notebook.
+   - **`403`:** continue at step 6.
+6. Ask the person to sign in, and wait. In one reply, run "Wait for the web
+   page to open" with 300 seconds, in the background (`run_in_background`
+   set to `true`), and ask the person for the steps, with one numbered step
+   for each:
+   1. **If the pane is hidden:** click the globe icon in the upper right
+      corner of the Claude app.
+   2. Paste the token into the box on the web page, and press Enter.
+
+   For example:
+
+   > Your notebook is almost ready, next to our chat.
+   > 1. Click the globe icon in the upper right corner of the Claude app,
+   >    to show it.
+   > 2. On the web page, paste this token into the box, and press Enter:
+   >    `d2f22990`
+
+   Then end your turn. If the person says that the token did not work, give
+   it again. When the wait ends:
+   - **`open`:** the person signed in. Continue at step 7.
+   - **`timeout`:** the person did not sign in within 5 minutes. Ask what
+     is in the way. When it is solved, run the wait again.
+7. Attach. In one reply, run "Collapse the JupyterLab side bar" in the web
+   page, and run "Attach".
+   - **If its output contains `Successfully activate notebook`,** continue
+     at step 8.
+   - **If it says that there is no kernel,** follow "The notebook has no
+     kernel" in `references/troubleshooting.md`.
+8. Finish. In one reply, act on the setting `hide-chat-list` from step 3,
+   and load `working-in-notebooks`, as "Understand the request" says:
+   - **`yes`:** hide the list of chats with
+     `mcp__ccd_window__set_sidebar_collapsed`, with `collapsed` set to true.
+   - **`no`:** leave the list as it is.
+   - **`no setting`:** do "Hide the list of chats".
 
 ## Open the notebook
 
