@@ -1,14 +1,16 @@
 ---
 name: managing-jupylet-notebooks
-description: Opens and closes Jupyter notebooks of a Jupylet folder for a person. Chooses the notebook, then has the notebook-opener agent start a Jupyter server, open the notebook in the browser pane of the Claude app, next to the chat, and connect to it with the Jupyter MCP tools. Then hands the work in the notebook to working-in-notebooks. Also stops the Jupyter server, and solves known problems. Use this skill when the person asks to open, run or try a notebook or an example. Also use it when the person asks for help with an open notebook or cannot find a notebook web page that they closed. Also use it when the person asks to stop Jupyter. Use it together with guiding-jupylet-users.
+description: Opens and closes Jupyter notebooks of a Jupylet folder for a person. Chooses the notebook, then starts a Jupyter server, by itself on macOS or with the notebook-opener agent elsewhere, opens the notebook in the browser pane of the Claude app, next to the chat, and connects to it with the Jupyter MCP tools. Then hands the work in the notebook to working-in-notebooks. Also stops the Jupyter server, and solves known problems. Use this skill when the person asks to open, run or try a notebook or an example. Also use it when the person asks for help with an open notebook or cannot find a notebook web page that they closed. Also use it when the person asks to stop Jupyter. Use it together with guiding-jupylet-users.
 ---
 
 # Managing Jupylet notebooks
 
 With this skill you open a Jupyter notebook for the person, and close it at
 the end. The notebook opens in the Claude web browser, where the person
-sees it, and you attach to it. A small background agent, the
-`notebook-opener`, does the steps in between: it finds the environment,
+sees it, and you attach to it. On macOS, you start the Jupyter server
+yourself, with one command ("Open the notebook directly"). Elsewhere, a
+small background agent, the `notebook-opener`, does the steps in between: it
+finds the environment,
 starts the Jupyter server, opens the web page and attaches. You decide what
 to open, talk with the person, and act on what the opener reports. The work
 in the notebook itself, reading, changing and running cells, is in the
@@ -56,11 +58,13 @@ Values in `{braces}` are blanks that you fill in.
 - `{conda_python}`: the Python of a conda installation. "Find the Jupyter
   servers that run" finds it.
 - `{python}`: the Python of the environment of the Jupyter server:
-  `bin/python` in it on macOS, `python.exe` in it on Windows.
+  `bin/python` in it on macOS, `python.exe` in it on Windows. "Wait for the
+  Jupyter server" gives it too.
 - `{port}`, `{token}`: the port and the token of the Jupyter server that you
-  work with. The report of the opener gives them.
+  work with. The report of the opener, or "Wait for the Jupyter server",
+  gives them.
 - `{tab_id}`: the Terminal tab that runs the Jupyter server, from the report
-  of the opener.
+  of the opener, or from step 3 of "Open the notebook directly".
 - `{folder}`: the folder that the Jupyter server serves.
 - `{notebook}`: the path of the notebook, from `{folder}`, for example
   `11-spaceship.ipynb`.
@@ -254,9 +258,14 @@ is one reply: do the calls of a step together.
    - **`problem: not installed: ...`:** close the tab with
      `mcp__terminal__stop_terminal_tab`, with `close` set to `true`, and do
      "Install Jupylet first".
-   - **Another `problem:`:** close the tab in the same way, and follow "The
-     Jupyter server does not become ready" in
-     `references/troubleshooting.md`, with the problem.
+   - **`problem: already open, ...`:** a Jupyter server already has the
+     notebook open, for example from another chat. Close the tab in the
+     same way. If it says `compatible yes`, do "Use a running Jupyter
+     server". If not, do "Move the notebook to a new Jupyter server". It
+     gives the port and the token of that server.
+   - **Another `problem:`:** close the tab in the same way, and do "Open the
+     notebook". The opener finds the environment in other ways, for example
+     without Miniforge, and reports the cause.
 4. Open the web page, at `http://localhost:{port}/doc/tree/{notebook}`. On
    the first start of this conversation, as in step 2, open it with
    `preview_start`. After an earlier start, call
@@ -289,7 +298,8 @@ is one reply: do the calls of a step together.
    >    `d2f22990`
 
    Then end your turn. If the person says that the token did not work, give
-   it again. When the wait ends:
+   it again. When the wait ends, its notification gives the exit code: 0
+   means `open`, 1 means `timeout`, so you do not need to read its output.
    - **`open`:** the person signed in. Continue at step 7.
    - **`timeout`:** the person did not sign in within 5 minutes. Ask what
      is in the way. When it is solved, run the wait again.
@@ -543,7 +553,8 @@ name the one that you want to stop, by its notebook, and wait for a clear
 yes. For example: "Shall I close the Jupyter server with your spaceship
 notebook?" A short word such as "shutdown" does not choose one.
 
-Take `{port}`, `{token}` and `{tab_id}` from the report of the opener. For a
+Take `{port}`, `{token}` and `{tab_id}` from the report of the opener, or
+from "Open the notebook directly". For a
 Jupyter server that the opener did not start, take them from "Find the
 Jupyter servers that run".
 

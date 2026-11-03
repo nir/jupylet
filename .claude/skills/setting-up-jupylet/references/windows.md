@@ -85,12 +85,13 @@ of them.
 
 Run these two commands, each in its own call:
 
-1. `curl.exe -fL -o "{scratchpad}\Miniforge3.exe" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe  # jupylet: setup/download-miniforge`
+1. `curl.exe -fL -o "$env:TEMP\Miniforge3.exe" https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe  # jupylet: setup/download-miniforge`
 
-   It downloads the latest Miniforge installer into the scratchpad, a
-   temporary folder of this session.
+   It downloads the latest Miniforge installer into the temporary folder of
+   Windows, `$env:TEMP`. The path of the scratchpad can be longer than the
+   260 characters that Windows allows for a file path.
 2. Only if the download succeeded:
-   `Start-Process -Wait -FilePath "{scratchpad}\Miniforge3.exe" -ArgumentList '/S', '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', "/D=$env:USERPROFILE\miniforge3"  # jupylet: setup/run-miniforge-installer`
+   `Start-Process -Wait -FilePath "$env:TEMP\Miniforge3.exe" -ArgumentList '/S', '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', "/D=$env:USERPROFILE\miniforge3"  # jupylet: setup/run-miniforge-installer`
 
    It runs the installer without windows or questions, into `miniforge3` in
    the home folder.

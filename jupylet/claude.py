@@ -146,7 +146,8 @@ call <port> <token> <tool> ['<json arguments>']
     or `-` to read them from stdin.
 
 wait-open <port> <token> <notebook path> <seconds>
-    `open` when a new web page opens the notebook, signed in, or `timeout`.
+    `open` when a new web page opens the notebook, signed in, or `timeout`
+    (exit code 1).
     A web page that had the notebook open before the wait started does not
     count.
 
@@ -556,6 +557,11 @@ def serve(state, notebook, new=False):
     if new:
         notebook = _new_notebook(os.path.join(folder, 'examples'), notebook)
 
+    else:
+        open_in = _open_in(notebook, version=_version(folder))
+        if open_in:
+            return problem(open_in)
+
     info.update(
         hide=_setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'hide-chat-list')
             or _setting(os.path.expanduser(os.path.join('~', '.jupylet', 'claude-config.md')), 'hide-chat-list')
@@ -593,10 +599,7 @@ def _serve_env(folder, info):
         if (name == 'base' and base or os.path.basename(env) == name) and _python_of(env):
             return env
 
-    with open(os.path.join(folder, 'jupylet', '__init__.py')) as f:
-        version = re.search(r"^VERSION = '([^']+)'", f.read(), re.M).group(1)
-
-    found = [env for env, _, kind, source in find_env(version, root, folder) if kind == 'conda' and source == 'this folder']
+    found = [env for env, _, kind, source in find_env(_version(folder), root, folder) if kind == 'conda' and source == 'this folder']
     if not found:
         return None
 
@@ -605,6 +608,29 @@ def _serve_env(folder, info):
     _add_setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'environment', name)
 
     return env
+
+
+def _version(folder):
+    """The jupylet version of the code in folder."""
+    with open(os.path.join(folder, 'jupylet', '__init__.py')) as f:
+        return re.search(r"^VERSION = '([^']+)'", f.read(), re.M).group(1)
+
+
+def _open_in(notebook, version):
+    """Describe the Jupyter server that has notebook open, or return None.
+
+    A notebook open in two servers can lose changes, since both save it.
+    """
+    notebook = os.path.realpath(notebook)
+
+    for port, token, root, notebooks, env, found, mcp, nbmodel_off, connections in running():
+        for path, n in zip(notebooks, connections):
+            if os.path.realpath(os.path.join(root, path)) == notebook:
+                compatible = found == version and mcp and nbmodel_off
+                return 'already open, port %s, token %s, compatible %s, connections %s' % (
+                    port, token, 'yes' if compatible else 'no', n)
+
+    return None
 
 
 def _setting(path, key):
@@ -2446,7 +2472,9 @@ def main(argv):
         print(call(*args[:3], _json_arg(args[3]) if len(args) == 4 else None))
 
     elif cmd == 'wait-open' and len(args) == 4:
-        print('open' if wait_open(*args[:3], float(args[3])) else 'timeout')
+        opened = wait_open(*args[:3], float(args[3]))
+        print('open' if opened else 'timeout')
+        return 0 if opened else 1
 
     elif cmd == 'context' and len(args) == 1:
         print('context: %dk tokens.' % round(context_size(_session_log(args[0])) / 1000))

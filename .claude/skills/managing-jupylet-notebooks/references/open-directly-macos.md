@@ -29,7 +29,8 @@ it:
    Jupylet of `{code}`;
 3. prepares the Jupyter settings of the environment, if they need it;
 4. with `--new`, creates the empty notebook in `{code}/examples` (with
-   `-2`, `-3`... if the name is taken);
+   `-2`, `-3`... if the name is taken); without it, checks that no Jupyter
+   server that runs has the notebook open;
 5. reads the setting `hide-chat-list`, makes a token, and writes the state
    file `jupyter.json`;
 6. becomes JupyterLab, serving the folder of the notebook.
@@ -66,8 +67,8 @@ Prints `200` if the web page signed in, or `403` if it did not.
 
 `cd "{code}" && "{python}" -m jupylet.claude wait-open {port} {token} {notebook} {seconds}  # jupylet: notebooks/wait-open`
 
-Run it in the background. Prints `open` when the notebook opens in a web page,
-or `timeout`.
+Run it in the background. Prints `open` (exit code 0) when the notebook opens
+in a web page, or `timeout` (exit code 1).
 
 ## Collapse the JupyterLab side bar
 

@@ -100,12 +100,15 @@ macOS:
 
 Windows 11:
 
-1. `curl.exe -fL -o "{scratchpad}\jupylet.tar.gz" "{source}"  # jupylet: download/get-archive`
+1. `curl.exe -fL -o "$env:TEMP\jupylet.tar.gz" "{source}"  # jupylet: download/get-archive`
 2. `New-Item -ItemType Directory "{code}"  # jupylet: download/make-folder`
-3. `tar.exe -xzf "{scratchpad}\jupylet.tar.gz" --strip-components=1 -C "{code}"  # jupylet: download/unpack`
+3. `tar.exe -xzf "$env:TEMP\jupylet.tar.gz" --strip-components=1 -C "{code}"  # jupylet: download/unpack`
 
-The commands download the archive into the scratchpad, a temporary folder of
-this session, then create `{code}`, and then unpack the code into it. The
+The commands download the archive into a temporary folder, then create
+`{code}`, and then unpack the code into it. On macOS, the temporary folder is
+the scratchpad of this session. On Windows, it is the temporary folder of
+Windows, `$env:TEMP`: the path of the scratchpad can be longer than the 260
+characters that Windows allows for a file path. The
 archive holds one top folder. `--strip-components=1` skips that folder, so
 the code goes directly into `{code}`. On Windows, use `curl.exe`, not `curl`.
 In PowerShell, `curl` is a different command.
