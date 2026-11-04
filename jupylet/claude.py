@@ -32,6 +32,9 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude serve <state file> <notebook path>
     python -m jupylet.claude serve <state file> --new <name>
     python -m jupylet.claude wait-ready <state file>
+    python -m jupylet.claude config
+    python -m jupylet.claude config set local|global <key> <value>
+    python -m jupylet.claude config delete local|global <key>
     python -m jupylet.claude detach <log file> <command> [<argument> ...]
     python -m jupylet.claude wait <log file> <token>
     python -m jupylet.claude attach <port> <token> <notebook path>
@@ -113,6 +116,21 @@ wait-ready <state file>
     one `- ` line each. Or `problem: ...` (exit code 1), for example
     `problem: not installed: ...` or `problem: the Jupyter server ended:
     read its terminal tab`.
+
+config
+    Also by file path with any Python 3. Every setting, one on each line,
+    for example `- hide-chat-list = yes`; or `no settings`. The settings
+    are in .jupylet/claude-config.md in this jupylet folder (local) and in
+    the home folder (global). A local setting overrides the global one with
+    the same key.
+
+config set local|global <key> <value>
+    `set: - <key> = <value> (local)`, or `no change: ...` if the file
+    already has that value. Makes the file, with its header, if it does not
+    exist yet.
+
+config delete local|global <key>
+    `deleted: <key> (local)`, or `no setting: ...`.
 
 detach <log file> <command> [<argument> ...]
     The process id of the started command, for example `23413`, at once.
@@ -486,8 +504,7 @@ print(json.dumps([prepare_needs(), jupyter_runtime_dir(), jupylet.__file__]))
 CONFIG_HEADER = """# Claude configuration for Jupylet
 
 Settings for Claude when it works with Jupylet. One setting on each line,
-as `- key = value`. When several lines set the same key, the last of these
-lines counts.
+as `- key = value`.
 
 """
 
@@ -563,8 +580,7 @@ def serve(state, notebook, new=False):
             return problem(open_in)
 
     info.update(
-        hide=_setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'hide-chat-list')
-            or _setting(os.path.expanduser(os.path.join('~', '.jupylet', 'claude-config.md')), 'hide-chat-list')
+        hide=_setting(_config_path('local'), 'hide-chat-list') or _setting(_config_path('global'), 'hide-chat-list')
             or 'no setting',
         token=secrets.token_hex(4),
         environment=env,
@@ -592,7 +608,7 @@ def _serve_env(folder, info):
     becomes the setting.
     """
     root = os.path.expanduser(os.path.join('~', 'miniforge3'))
-    name = _setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'environment')
+    name = _setting(_config_path('local'), 'environment')
 
     for env in _candidates(root, folder) if name else []:
         base = os.path.basename(os.path.dirname(env)) != 'envs'
@@ -605,7 +621,7 @@ def _serve_env(folder, info):
 
     env = found[0]
     name = 'base' if os.path.basename(os.path.dirname(env)) != 'envs' else os.path.basename(env)
-    _add_setting(os.path.join(folder, '.jupylet', 'claude-config.md'), 'environment', name)
+    _set_setting(_config_path('local'), 'environment', name)
 
     return env
 
@@ -636,7 +652,7 @@ def _open_in(notebook, version):
 def _setting(path, key):
     """The value of key in a settings file, from its last line that sets it, or None."""
     try:
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             values = re.findall(r'^- %s = (.*?)\s*$' % re.escape(key), f.read(), re.M)
     except OSError:
         return None
@@ -644,12 +660,74 @@ def _setting(path, key):
     return values[-1] if values else None
 
 
-def _add_setting(path, key, value):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    text = '' if os.path.exists(path) else CONFIG_HEADER
+def _config_path(where):
+    """The settings file of this jupylet folder (local) or of the home folder (global)."""
+    if where == 'local':
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.jupylet', 'claude-config.md')
 
-    with open(path, 'a') as f:
-        f.write('%s- %s = %s\n' % (text, key, value))
+    return os.path.join(os.path.expanduser('~'), '.jupylet', 'claude-config.md')
+
+
+def config():
+    """Every setting of the two settings files, local over global, one on each line."""
+    found = {}
+
+    for where in ('global', 'local'):
+        try:
+            with open(_config_path(where), encoding='utf-8') as f:
+                found.update(re.findall(r'^- (\S+) = (.*?)\s*$', f.read(), re.M))
+        except OSError:
+            pass
+
+    if not found:
+        return 'no settings'
+
+    return '\n'.join('- %s = %s' % item for item in found.items())
+
+
+def config_set(where, key, value):
+    """Set key to value in the local or global settings file."""
+    if _setting(_config_path(where), key) == value:
+        return 'no change: - %s = %s (%s)' % (key, value, where)
+
+    _set_setting(_config_path(where), key, value)
+    return 'set: - %s = %s (%s)' % (key, value, where)
+
+
+def config_delete(where, key):
+    """Delete every line that sets key from the local or global settings file."""
+    if _setting(_config_path(where), key) is None:
+        return 'no setting: %s (%s)' % (key, where)
+
+    _set_setting(_config_path(where), key, None)
+    return 'deleted: %s (%s)' % (key, where)
+
+
+def _set_setting(path, key, value):
+    """Keep one line that sets key to value in a settings file, in place of the last; none if value is None."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    try:
+        with open(path, encoding='utf-8') as f:
+            lines = f.read().splitlines(True)
+    except FileNotFoundError:
+        lines = CONFIG_HEADER.splitlines(True)
+
+    pattern = re.compile(r'^- %s = ' % re.escape(key))
+    found = [i for i, line in enumerate(lines) if pattern.match(line)]
+
+    if value is not None and found:
+        lines[found.pop()] = '- %s = %s\n' % (key, value)
+
+    elif value is not None:
+        if lines and not lines[-1].endswith('\n'):
+            lines[-1] += '\n'
+        lines.append('- %s = %s\n' % (key, value))
+
+    lines = [line for i, line in enumerate(lines) if i not in found]
+
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(''.join(lines))
 
 
 def _new_notebook(folder, name):
@@ -2450,6 +2528,15 @@ def main(argv):
         ok, text = wait_ready(args[0])
         print(text)
         return 0 if ok else 1
+
+    elif cmd == 'config' and not args:
+        print(config())
+
+    elif cmd == 'config' and len(args) == 4 and args[0] == 'set' and args[1] in ('local', 'global'):
+        print(config_set(*args[1:]))
+
+    elif cmd == 'config' and len(args) == 3 and args[0] == 'delete' and args[1] in ('local', 'global'):
+        print(config_delete(*args[1:]))
 
     elif cmd == 'detach' and len(args) >= 2:
         print(detach(args[0], args[1:]))

@@ -225,7 +225,7 @@ Run these from the reference file, in this order:
    problem. Ask the person before each attempt. If you cannot solve it,
    stop, as in "Rules for this skill".
 
-Then write boxless the local setting `environment` = `{env}` with the skill
+Then write the local setting `environment` = `{env}` with the skill
 `configuring-jupylet`. The skill `managing-jupylet-notebooks` reads it to find
 the environment of this folder.
 

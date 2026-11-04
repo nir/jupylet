@@ -537,8 +537,8 @@ setting` or `no tool`.
   > in the top-left corner of the Claude app, just right of the three
   > lines.
 
-  After the answer, yes or no, write boxless the global setting
-  `hide-chat-list` (`yes` or `no`) with the skill `configuring-jupylet`.
+  After the answer, yes or no, write the global setting `hide-chat-list`
+  (`yes` or `no`) with the skill `configuring-jupylet`.
 
 Do not show the list of chats again yourself.
 

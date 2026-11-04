@@ -65,6 +65,11 @@ files are in `{code}/.claude/skills/managing-jupylet-notebooks/references`:
 `opener-macos.md` and `opener-windows.md`. Read the file for the computer
 before your first command.
 
+## Settings
+
+The settings of Claude for Jupylet are read and written as
+`{code}/.claude/skills/configuring-jupylet/SKILL.md` says. Read that file.
+
 ## Terms
 
 - **Claude app:** the Claude desktop app, where the person chats with the
@@ -260,10 +265,10 @@ of Jupylet, or are a venv, which Jupylet with Claude does not use.
 
 - **If no environment is suitable,** Jupylet is not installed for this
   folder yet. Stop, and report `stopped: not installed, no Jupylet environment.`
-- **Otherwise,** read the setting `environment`, as "Read a setting" says.
-  It names the environment chosen for the Jupylet folder. Use it if it is
-  suitable, or else the first suitable one in the list, which is the best.
-  Its path is `{env}`, which gives `{env name}`, `{conda}` and `{python}`.
+- **Otherwise,** read the setting `environment`. It names the environment
+  chosen for the Jupylet folder. Use it if it is suitable, or else the first
+  suitable one in the list, which is the best. Its path is `{env}`, which
+  gives `{env name}`, `{conda}` and `{python}`.
 
 Then run "Check JupyterLab and the extra". If it prints an error, stop, and
 report `problem:` with "Jupylet, JupyterLab or the extra is missing" in
@@ -365,8 +370,7 @@ the notebook, which fits the narrow pane. The browser tools below are
 ## Hide the list of chats
 
 This task makes room for the notebook: it hides the list of chats of the
-Claude app, if the person wants it. Read the setting `hide-chat-list`, as
-"Read a setting" says.
+Claude app, if the person wants it. Read the setting `hide-chat-list`.
 
 - **If it is `yes`,** hide the list: call `set_sidebar_collapsed` with
   `collapsed` set to true. Add to the report: "I hid the list of chats to
@@ -392,18 +396,3 @@ Run "Attach".
   "The notebook has no kernel" in `references/troubleshooting.md`.
 - **If it says anything else,** stop, and report `problem:` with its
   output.
-
-## Read a setting
-
-Settings are kept in two files, both named `.jupylet/claude-config.md`: the
-local file in `{code}`, for this Jupylet folder only, and the global file in
-the home folder of the person, for all Jupylet folders. Each setting is a
-line `- key = value`.
-
-Read the files with the Read tool. A file that does not exist gives an
-error, and that is normal: the file appears with its first setting.
-
-1. Read the local file. If a line in it sets the key, the last such line
-   gives the value.
-2. Otherwise, read the global file in the same way.
-3. If neither file sets the key, the setting has no value.
