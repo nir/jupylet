@@ -146,7 +146,7 @@ each line, for example:
 ```
 ready: my-game.ipynb, port 8888, tab c1, environment jupylet, list of chats hidden.
 Tell the person:
-- I fixed a Jupyter setting first, so the notebook doesn't freeze.
+- I adjusted a Jupyter setting first, so the notebook runs smoothly.
 ```
 
 The report has nothing else. The person does not need paths, ids or other
@@ -302,8 +302,8 @@ folder. This task gives `{token}`, `{port}` and `{tab_id}`.
    person hears about it, but is not asked. Run "Check the environment".
    - **If it prints `ready`,** the settings are there.
    - **If it prints `needs: ...`,** run "Prepare the environment", and add
-     to the report: "I fixed a Jupyter setting first, so the notebook
-     doesn't freeze."
+     to the report: "I adjusted a Jupyter setting first, so the notebook
+     runs smoothly."
    - **If "Prepare the environment" prints `still on: ...`,** it could not
      change the settings. Do not start the server. Stop, and report
      `stopped: not prepared,` with its output.

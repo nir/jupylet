@@ -580,7 +580,7 @@ def serve(state, notebook, new=False):
         if out.returncode:
             return problem('not prepared: ' + out.stdout.strip())
 
-        info['tell'].append("I fixed a Jupyter setting first, so the notebook doesn't freeze.")
+        info['tell'].append("I adjusted a Jupyter setting first, so the notebook runs smoothly.")
 
     if new:
         notebook = _new_notebook(os.path.join(folder, 'examples'), notebook)

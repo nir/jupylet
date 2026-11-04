@@ -119,7 +119,7 @@ mention a technical detail that the person cannot use, for example a port
 number, a process ID or a kernel. If the person asks how you know what to
 do, say that Jupylet comes with instructions for Claude.
 
-- Good: "Starting Jupyter now, one second."
+- Good: "Starting Jupyter now. It takes a few seconds."
 - Bad: "Go straight to step 9."
 - Bad: "Jupyter is running on port 8888, process 4312."
 

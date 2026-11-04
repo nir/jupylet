@@ -246,9 +246,9 @@ is one reply: do the calls of a step together.
      Jupyter server" after a yes, and continue at step 3.
    - **Otherwise,** continue at step 3.
 3. Start the Jupyter server, and wait until it is ready. In one reply, tell
-   the person in one line what happens, for example "Starting Jupyter now,
-   one second.", do "Start the Jupyter server", and run "Wait for the
-   Jupyter server". Keep the `tab_id` of the tab: it is `{tab_id}`.
+   the person in one line what happens, for example "Starting Jupyter now.
+   It takes a few seconds.", do "Start the Jupyter server", and run "Wait
+   for the Jupyter server". Keep the `tab_id` of the tab: it is `{tab_id}`.
    - **`ready:`** keep `{notebook}`, `{folder}`, `{port}`, `{address}`,
      `{python}`, and the setting `hide-chat-list`. Pass on to the person
      each line under `Tell the person:`.
@@ -279,22 +279,29 @@ is one reply: do the calls of a step together.
      kernel" in `references/troubleshooting.md`.
 6. Finish. In one reply, load `working-in-notebooks`, as "Understand the
    request" says, act on the setting `hide-chat-list` from step 3, and send
-   the person one message:
-   - Say that the notebook is ready.
-   - **If the pane was hidden in step 5,** ask the person to click the globe
-     icon in the upper right corner of the Claude app, to see it.
-   - **`hide-chat-list` is `yes`:** hide the list of chats with
+   the person one message. The setting:
+   - **`yes`:** hide the list of chats with
      `mcp__ccd_window__set_sidebar_collapsed`, with `collapsed` set to true.
    - **`no`:** leave the list as it is.
-   - **`no setting`:** ask whether to hide the list of chats, as "Hide the
-     list of chats" says.
+   - **`no setting`:** ask later whether to hide it, as "Hide the list of
+     chats" says.
 
-   For example:
+   The message:
+   - **If the pane was hidden in step 5,** say only that the notebook is
+     ready, and ask the person to click the globe icon in the upper right
+     corner of the Claude app. Nothing else: the click is the one thing that
+     the person has to do, and other words would bury it. For example:
 
-   > Your new notebook is ready. Click the globe icon in the upper right
-   > corner of the Claude app to see it next to our chat. Shall I also hide
-   > the list of chats on the left, to give the notebook more room? I'll
-   > remember your answer for next time.
+     > Your new notebook is ready. Click the globe icon in the upper right
+     > corner of the Claude app to see it next to our chat.
+
+     Then end your turn. Keep the news for after: when the person answers,
+     call `tabs_context`, and once the pane is displayed, send it.
+   - **If the pane is displayed,** send the news now.
+
+   The news is, in short lines: each line under `Tell the person:`, the list
+   of chats (that you hid it, or the question of "Hide the list of chats"),
+   and any explanation that the person needs, for example of a cell.
 
 ## Open the notebook
 
@@ -306,8 +313,8 @@ note when the person has to do something, and it ends with a report. The
 person's request to open the notebook covers starting the opener.
 
 1. Start the opener. In one reply, tell the person in one line what
-   happens, for example "Starting Jupyter now, one second.", and call the
-   tool `Agent` with:
+   happens, for example "Starting Jupyter now. It takes a few seconds.",
+   and call the tool `Agent` with:
    - `name`: `notebook-opener`
    - `subagent_type`: `notebook-opener`
    - `run_in_background`: `true`
@@ -348,10 +355,13 @@ person's request to open the notebook covers starting the opener.
 3. Act on the report of the opener. It arrives as a new turn, and it starts
    with one word:
    - **`ready:`** the notebook is open, and you are attached. Keep `{port}`
-     and `{tab_id}`. Pass on to the person each thing that the
-     report says to tell them. If the report gives the list of chats as `no
-     setting` or `no tool`, do "Hide the list of chats". Then load
-     `working-in-notebooks`, as "Understand the request" says.
+     and `{tab_id}`. Load `working-in-notebooks`, as "Understand the
+     request" says. Then give the person the news: each thing that the
+     report says to tell them, and, if the report gives the list of chats
+     as `no setting` or `no tool`, "Hide the list of chats". If you asked
+     the person to click the globe icon, and the pane is not displayed yet
+     (`tabs_context`), keep the news until it is, as step 6 of "Open the
+     notebook directly" says.
    - **`stopped: already open, ...`:** a Jupyter server already has the
      notebook open. If the report says that it is compatible, do "Use a
      running Jupyter server". If not, do "Move the notebook to a new Jupyter
