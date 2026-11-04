@@ -1,17 +1,17 @@
 ---
 name: managing-jupylet-notebooks
-description: Opens and closes Jupyter notebooks of a Jupylet folder for a person. Chooses the notebook, then starts a Jupyter server, by itself on macOS or with the notebook-opener agent elsewhere, opens the notebook in the browser pane of the Claude app, next to the chat, and connects to it with the Jupyter MCP tools. Then hands the work in the notebook to working-in-notebooks. Also stops the Jupyter server, and solves known problems. Use this skill when the person asks to open, run or try a notebook or an example. Also use it when the person asks for help with an open notebook or cannot find a notebook web page that they closed. Also use it when the person asks to stop Jupyter. Use it together with guiding-jupylet-users.
+description: Opens and closes Jupyter notebooks of a Jupylet folder for a person. Chooses the notebook, then starts a Jupyter server, by itself in the Terminal panel, or with the notebook-opener agent, opens the notebook in the browser pane of the Claude app, next to the chat, and connects to it with the Jupyter MCP tools. Then hands the work in the notebook to working-in-notebooks. Also stops the Jupyter server, and solves known problems. Use this skill when the person asks to open, run or try a notebook or an example. Also use it when the person asks for help with an open notebook or cannot find a notebook web page that they closed. Also use it when the person asks to stop Jupyter. Use it together with guiding-jupylet-users.
 ---
 
 # Managing Jupylet notebooks
 
 With this skill you open a Jupyter notebook for the person, and close it at
 the end. The notebook opens in the Claude web browser, where the person
-sees it, and you attach to it. On macOS, you start the Jupyter server
-yourself, with one command ("Open the notebook directly"). Elsewhere, a
-small background agent, the `notebook-opener`, does the steps in between: it
-finds the environment,
-starts the Jupyter server, opens the web page and attaches. You decide what
+sees it, and you attach to it. You start the Jupyter server yourself, with
+one command in the Terminal panel ("Open the notebook directly"). When that
+does not work, a small background agent, the `notebook-opener`, does the
+steps in between: it finds the environment, starts the Jupyter server, opens
+the web page and attaches. You decide what
 to open, talk with the person, and act on what the opener reports. The work
 in the notebook itself, reading, changing and running cells, is in the
 skill `working-in-notebooks`. "Understand the request" says which tasks to
@@ -26,8 +26,8 @@ which order.
 Open a notebook:
 
 - "Choose a notebook": decide which notebook to open, and from which folder.
-- "Open the notebook directly": open it yourself, in a few steps, on macOS
-  with the Terminal panel.
+- "Open the notebook directly": open it yourself, in a few steps, with the
+  Terminal panel.
 - "Open the notebook": have the opener open it, and act on its notes and
   its report.
 - "Use a running Jupyter server": when the notebook is already open in a
@@ -139,9 +139,8 @@ To open the notebook for the person, first do "Choose a notebook". Then:
   in the Claude app. The notebook keeps its variables.
 - If you know that an incompatible Jupyter server has it open, do "Move the
   notebook to a new Jupyter server".
-- Otherwise, on macOS, when the tool list has
-  `mcp__terminal__run_in_terminal`, loaded or only by its name, do "Open
-  the notebook directly".
+- Otherwise, when the tool list has `mcp__terminal__run_in_terminal`,
+  loaded or only by its name, do "Open the notebook directly".
 - In other cases, do "Open the notebook". The opener checks the Jupyter
   servers that run, and reports when one of them already has the notebook
   open.
@@ -223,14 +222,15 @@ without asking.
 
 ## Open the notebook directly
 
-This task opens the notebook yourself, without the opener, on macOS when the
-tool list has `mcp__terminal__run_in_terminal`, loaded or only by its name.
-One command checks the environment and starts the Jupyter server, so it
-takes only a few steps. Its commands are in `references/open-directly-macos.md`. Each step
+This task opens the notebook yourself, without the opener, when the tool
+list has `mcp__terminal__run_in_terminal`, loaded or only by its name. One
+command checks the environment and starts the Jupyter server, so it takes
+only a few steps. Its commands are in `references/open-directly-macos.md`
+on macOS, and in `references/open-directly-windows.md` on Windows. Each step
 is one reply: do the calls of a step together.
 
 1. Get ready. In one reply:
-   - Read `references/open-directly-macos.md`.
+   - Read the commands file for the computer.
    - Load the tools that the task needs, if the tool list shows them only by
      their names: call `ToolSearch` with the query
      `select:mcp__terminal__run_in_terminal,mcp__terminal__list_terminal_tabs,mcp__terminal__stop_terminal_tab,mcp__ccd_window__set_sidebar_collapsed`.

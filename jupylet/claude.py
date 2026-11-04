@@ -104,8 +104,8 @@ serve <state file> <notebook path>
 serve <state file> --new <name>
     Runs in a terminal tab, by file path with any Python 3. Finds this
     folder's environment, goes on in that environment's Python, checks and
-    prepares the environment, and becomes JupyterLab,
-    serving the notebook's folder, until the tab closes. With --new, it
+    prepares the environment, and becomes JupyterLab (on Windows, starts it
+    and waits), serving the notebook's folder, until the tab closes. With --new, it
     first creates the empty notebook examples/<name>.ipynb (or <name>-2...).
     It prints only Jupyter's own output, or a problem if it did not start.
 
@@ -527,13 +527,15 @@ def serve(state, notebook, new=False):
 
     Returns:
         str: A problem, if Jupyter did not start. On success it does not
-            return: this process becomes JupyterLab.
+            return: this process becomes JupyterLab, or on Windows waits for
+            it.
 
     Notes:
-        It replaces itself with bash and then JupyterLab (exec), so the server
-        keeps the process id that the state file records, and it ends with its
-        terminal tab: the tab, the chat, or the Claude app closing ends it.
-        It never detaches the server.
+        On macOS it replaces itself with bash and then JupyterLab (exec), so
+        the server keeps the process id that the state file records. On
+        Windows it starts JupyterLab as its child and waits for it. Either
+        way the server ends with its terminal tab: the tab, the chat, or the
+        Claude app closing ends it. It never detaches the server.
     """
     folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     info = {'pid': os.getpid(), 'started': time.time(), 'tell': []}
@@ -545,9 +547,6 @@ def serve(state, notebook, new=False):
 
     _write_json(state, info)
 
-    if sys.platform == 'win32':
-        return problem('not on Windows yet: serve runs on macOS only')
-
     env = _serve_env(folder, info)
     if not env:
         return problem('not installed: no conda environment runs the jupylet in %s' % folder)
@@ -556,12 +555,16 @@ def serve(state, notebook, new=False):
 
     #
     # From here on, run in the environment's own Python, the one that has
-    # Jupyter: run this command again with it. The process stays the same,
-    # so its id in the state file stays right.
+    # Jupyter: run this command again with it. On macOS the process stays
+    # the same. Windows has no such replacement, so there this process waits
+    # for the new one, in the same terminal tab, and ends with it.
     #
     if os.path.realpath(sys.executable) != os.path.realpath(python):
+        args = [python, os.path.abspath(__file__), 'serve', state] + (['--new', notebook] if new else [notebook])
         sys.stdout.flush()
-        os.execv(python, [python, os.path.abspath(__file__), 'serve', state] + (['--new', notebook] if new else [notebook]))
+        if sys.platform == 'win32':
+            sys.exit(subprocess.call(args))
+        os.execv(python, args)
 
     out = subprocess.run([python, '-c', _SERVE_PROBE], capture_output=True, text=True, cwd=env)
     if out.returncode:
@@ -599,6 +602,21 @@ def serve(state, notebook, new=False):
     _write_json(state, info)
 
     conda = os.path.dirname(os.path.dirname(env)) if os.path.basename(os.path.dirname(env)) == 'envs' else env
+    options = '--no-browser --IdentityProvider.token=%s "--JupyterMCPServerExtensionApp.allowed_jupyter_mcp_tools=%s"' % (
+        info['token'], PAGE_TOOLS)
+
+    #
+    # Windows: JupyterLab runs as a child of this process, in the same
+    # terminal tab, so closing the tab ends both. cmd activates the
+    # environment, as the Miniforge Prompt does: PowerShell would need
+    # conda's profile script, which Windows blocks by default.
+    #
+    if sys.platform == 'win32':
+        sys.stdout.flush()
+        name = '' if conda == env else ' ' + os.path.basename(env)
+        sys.exit(subprocess.call('cmd /d /s /c "call "%s"%s && cd /d "%s" && jupyter lab %s"' % (
+            os.path.join(conda, 'condabin', 'activate.bat'), name, info['folder'], options)))
+
     script = (
         'source "$1/bin/activate" "$2" && cd "$3" && exec jupyter lab --no-browser '
         '--IdentityProvider.token="$4" '
@@ -795,8 +813,10 @@ def wait_ready(state, timeout=60):
 
     Notes:
         Jupyter writes jpserver-<process id>.json into its runtime folder once
-        it listens, with its port. serve() replaced itself with Jupyter, so
-        that process id is the one in the state file.
+        it listens, with its port and token. The token that serve() made
+        names the record (_record_of()). The process id in the state file is
+        serve's: on macOS it became Jupyter, and on Windows it is Jupyter's
+        parent. Either way it ends when the server does.
     """
     t0 = time.time()
     info = {}
@@ -814,15 +834,13 @@ def wait_ready(state, timeout=60):
         if info.get('problem'):
             return False, 'problem: ' + info['problem']
 
-        if info.get('runtime') and not _alive(info['pid']):
+        if info.get('token') and not _alive(info['pid']):
             return False, 'problem: the Jupyter server ended: read its terminal tab'
 
-        record = os.path.join(info.get('runtime') or '', 'jpserver-%s.json' % info.get('pid'))
+        r = _record_of(info.get('runtime'), info.get('token')) if info.get('token') else None
 
-        if info.get('runtime') and os.path.exists(record):
-            with open(record) as f:
-                r = json.load(f)
-            port, token = r['port'], r.get('token', '')
+        if r:
+            port, token = r['port'], r['token']
 
             if _ready(port, token):
                 tell = ''.join('\n- ' + t for t in info['tell'])
@@ -837,7 +855,43 @@ def wait_ready(state, timeout=60):
     return False, 'problem: not ready after %d seconds' % timeout
 
 
+def _record_of(runtime, token):
+    """Jupyter's record (jpserver-*.json) of the server with token, or None.
+
+    serve() makes a new token for each server, so it names one server. The
+    process id in the record's name is no help on Windows, where JupyterLab
+    runs as a child of serve().
+    """
+    for path in glob.glob(os.path.join(runtime or '', 'jpserver-*.json')):
+        try:
+            with open(path) as f:
+                r = json.load(f)
+        except (OSError, ValueError):
+            continue
+
+        if r.get('token') == token and r.get('port'):
+            return r
+
+    return None
+
+
 def _alive(pid):
+    """True if the process with this id runs."""
+    #
+    # On Windows, os.kill(pid, 0) does not test a process: it ends it. Ask
+    # Windows for the process's exit code instead.
+    #
+    if sys.platform == 'win32':
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        code = ctypes.c_ulong()
+        kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+        kernel32.CloseHandle(handle)
+        return code.value == 259  # STILL_ACTIVE
+
     try:
         os.kill(pid, 0)
         return True
