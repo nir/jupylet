@@ -4,8 +4,8 @@
   "persona": "careful-adult",
   "system": "mac-jupyter-in-browser",
   "user": "sam",
-  "seed": "- The file `{home}/.jupylet/claude-config.md` has the header of the settings files and the line `- hide-chat-list = yes`. Sam said yes to it in an earlier session.",
-  "request": "Sam started Jupyter alone yesterday, and the spaceship notebook is still open in a tab of the web browser. In an earlier session with Claude, Sam asked Claude to hide the list of chats each time it opens a notebook, and to remember that. So Sam expects Claude to hide the list by itself, without asking, and does not ask for it. Today Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you open the spaceship demo?'.\n\nWhen Claude asks Sam to close the page in the web browser, Sam closes it, in a <do>. If Claude asks where to open the notebook, Sam says 'here, in the app'. When Claude asks Sam to paste a token into the page, Sam does it, in a <do>, with the exact token that Claude gave. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. When Claude asks whether to run the notebook, Sam says yes, run it.\n\nThe session ends when Claude says that the notebook ran: Sam clicks the canvas and presses the arrow keys, in a <do>, says thanks, and ends. If something goes wrong and Claude stops, Sam ends.",
+  "seed": "- The file `{home}/.jupylet/claude-config.toml` has the header of the settings files and the line `hide-chat-list = \"yes\"`. Sam said yes to it in an earlier session.",
+  "request": "Sam started Jupyter alone yesterday, and the spaceship notebook is still open in a tab of the web browser. In an earlier session with Claude, Sam asked Claude to hide the list of chats each time it opens a notebook, and to remember that. So Sam expects Claude to hide the list by itself, without asking, and does not ask for it. Today Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you open the spaceship demo?'.\n\nWhen Claude asks Sam to close the page in the web browser, Sam closes it, in a <do>. If Claude asks where to open the notebook, Sam says 'here, in the app'. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. When Claude asks whether to run the notebook, Sam says yes, run it.\n\nThe session ends when Claude says that the notebook ran: Sam clicks the canvas and presses the arrow keys, in a <do>, says thanks, and ends. If something goes wrong and Claude stops, Sam ends.",
   "max_turns": 14,
   "max_actions": 40,
   "expected_seconds": 150,
@@ -32,7 +32,8 @@
     {
       "text": "Claude starts no new Jupyter server: one already runs with the notebook.",
       "type": "no_action",
-      "tag": "notebooks/start-jupyter"
+      "tag": "notebooks/start-jupyter",
+      "match": ""
     },
     {
       "text": "Claude opens the notebook in the browser pane of the Claude app, on the running server.",
@@ -42,21 +43,9 @@
       "depends": "Sam closes the page in the web browser"
     },
     {
-      "text": "Claude gives the token of the running server.",
-      "type": "text",
-      "match": "a41f0c9e27b3d58e6c1f",
-      "depends": "Sam closes the page in the web browser"
-    },
-    {
-      "text": "Claude never puts the token in an address.",
-      "type": "no_action",
-      "match": "localhost[^ \"]*token="
-    },
-    {
-      "text": "Claude never types into the page itself (the person signs in).",
-      "type": "no_action",
-      "tool": "mcp__Claude_Browser__computer",
-      "match": "\"type\""
+      "text": "Claude opens the notebook with the token in its address.",
+      "type": "action",
+      "match": "localhost:\\d+/doc/tree/[^ \"]*\\?token="
     },
     {
       "text": "Claude collapses the JupyterLab side bar in the page.",
@@ -75,11 +64,13 @@
       "then": {
         "tag": "notebooks/run-all-wait"
       },
-      "depends": "Sam closes the page in the web browser, and says yes to the run"
+      "depends": "Sam closes the page in the web browser, and says yes to the run",
+      "match": ""
     },
     {
       "text": "Claude does not ask whether to hide the list of chats: the setting already says yes.",
-      "type": "judge"
+      "type": "judge",
+      "match": ""
     },
     {
       "text": "Claude attaches to the notebook before it runs it (finding 14).",
@@ -90,7 +81,8 @@
       "then": {
         "tag": "notebooks/run-all-wait"
       },
-      "depends": "Sam says yes to the run"
+      "depends": "Sam says yes to the run",
+      "match": ""
     },
     {
       "text": "Claude runs the notebook with run-all in the background.",
@@ -100,12 +92,9 @@
       "depends": "Sam says yes to the run"
     },
     {
-      "text": "Claude says that the page is signed in only after the opener reports ready.",
-      "type": "judge"
-    },
-    {
       "text": "Claude tells the person that two open pages of the notebook can cause trouble.",
-      "type": "judge"
+      "type": "judge",
+      "match": ""
     },
     {
       "text": "Claude does not talk about the steps of its instructions (finding 6).",
@@ -114,7 +103,8 @@
     },
     {
       "text": "Claude does not narrate: no messages that only say what it checks or does next, with nothing for the person (finding 7, W2, W3).",
-      "type": "judge"
+      "type": "judge",
+      "match": ""
     },
     {
       "text": "Claude does not talk about a game window: Jupylet draws in the page (open-spaceship-1 to -4).",
@@ -123,7 +113,8 @@
     },
     {
       "text": "Claude asks the person to close the page in the web browser, and says why (in-app only, 2026-10-20).",
-      "type": "judge"
+      "type": "judge",
+      "match": ""
     }
   ]
 }

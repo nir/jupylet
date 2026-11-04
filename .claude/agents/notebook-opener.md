@@ -157,28 +157,29 @@ details, and the main chat has what it needs in the first line.
 Do the tasks of the job in order. A task that stops with a report ends the
 job.
 
-- **A notebook in a new Jupyter server:** "Find a Python", "Find the
-  Jupyter servers that run", "Find the environment", "Start a Jupyter
-  server", "Open a web page", "Hide the list of chats", "Attach to the
-  notebook".
-- **A new notebook in a new Jupyter server:** "Find a Python", "Find the
-  environment", "Create the new notebook", "Start a Jupyter server", "Open
-  a web page", "Hide the list of chats", "Attach to the notebook". A new
-  notebook is open nowhere, so the running servers do not matter.
-- **A notebook in a running Jupyter server:** "Find a Python", "Find the
-  Jupyter servers that run", "Open a web page", "Hide the list of chats",
-  "Attach to the notebook".
+- **A notebook in a new Jupyter server:** "Find the environment", "Find
+  the Jupyter servers that run", "Start a Jupyter server", "Open a web
+  page", "Hide the list of chats", "Attach to the notebook".
+- **A new notebook in a new Jupyter server:** "Find the environment",
+  "Create the new notebook", "Start a Jupyter server", "Open a web page",
+  "Hide the list of chats", "Attach to the notebook". A new notebook is open
+  nowhere, so the running servers do not matter.
+- **A notebook in a running Jupyter server:** "Find the environment", "Find
+  the Jupyter servers that run", "Open a web page", "Hide the list of
+  chats", "Attach to the notebook".
 
 ## Find a Python
 
-The first commands need only Python 3, so the Python of any conda
-installation can run them. Never use `python3` or `python` of the system:
+Only "Find the environment" needs this task, when the setting
+`environment` does not name the environment. The commands that search for
+the environment need only Python 3, so the Python of any conda installation
+can run them. Every other command runs with `{python}`, the Python of the
+environment. Never use `python3` or `python` of the system:
 on a computer without Python, they can be stubs that only start an
 installation (the Microsoft Store on Windows, or the Command Line Tools on
 macOS).
 
-Run "Read the version". It gives `{version}`. Then run "Find conda
-installations". It finds the Python of each conda installation.
+Run "Find conda installations". It finds the Python of each conda installation.
 
 - **If it finds the Python of `{miniforge}`,** that Python is
   `{conda_python}`.
@@ -189,7 +190,8 @@ installations". It finds the Python of each conda installation.
 
 ## Find the Jupyter servers that run
 
-Run "List the Jupyter servers". It prints a JSON list, with one item for
+Run "List the Jupyter servers", with `{python}` of "Find the environment".
+It prints a JSON list, with one item for
 each Jupyter server that runs, for example:
 
 ```json
@@ -245,24 +247,30 @@ its `notebooks` together make `{notebook path}`. Then act by the job:
 
 ## Find the environment
 
-This task chooses the conda environment for the new Jupyter server: one
-that runs the Jupylet code in `{code}`, with JupyterLab and the `[claude]`
-extra.
+This task chooses the conda environment of the Jupylet code in `{code}`,
+with JupyterLab and the `[claude]` extra. A new Jupyter server runs in it,
+and the other commands run with its Python.
 
-Run "List the environments". The suitable environments are those whose kind
-is `conda` and whose source is `this folder`. The others run another copy
-of Jupylet, or are a venv, which Jupylet with Claude does not use.
-
-- **If no environment is suitable,** Jupylet is not installed for this
-  folder yet. Stop, and report `stopped: not installed, no Jupylet environment.`
-- **Otherwise,** read the setting `environment`. It names the environment
-  chosen for the Jupylet folder. Use it if it is suitable, or else the first
-  suitable one in the list, which is the best. Its path is `{env}`, which
-  gives `{env name}`, `{conda}` and `{python}`.
-
-Then run "Check JupyterLab and the extra". If it prints an error, stop, and
-report `problem:` with "Jupylet, JupyterLab or the extra is missing" in
-`references/troubleshooting.md`.
+1. Run "Read the version". It gives `{version}`. In the same reply, read
+   the setting `environment`. The installation of Jupylet writes it:
+   it names the environment of the Jupylet folder, in `{miniforge}`. Its
+   folder is `{miniforge}/envs/{its name}`, or `{miniforge}` itself for
+   `base`. That folder is `{env}`, which gives `{env name}`, `{conda}` and
+   `{python}`. Continue at step 3.
+2. **If the setting has no value,** or "Check JupyterLab and the extra"
+   cannot run the Python of step 1, find the environment: do "Find a
+   Python", and run "List the environments". The suitable environments are
+   those whose kind is `conda` and whose source is `this folder`. The
+   others run another copy of Jupylet, or are a venv, which Jupylet with
+   Claude does not use.
+   - **If no environment is suitable,** Jupylet is not installed for this
+     folder yet. Stop, and report `stopped: not installed, no Jupylet
+     environment.`
+   - **Otherwise,** the first suitable one in the list, which is the best,
+     is `{env}`.
+3. Run "Check JupyterLab and the extra". If it prints an error, stop, and
+   report `problem:` with "Jupylet, JupyterLab or the extra is missing" in
+   `references/troubleshooting.md`.
 
 ## Create the new notebook
 

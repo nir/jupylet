@@ -103,7 +103,8 @@ What the other commands print:
 serve <state file> <notebook path>
 serve <state file> --new <name>
     Runs in a terminal tab, by file path with any Python 3. Finds this
-    folder's environment, checks and prepares it, and becomes JupyterLab,
+    folder's environment, goes on in that environment's Python, checks and
+    prepares the environment, and becomes JupyterLab,
     serving the notebook's folder, until the tab closes. With --new, it
     first creates the empty notebook examples/<name>.ipynb (or <name>-2...).
     It prints only Jupyter's own output, or a problem if it did not start.
@@ -552,6 +553,15 @@ def serve(state, notebook, new=False):
         return problem('not installed: no conda environment runs the jupylet in %s' % folder)
 
     python = _python_of(env)
+
+    #
+    # From here on, run in the environment's own Python, the one that has
+    # Jupyter: run this command again with it. The process stays the same,
+    # so its id in the state file stays right.
+    #
+    if os.path.realpath(sys.executable) != os.path.realpath(python):
+        sys.stdout.flush()
+        os.execv(python, [python, os.path.abspath(__file__), 'serve', state] + (['--new', notebook] if new else [notebook]))
 
     out = subprocess.run([python, '-c', _SERVE_PROBE], capture_output=True, text=True, cwd=env)
     if out.returncode:
@@ -2136,7 +2146,22 @@ def running(folder=None):
 
 
 def _runtime_dir():
-    """Jupyter's runtime folder, where each server writes its jpserver-*.json."""
+    """Jupyter's runtime folder, where each server writes its jpserver-*.json.
+
+    jupyter_core knows it exactly. Without it, as in Miniforge's base, the
+    usual folders of each system.
+
+    History:
+        2026-11-04, Windows 11 (W6): a second _runtime_dir() further down,
+        with no such fallback, replaced this one, and `running` failed in
+        Miniforge's base with a TypeError.
+    """
+    try:
+        from jupyter_core.paths import jupyter_runtime_dir
+        return jupyter_runtime_dir()
+    except Exception:
+        pass
+
     runtime = os.environ.get('JUPYTER_RUNTIME_DIR')
 
     if not runtime and os.environ.get('JUPYTER_DATA_DIR'):
@@ -2236,14 +2261,6 @@ def _nbmodel_off_in(port, token):
     names = [e.get('name') for e in page.get('federated_extensions', [])]
 
     return NBMODEL_LAB not in names or NBMODEL_LAB in page.get('disabledExtensions', [])
-
-
-def _runtime_dir():
-    try:
-        from jupyter_core.paths import jupyter_runtime_dir
-        return jupyter_runtime_dir()
-    except Exception:
-        return None
 
 
 def state_files(root='.'):

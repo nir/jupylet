@@ -55,8 +55,6 @@ Values in `{braces}` are blanks that you fill in.
 - `{code}`: the Jupylet folder. It is the folder that contains
   `.claude/skills/managing-jupylet-notebooks`. Use its full path.
 - `{miniforge}`: the folder `miniforge3` in the home folder of the person.
-- `{conda_python}`: the Python of a conda installation. "Find the Jupyter
-  servers that run" finds it.
 - `{python}`: the Python of the environment of the Jupyter server:
   `bin/python` in it on macOS, `python.exe` in it on Windows. "Wait for the
   Jupyter server" gives it too.
@@ -441,15 +439,14 @@ will continue with what they asked. Ask for a yes, for example:
 
 ## Find the Jupyter servers that run
 
-First find a Python that can run the command. Run "Find conda
-installations" from the reference file. It finds the Python of each conda
-installation. The Python of `{miniforge}` is `{conda_python}`, or else the
-first one that it finds. Do not use `python3` or `python` of the system: on
-a computer without Python, they can be stubs that only start an
-installation. If it finds nothing, Jupylet is not installed: do "Install
-Jupylet first".
+This task runs a command with `{python}`, the Python of the Jupylet
+environment. Read the setting `environment` with the skill
+`configuring-jupylet`: `{python}` is the Python of
+`{miniforge}/envs/{environment}`, or of `{miniforge}` itself for `base`. If
+the setting has no value, Jupylet is not installed for this folder: do
+"Install Jupylet first".
 
-Then run "List the Jupyter servers" from the reference file. It prints a JSON
+Run "List the Jupyter servers" from the reference file. It prints a JSON
 list, with one item for each Jupyter server that runs, for example:
 
 ```json

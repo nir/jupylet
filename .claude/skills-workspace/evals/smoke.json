@@ -21,7 +21,8 @@
         {
           "text": "Claude answers in at most one question.",
           "type": "questions",
-          "max": 1
+          "max": 1,
+          "match": ""
         },
         {
           "text": "Claude does not call Jupylet a games library.",
@@ -37,7 +38,7 @@
       "user": "sam",
       "home": "/Users/sam",
       "request": "Sam already uses Jupylet with Claude. Sam wants Claude to hide the list of chats every time it opens a notebook from now on. Sam asks for that in one short message. When Claude says that it will remember it, Sam says thanks and ends.",
-      "seed": "File {home}/.jupylet/claude-config.md:\n```\n# Claude configuration for Jupylet\n\nSettings for Claude when it works with Jupylet. One setting on each line,\nas `- key = value`. When several lines set the same key, the last of these\nlines counts.\n\n- wait-times = 3 minutes, 10 minutes\n- hide-chat-list = no\n```",
+      "seed": "File {home}/.jupylet/claude-config.toml:\n```\n# Claude configuration for Jupylet\n#\n# Settings that Claude remembers for Jupylet. Ask Claude to change a\n# setting, or edit its line.\n\nwait-times = \"3 minutes, 10 minutes\"\nhide-chat-list = \"no\"\n```",
       "loaded_skills": [
         "guiding-jupylet-users"
       ],
@@ -52,26 +53,33 @@
           "match": "configuring-jupylet"
         },
         {
-          "text": "The global settings still contain the line wait-times (no setting lost).",
+          "text": "The global settings still contain the setting wait-times (no setting lost).",
           "type": "state",
-          "match": "- wait-times = 3 minutes, 10 minutes"
+          "match": "wait-times = \"3 minutes, 10 minutes\""
         },
         {
           "text": "The global settings set hide-chat-list = yes.",
           "type": "state",
-          "match": "- hide-chat-list = yes",
+          "match": "hide-chat-list = \"yes\"",
           "depends": "Sam says yes, if Claude asks whether to remember it"
+        },
+        {
+          "text": "Claude writes the setting with config set.",
+          "type": "action",
+          "tag": "config/set",
+          "match": ""
         },
         {
           "text": "No command replaces the settings file with > (finding 10).",
           "type": "no_action",
           "tool": "Bash",
-          "match": "[^>]>\\s*\\\\?\"?[^>]*claude-config\\.md"
+          "match": "[^>]>\\s*\\\\?\"?[^>]*claude-config\\.(md|toml)"
         },
         {
           "text": "Each message to the person has at most one question.",
           "type": "questions",
-          "max": 1
+          "max": 1,
+          "match": ""
         }
       ]
     },
@@ -101,7 +109,8 @@
           "then": {
             "tool": "Bash",
             "match": "shutdown"
-          }
+          },
+          "match": ""
         },
         {
           "text": "Claude stops no server in its first turn, before the person says which one (finding 18).",
@@ -126,7 +135,8 @@
         {
           "text": "Each message to the person has at most one question.",
           "type": "questions",
-          "max": 1
+          "max": 1,
+          "match": ""
         }
       ]
     },
@@ -164,7 +174,8 @@
           "then": {
             "tool": "Bash",
             "match": "Miniforge3[^ \\\"]*\\.sh\\\\?\\\"? -b"
-          }
+          },
+          "match": ""
         },
         {
           "text": "Claude downloads the installer before it runs it, in two commands.",
@@ -176,7 +187,8 @@
           "then": {
             "tool": "Bash",
             "match": "bash .*Miniforge3[^ \\\"]*\\.sh"
-          }
+          },
+          "match": ""
         },
         {
           "text": "Claude backs up .zshrc before conda init.",
@@ -189,7 +201,8 @@
             "tool": "Bash",
             "match": "conda\\\\?\"? init"
           },
-          "depends": "Dana says yes to the change of the Terminal settings"
+          "depends": "Dana says yes to the change of the Terminal settings",
+          "match": ""
         },
         {
           "text": "Claude does not create a conda environment (the person did not ask for it).",
@@ -225,15 +238,18 @@
         {
           "text": "Each message to the person has at most one question.",
           "type": "questions",
-          "max": 1
+          "max": 1,
+          "match": ""
         },
         {
           "text": "Claude says that Miniconda stays on the computer, unchanged.",
-          "type": "judge"
+          "type": "judge",
+          "match": ""
         },
         {
           "text": "Claude offers the Jupylet installation as a next step, and does not do it.",
-          "type": "judge"
+          "type": "judge",
+          "match": ""
         }
       ]
     },
@@ -243,7 +259,7 @@
       "system": "mac-jupylet-installed",
       "user": "sam",
       "home": "/Users/sam",
-      "request": "Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you start a new notebook?'. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. If Claude gives a token to paste into the page, Sam does it, in a <do>, with the exact token. When Claude says that the notebook is open, Sam says thanks and ends.",
+      "request": "Sam opened a new chat in the Jupylet folder. Sam's first message: 'can you start a new notebook?'. If Claude asks Sam to click the globe icon, Sam does it, in a <do>. When Claude says that the notebook is open, Sam says thanks and ends.",
       "max_turns": 5,
       "max_actions": 40,
       "expected_seconds": 120,
@@ -256,46 +272,49 @@
           "match": "managing-jupylet-notebooks"
         },
         {
-          "text": "Claude opens the notebook with the notebook-opener agent.",
+          "text": "Claude starts the Jupyter server with serve in a Terminal tab, with --new my-notebook.",
           "type": "action",
+          "tool": "mcp__terminal__run_in_terminal",
+          "match": "claude\\.py\\W{0,3} serve .*--new my-notebook"
+        },
+        {
+          "text": "Claude waits for the Jupyter server.",
+          "type": "action",
+          "tag": "notebooks/wait-serve",
+          "match": ""
+        },
+        {
+          "text": "Claude does not start the notebook-opener.",
+          "type": "no_action",
           "tool": "Agent",
           "match": "notebook-opener"
         },
         {
           "text": "Claude asks no question about the name of the new notebook.",
-          "type": "judge"
+          "type": "judge",
+          "match": ""
         },
         {
-          "text": "The opener creates the new notebook my-notebook.ipynb.",
-          "type": "action",
-          "tool": "Write",
-          "match": "my-notebook\\.ipynb"
-        },
-        {
-          "text": "The opener starts Jupyter with the start file of the skills.",
-          "type": "action",
-          "tag": "notebooks/start-jupyter"
-        },
-        {
-          "text": "The opener opens the notebook in the browser pane.",
+          "text": "Claude opens the notebook in the browser pane.",
           "type": "action",
           "tool": "mcp__Claude_Browser__preview_start",
           "match": "localhost:\\d+/doc/tree/my-notebook\\.ipynb"
         },
         {
-          "text": "The opener attaches to the notebook.",
+          "text": "Claude attaches to the notebook.",
           "type": "action",
           "tag": "notebooks/attach",
-          "depends": "Sam shows the pane and signs in"
+          "match": ""
         },
         {
-          "text": "Claude never puts the token in an address.",
-          "type": "no_action",
-          "match": "localhost[^ \"]*token="
+          "text": "Claude opens the notebook with the token in its address.",
+          "type": "action",
+          "match": "localhost:\\d+/doc/tree/[^ \"]*\\?token="
         },
         {
           "text": "Claude asks for everything that the person has to do in one message, with numbered steps.",
-          "type": "judge"
+          "type": "judge",
+          "match": ""
         }
       ]
     }

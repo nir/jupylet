@@ -283,3 +283,133 @@ the problem), and the run that shows the effect.
   follow the skills.
 - Replaced: the 403 and the 200 of T8 in `tool:mcp__Claude_Browser__javascript_tool`.
 - Effect: to be shown by the next run of `smoke-open-new` or `open-spaceship`.
+
+## Recordings: T13, T15 and W4, the direct open and Windows 11 (2026-11-03)
+
+- `recordings.json`: 7 outputs of T13 (`session-export-1793703772534`) and 6
+  of T15 (`session-export-1793704313650`), on Nir's Mac with the new task
+  "Open the notebook directly": `notebooks/wait-serve`, the sign-in check
+  (200 in T13, 403 in T15), `preview_start`, `tabs_context`, attach, and
+  `list_terminal_tabs`. 32 outputs of W4 (`session-export-1793724063238`), a
+  fresh install on Windows 11 with the notebook-opener: the download, the
+  setup, the environment, trust, the opener's commands, and run-all.
+- Left out: the two failed `download/get-archive` of W4 (`bad output glob`):
+  the scratchpad path was 282 characters, over the limit of Windows, and the
+  download now goes to `$env:TEMP`.
+- Not recorded: the `run_in_terminal` call of `serve` (its output has the
+  same form as T9's), and the `wait-open` of T15.
+- Effect: to be shown by the next run of `smoke-open-new` on macOS, and of a
+  Windows scenario.
+
+## Commands: serve and wait-ready (2026-11-03)
+
+- `commands.md`: what `serve` does to the state (the setting, the new
+  notebook, the check for a server that has the notebook open, the new
+  server in the Terminal tab), that its output goes to the tab, how soon
+  `wait-ready` answers, the exit code 1 of a `wait-open` timeout, and that a
+  new server on a port of an earlier one is often already signed in.
+- Why: the documentation of `claude.py` says what the two commands print,
+  but not what they change in the state, and the new task "Open the notebook
+  directly" uses them. T12 and T13 were signed in at once.
+- Effect: to be shown by the next run of `smoke-open-new` on macOS.
+
+## Settings: claude.py config, no header.md (2026-11-04)
+
+- `recordings.json`: removed the 10 outputs of `config/make-folder`,
+  `config/copy-header` and `config/add-line` (T8, W1, W4). The skill
+  `configuring-jupylet` now reads and writes the settings with `claude.py
+  config`, `config set` and `config delete`, and these commands are gone.
+- Harness: the seed gives the header of the settings files from
+  `CONFIG_HEADER` in `claude.py`, since `header.md` is deleted.
+- Effect: to be shown by the next run of `smoke-remember`.
+
+## Systems: win-jupylet-installed (2026-11-04)
+
+- `systems/win-jupylet-installed.md`: a Windows 11 PC where Jupylet is
+  installed, from W5: Miniforge, the environment `jupylet` prepared, the
+  examples trusted, the local setting `environment`, and no global settings.
+- Why: on macOS Claude opens a notebook directly, so the notebook-opener
+  runs only on Windows, and no Windows system had Jupylet installed. It
+  tests the opener's read of the settings with `claude.py config`.
+- Effect: to be shown by `open-spaceship --system win-jupylet-installed`.
+
+## The web page opens with the token in its address (2026-11-04)
+
+- Skills: Claude opens the notebook at its address with `?token=`, as
+  JupyterLab prints it, and the web page is ready at once. The checks of
+  `smoke-open-new`, `open-spaceship`, `open-spaceship-running`,
+  `full-install` and `full-install-miniconda` now check for that address.
+- `system.md`, `human.md`, `commands.md`, the harness: the examples and the
+  notes of the old steps for the person are replaced.
+- `recordings.json`: removed 8 outputs of the old page scripts (T9, T13,
+  T15, W4).
+- Why: T16 (`session-export-1793781614434`), on Nir's Mac: Claude opened
+  the address that JupyterLab printed, and the notebook was ready in 27 s.
+- Effect: to be shown by the next run of `smoke-open-new`.
+
+## Harness: the open page is a fact of the state (2026-11-04)
+
+- `run_eval.py`, `page_fact()`: with a `preview_start` or `navigate` to a
+  notebook address, the harness tells the system simulator that the web page
+  now shows the notebook and is connected to its kernel, also in a hidden
+  pane, so that `attach` and `kernel` follow from the state.
+- Why: in `smoke-open-new-5`, the simulator took the page in a hidden pane
+  for a page that is not open.
+- `smoke-open-new-6` then showed a real problem, not one of the simulator:
+  `wait-open` does not count a web page that was open before the wait
+  started, and with the token in its address the page is open at once. So
+  the skills now attach right after the page opens: `attach` waits up to a
+  minute for the kernel. Its `wait-open` timeout was right.
+- Effect: to be shown by `smoke-open-new-7`.
+
+## Commands take the port; no wait-open, no background monitors (2026-11-04)
+
+- `claude.py`: the commands that talk to a Jupyter server take only its
+  port, and find its token in Jupyter's records. `wait-ready` prints the
+  address of the web page with the token. `shutdown` names the processes
+  that remain (`still running: processes ...`). `wait-open` is removed.
+- Skills: no `{token}` in the commands of Claude. The opener still makes the
+  token for its start script and the address of the web page. The skill
+  `running-background-monitors`, the agent `background-monitor` and
+  `briefs.md` are removed: nothing started a monitor any more.
+- `commands.md`, `system.md`: the notes of `wait-open` are replaced, and a
+  note says how the commands with a port find the token.
+- `recordings.json`: removed `notebooks/make-token` and `notebooks/wait-open`,
+  and the token after the port in 17 inputs.
+- Effect: to be shown by `smoke-open-new-8`.
+- `smoke-open-new-8`: the simulator gave the address of `wait-ready` as
+  `/lab/tree/...`. The usage text of `claude.py` now shows its form,
+  `http://localhost:<port>/doc/tree/<notebook>?token=<token>`.
+- `smoke-open-new-9`: the simulator copied the `ready:` line of the T13
+  recording, with `token` and no `address`, and with `hide chat list yes`
+  from T13, not from the state. Removed the recordings of
+  `notebooks/wait-serve`: the usage text of `claude.py` gives the form.
+- Harness, `recordings.py`: each output of a `claude.py` command now keeps
+  a fingerprint of the command's part of the usage text (`doc`), and
+  `examples()` leaves an output out when that part differs in the code
+  under test. So a change of a command makes its old outputs stale by
+  itself, without a hand edit. `recordings.py stamp` gave the current
+  fingerprints to the 28 outputs that match the current code.
+
+## Settings files in TOML (2026-11-04)
+
+- `claude.py`: the settings are in `.jupylet/claude-config.toml`, one
+  `key = "value"` line for each, under a header of comments. A
+  `claude-config.md` of an earlier version still gives its settings until
+  the first write, which moves them into the TOML file and removes it.
+- Seeds and checks: `smoke-remember` and `open-spaceship-running` start with
+  a TOML file. The state checks look for `key = "value"`, and the checks of
+  the Write and Edit tools name both file names.
+- Systems: `mac-jupyter-in-browser` and `win-jupylet-installed` have the
+  TOML file.
+- Effect: to be shown by `smoke-remember-3`.
+
+## The environment's Python (2026-11-04)
+
+- `claude.py`: `serve` goes on in the environment's Python as soon as it
+  finds the environment, so its checks and `running` run there. Only
+  `find-env`, `config` and `wait-ready` run with the Python of Miniforge.
+- Skills: "List the Jupyter servers" runs with `{python}`. The opener finds
+  the environment before it lists the servers.
+- Why: W6 (Windows 11): `running` failed in Miniforge's base, from a second
+  `_runtime_dir()` without a fallback.

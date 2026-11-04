@@ -693,16 +693,15 @@ class Session:
                 'gives the content when Claude reads one of them, until a command changes it.'
                 '\n\n%s' % (self.code, '\n'.join(sorted(rows))))
         #
-        # The header of the settings files: a command copies it into a new
-        # settings file (`cp -n`), and a seed can name a settings file "with
+        # The header of the settings files: `claude.py config set` writes it
+        # into a new settings file, and a seed can name a settings file "with
         # the header". Without its text, the system simulator made up another
         # header (runs open-spaceship-7, open-spaceship-running-2).
         #
-        header = os.path.join(self.code, '.claude', 'skills', 'configuring-jupylet', 'header.md')
-        if os.path.isfile(header):
-            text += ('\n\nThe file `.claude/skills/configuring-jupylet/header.md` has this content. Each '
-                     'settings file `claude-config.md` starts with it, also a settings file that the '
-                     'computer at the start names "with the header":\n\n```\n%s```' % read(header))
+        header = re.search(r'^CONFIG_HEADER = """(.*?)"""', read(os.path.join(self.code, 'jupylet', 'claude.py')), re.M | re.S)
+        if header:
+            text += ('\n\nEach settings file `claude-config.toml` starts with this header, also a settings '
+                     'file that the computer at the start names "with the header":\n\n```\n%s```' % header.group(1))
 
         return text
 
@@ -1015,7 +1014,7 @@ class Session:
                     'notified when it completes. To check interim output, use Read on that file path.' % (tid, path))
 
         cells = self.files.notebook_cells(json.dumps(inp)) if tool in SHELLS else ''
-        extra = [x for x in (cells, self.examples_for(tool, inp)) if x]
+        extra = [x for x in (cells, self.page_fact(tool, inp), self.examples_for(tool, inp)) if x]
         output, _ = self.ask_system('<action tool="%s">\n%s\n</action>%s' % (
             tool, json.dumps(inp), ''.join('\n\n' + x for x in extra)))
 
@@ -1044,7 +1043,8 @@ class Session:
             key = 'tool:' + tool if tool.startswith('mcp__') else None
         platform = self.ev.get('os', 'macos')
 
-        return recordings.examples(key, self.recordings, platform) if key else ''
+        code = recordings.read_code(os.path.join(self.code, 'jupylet', 'claude.py'))
+        return recordings.examples(key, self.recordings, platform, code) if key else ''
 
     PAGE_TOOLS = ('mcp__Claude_Browser__preview_start', 'mcp__Claude_Browser__navigate')
 
@@ -1057,6 +1057,22 @@ class Session:
             if name not in self.pages_shown and name not in self.pages_new:
                 self.pages_new.append(name)
 
+    def page_fact(self, tool, inp):
+        """For a page that Claude opens with a notebook, the fact that the
+        page is open, for the state of the system simulator. Without it, the
+        simulator took a page in a hidden pane for a page that is not open
+        (run smoke-open-new-5)."""
+        if tool not in self.PAGE_TOOLS:
+            return ''
+
+        names = self.files.notebook_names(inp.get('url', ''))
+        if not names:
+            return ''
+
+        return ('If a Jupyter server runs on the port of this address, with the token of the address, '
+                'the web page now shows %s.ipynb and is connected to its kernel, also while the pane is '
+                'hidden. Keep this in the state: `attach` and `kernel` find its kernel.' % names[0])
+
     def page_for_human(self):
         """The cells of each notebook page that opened since the last message
         to the human simulator."""
@@ -1064,8 +1080,7 @@ class Session:
         for name in self.pages_new:
             nb = self.files.notebook_text(name)
             if nb:
-                out.append('<page notebook="%s.ipynb">\nA page with this notebook opened on your screen. If '
-                           'it asks for a token, it shows the notebook only after you sign in. These are its '
+                out.append('<page notebook="%s.ipynb">\nA page with this notebook opened on your screen. These are its '
                            'cells, in the percent format of jupytext: each cell starts with a `# %%%%` line, '
                            'and the text cells are comments. The outputs of a cell show below it, after the '
                            'cell runs.\n\n%s\n</page>' % (name, nb))

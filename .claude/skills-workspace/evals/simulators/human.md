@@ -22,8 +22,8 @@ Answer with one or more of these parts, and nothing else:
 
 - `<say>…</say>`: what you type in the chat.
 - `<do>…</do>`: what you do on the computer, outside the chat, in plain
-  words. For example: "paste the token 3795c9ed into the box on the page and
-  press Enter", or "click the globe icon in the upper right corner".
+  words. For example: "click the globe icon in the upper right corner", or
+  "close the tab of the notebook in the web browser".
 - `<wait/>`: you say nothing and wait, for example after Claude said that it
   will tell you when something is finished.
 - `<end/>`: your goal is reached, or you want to stop. Add a `<say>` before

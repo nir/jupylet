@@ -24,13 +24,31 @@ What the documentation does not say:
 - **`attach` with no kernel:**
   `No kernel for '<notebook>': is it open in the browser?`
 - **`attach` on success** ends with a table of the first 20 cells.
+- **The commands with `<port>`** find the token of the server on that port
+  themselves. With no server on that port: `No Jupyter server on port
+  <port>.`
 - **`call` with an unknown tool:**
   `ERROR: Internal error calling tool: Unknown tool: <tool>`.
 - **`call` with `read_notebook`** and `{"notebook_name": …, "response_format":
   "brief"}`: `Notebook <name> has <n> cells.` and a table of the cells.
 - **`replace-kernel`** takes about ten seconds.
-- **`wait-open`, `wait-change` and `run-all`** run until they can print, so
+- **`wait-change` and `run-all`** run until they can print, so
   Claude usually starts them in the background.
+- **`serve`** runs in a tab of the Terminal panel (`run_in_terminal`), so its
+  output goes to the tab, not to Claude. In the state, it does in this order,
+  and stops at the first problem: it reads the local setting `environment`
+  (or searches, and adds the setting); with `--new`, it creates the empty
+  notebook in `examples` (`my-game.ipynb`, or `my-game-2.ipynb` if taken);
+  without `--new`, it stops if a running Jupyter server has the notebook
+  open; it writes the state file; and then a new Jupyter server runs, in
+  that tab, serving the folder of the notebook, on the first free port from
+  8888, with a new token of 8 hex characters. It prints only Jupyter's own
+  log lines to the tab, or one problem line, for example `already open,
+  port 8888, token 3f9a1c07, compatible yes, connections 1`.
+- **`wait-ready`** answers within a few seconds of `serve`: `ready: …` with
+  the values of that new server, or `problem: …` with the problem of
+  `serve`. It can start in the same reply as `serve`: it waits for the
+  state file for up to 10 seconds.
 
 Each command in the documentation exists in `claude.py`. Never answer one of
 them with a usage error. A usage error, with exit code 1, comes only for a
@@ -54,8 +72,9 @@ The example notebooks are `01-hello-world`, `02-hello-jupylet`,
 ## Other checks of the skills
 
 - The port check prints `free` or `in use`.
-- The sign-in check in the page (`fetch('/api/status')`) gives `403` before
-  the person pastes the token, and `200` after.
+- A web page opened at an address with `?token=` and the token of the
+  server shows the notebook at once, and connects to its kernel, also in a
+  hidden pane. `attach` then finds its kernel.
 - The side bar script gives `undefined`, or the text that the script
   returns.
 - "Browse notebooks" (`notebooks/browse-notebooks`) runs until the person

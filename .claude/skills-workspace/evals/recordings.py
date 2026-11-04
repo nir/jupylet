@@ -7,6 +7,7 @@ form, with the values of the current state.
 
 Usage:
     recordings.py add <export.zip or transcript.jsonl> <source name>
+    recordings.py stamp
     recordings.py list
 
 `add` reads a session and adds what it finds to simulators/recordings.json:
@@ -30,7 +31,14 @@ folders become `{scratchpad}`. At most MAX outputs are kept for each key and
 platform. A newer session replaces the oldest outputs of a full key, so the
 examples follow the skills; within one session, its first outputs are kept.
 Long outputs are shortened.
+
+Each output of a `claude.py` command keeps a fingerprint of that command's
+part of the usage text of `claude.py`, as it was when the output was added
+(`doc`). When the usage text of the command changes, its output may have
+changed too: the harness then leaves the old outputs out (examples()).
 """
+
+import hashlib
 
 import glob
 import json
@@ -46,9 +54,8 @@ STORE = os.path.join(HERE, 'simulators', 'recordings.json')
 TAG = re.compile(r'#\s*jupylet:\s*([\w-]+/[\w-]+)\s*$')
 MAX = 3
 #
-# The JavaScript tool runs several different scripts: the sign-in check, the
-# wait for the person, the fold of the side bar. Three outputs were too few
-# for all of them (T9 replaced the 200 of T8 with its own 403).
+# The JavaScript tool runs several different scripts, for example the fold
+# of the side bar. Three outputs were too few for all of them (T9).
 #
 MAX_FOR = {'tool:mcp__Claude_Browser__javascript_tool': 6}
 SHELLS = {'Bash': 'macos', 'PowerShell': 'windows'}
@@ -223,6 +230,46 @@ def collect(lines):
     return found
 
 
+CODE = os.path.join(HERE, '..', '..', '..', 'jupylet', 'claude.py')
+COMMAND = re.compile(r'jupylet[./\\]claude(?:\.py"?)?\s+([a-z][a-z-]*)')
+
+
+def doc_print(command, code):
+    """A fingerprint of the part of the usage text of claude.py (the text
+    `code`) that describes command, or None if it has no part."""
+    usage = code[code.find('USAGE = """'):]
+    lines = usage[:usage.find('"""', 12)].splitlines()
+    head = re.compile(r'%s(\s|$)' % re.escape(command))
+    part = []
+
+    #
+    # A part is its header lines, which start with the command, and the
+    # indented lines below them, blank lines between them included.
+    #
+    for i, line in enumerate(lines):
+        if part and not (head.match(line) or line.startswith((' ', '\t')) or not line.strip()):
+            break
+        if part or head.match(line):
+            part.append(line)
+
+    text = '\n'.join(part).strip()
+    return hashlib.sha1(text.encode()).hexdigest()[:8] if text else None
+
+
+def doc_of(cmd, code):
+    """The fingerprint for a command line that runs claude.py, or None."""
+    m = COMMAND.search(cmd)
+    return doc_print(m.group(1), code) if m and code else None
+
+
+def read_code(path=CODE):
+    try:
+        with open(path, encoding='utf-8') as f:
+            return f.read()
+    except OSError:
+        return ''
+
+
 def add(path, source):
 
     lines = transcript_lines(path)
@@ -231,6 +278,7 @@ def add(path, source):
     scratch = find_scratch([c[1] + '\n' + c[2] for c in calls])
 
     data = load()
+    code = read_code()
     added, replaced, taken = 0, 0, {}
     for key, cmd, out, err, platform in calls:
         #
@@ -241,6 +289,9 @@ def add(path, source):
         item = {'source': source, 'input': general(cmd, home, scratch),
                 'output': shorten(general(out, home, scratch)), 'error': err}
         item['platform'] = platform
+        doc = doc_of(cmd, code)
+        if doc:
+            item['doc'] = doc
         items = data.setdefault(key, [])
         same = [x for x in items if x.get('platform', 'macos') == platform]
         if any(x['output'] == item['output'] for x in same) or taken.get((key, platform), 0) >= MAX_FOR.get(key, MAX):
@@ -257,14 +308,17 @@ def add(path, source):
         source, added, replaced, len(data), STORE))
 
 
-def examples(key, data=None, platform='macos'):
-    """The recorded outputs of a key on a platform, as a block for the system simulator, or ''."""
+def examples(key, data=None, platform='macos', code=None):
+    """The recorded outputs of a key on a platform, as a block for the system
+    simulator, or ''. code is the text of the claude.py under test."""
     #
     # An outdated output has a form that the command no longer prints: leave
-    # it out, so that the simulator does not copy it.
+    # it out, so that the simulator does not copy it. Its usage text changed
+    # since it was added (run smoke-open-new-9), or it is marked by hand.
     #
     items = [x for x in (data if data is not None else load()).get(key, [])
-             if x.get('platform', 'macos') == platform and not x.get('outdated')]
+             if x.get('platform', 'macos') == platform and not x.get('outdated')
+             and not (code and x.get('doc') and x['doc'] != doc_of(x['input'], code))]
     #
     # An error alone would be copied as the normal output: show errors only
     # next to a normal output (the first run of run-all timed out in T8).
@@ -283,10 +337,26 @@ def examples(key, data=None, platform='macos'):
                 'tool' if key.startswith('tool:') else 'command', '\n\n'.join(rows)))
 
 
+def stamp():
+    """Give each output of a claude.py command without a fingerprint the one
+    of the current claude.py. Only for outputs known to match it."""
+    data, code, n = load(), read_code(), 0
+    for items in data.values():
+        for x in items:
+            doc = doc_of(x['input'], code)
+            if doc and not x.get('doc'):
+                x['doc'] = doc
+                n += 1
+    save(data)
+    print('%d outputs stamped' % n)
+
+
 def main():
 
     if sys.argv[1:2] == ['add'] and len(sys.argv) == 4:
         add(sys.argv[2], sys.argv[3])
+    elif sys.argv[1:2] == ['stamp']:
+        stamp()
     elif sys.argv[1:2] == ['list']:
         for key, items in sorted(load().items()):
             print('%-40s %s' % (key, ', '.join(x['source'] + ('/' + x['platform'] if 'platform' in x else '')

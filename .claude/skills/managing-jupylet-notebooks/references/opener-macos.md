@@ -32,7 +32,7 @@ them do not exist.
 
 ## List the Jupyter servers
 
-`cd "{code}" && "{conda_python}" "{code}/jupylet/claude.py" running  # jupylet: notebooks/list-servers`
+`cd "{code}" && "{python}" -m jupylet.claude running  # jupylet: notebooks/list-servers`
 
 Runs `claude.py` by its path, so it needs no Jupylet in that Python. Prints a
 JSON list of the Jupyter servers that run, as the task "Find the Jupyter

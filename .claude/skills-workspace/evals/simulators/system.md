@@ -15,7 +15,7 @@ Each message to you is one of these:
 - `<action tool="…">…</action>`: one tool call of the worker, with its input
   as JSON. Answer with its output.
 - `<event>…</event>`: something that the person did on the computer, for
-  example "pastes the token into the page and presses Enter". Change the
+  example "clicks the globe icon in the upper right corner". Change the
   state. Answer with `<output></output>`.
 - `<pending>…</pending>`: a list of background commands that still run.
   Say which of them end now, and with which output. See "Background
@@ -138,6 +138,6 @@ its output
 </done>
 ```
 
-A command ends now when the state lets it end. For example, `wait-open`
-ends with `open` only after the person signed in to the page. A command
+A command ends now when the state lets it end. For example, `run-all`
+ends with `finished` only after the run is over. A command
 that cannot end yet stays pending: give nothing for it.

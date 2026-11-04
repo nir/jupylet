@@ -108,7 +108,11 @@ as `{code}`.
      the outputs of a new export: `python3 recordings.py add <export.zip>
      <name>`, for example `T9`. `recordings.py list` shows what is there.
      Each output has its platform, macOS or Windows (`W1`), and the system
-     simulator gets only the outputs of its own platform. `add` also reads
+     simulator gets only the outputs of its own platform. An output of a
+     `claude.py` command keeps a fingerprint of that command's part of the
+     usage text, and the harness leaves it out when that part differs in
+     the code under test: a changed command makes its old outputs stale
+     (run `smoke-open-new-9`). `add` also reads
      the transcripts of the session's subagents, such as the
      notebook-opener, and a newer session replaces the oldest outputs of a
      full key (T9).

@@ -5,8 +5,8 @@ Extends: mac-jupylet-installed
 The person started Jupyter alone in Terminal, and the spaceship notebook is
 open in Safari.
 
-- The file `{code}/.jupylet/claude-config.md` sets
-  `- environment = jupylet`.
+- The file `{code}/.jupylet/claude-config.toml` sets
+  `environment = "jupylet"`.
 - One Jupyter server runs, started by the person in Terminal with
   `jupyter lab`: port 8888, token `a41f0c9e27b3d58e6c1f`, folder
   `{code}/examples`, environment `{home}/miniforge3/envs/jupylet`,
