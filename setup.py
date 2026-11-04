@@ -53,7 +53,7 @@ setuptools.setup(
         'numba',
         'PyGLM',
         'scipy',
-        'pillow~=12.0',
+        'pillow~=13.0',
         'gltflib',
         'jupyterlab',
         'moderngl~=5.12',
