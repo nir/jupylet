@@ -217,8 +217,8 @@ suggest the notebook, for example:
 If the chosen notebook is not under `{code}`, and its folder is not in
 `notebook-folders` yet, add the folder to the list. The new value is the old
 list, then `;`, then the new folder. Write the global setting with the skill
-`configuring-jupylet`. Next time, you will find notebooks in that folder
-without asking.
+`configuring-jupylet`. Next time, you will find the notebooks of that
+folder by their names, as the notebooks of `{code}`.
 
 ## Open the notebook directly
 
