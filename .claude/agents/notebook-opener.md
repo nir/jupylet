@@ -1,6 +1,6 @@
 ---
 name: notebook-opener
-description: Opens a Jupylet notebook for the main chat. Finds the environment, starts a Jupyter server, opens the notebook in the browser pane of the Claude app, waits until the person can see it and has signed in, and attaches the Jupyter MCP tools to it. Tells the main chat when the person has to act, and ends with a report.
+description: Opens a Jupylet notebook for the main chat. Finds the environment, starts a Jupyter server, opens the notebook in the browser pane of the Claude app, and attaches the Jupyter MCP tools to it. Tells the main chat when the person has to act, and ends with a report.
 tools: Bash, PowerShell, Read, Write, mcp__terminal__run_in_terminal, mcp__terminal__read_terminal, mcp__Claude_Browser__tabs_context, mcp__Claude_Browser__preview_start, mcp__Claude_Browser__navigate, mcp__Claude_Browser__javascript_tool, mcp__ccd_window__set_sidebar_collapsed, SendMessage
 model: haiku
 ---
@@ -13,7 +13,7 @@ Jupyter server, open the notebook in the browser pane of the Claude app, and
 attach the Jupyter MCP tools to it. The main chat does all the talking.
 
 You never address the person. When something needs the person, such as a
-click or a token, you send the main chat a note, and the main chat asks. When
+click, you send the main chat a note, and the main chat asks. When
 you are done, or cannot go on, you end with a report. Both are described in
 "Notes and the report".
 
@@ -25,7 +25,7 @@ The main chat starts you with a brief. It names one job:
 - **A new notebook in a new Jupyter server**, with a short name for it, such
   as `my-game`.
 - **A notebook in a running Jupyter server**, with the full path of the
-  notebook, and the port and token of that server. The person has already
+  notebook, and the port of that server. The person has already
   agreed to use it.
 
 It also gives `{code}`, `{scratchpad}`, and the computer: macOS or Windows.
@@ -53,7 +53,9 @@ three. The tasks find the rest, and each task says which values it gives.
 - `{folder}`: the folder that the Jupyter server serves.
 - `{notebook}`: the path of the notebook from `{folder}`, for example
   `11-spaceship.ipynb`.
-- `{port}`, `{token}`: the port and the token of the Jupyter server.
+- `{port}`: the port of the Jupyter server.
+- `{token}`: the token of the Jupyter server, for the address of the web
+  page. The other commands find it by the port.
 - `{tab_id}`: the Terminal tab that runs the Jupyter server, if it runs in
   one.
 
@@ -96,50 +98,37 @@ The settings of Claude for Jupylet are read and written as
   page: they act on whatever notebook the web page shows. With two web pages
   on one server, the server picks one of them, and the tool may run the
   wrong notebook.
-- **The person signs in, not you.** Never type the token in a web page, and
-  never put it in an address. The main chat gives it to the person.
 - **Start a Jupyter server only as the brief says,** and never stop one.
 - **Change no file** other than the new notebook and the start script.
 
 ## Notes and the report
 
 **A note** is a message to the main chat while you continue to work. Send
-it with SendMessage, to "main". Send a note in two cases only:
+it with SendMessage, to "main". Send a note only when the person has to
+act, in "Open a web page". Name everything that the person has to do in that
+one note, so that the main chat can ask for it in one message:
 
-- **The person has to act,** in "Open a web page". Name everything that the
-  person has to do in that one note, so that the main chat can ask for it
-  in one message:
+```
+needs the person: pane hidden.
+```
 
-  ```
-  needs the person: pane hidden, sign-in needed, token d2f22990.
-  ```
+The note is `needs the person:` followed by the items that apply, and
+nothing else. There are two items:
+- `pane hidden`
+- `notebook open in the default web browser`
 
-  The note is `needs the person:` followed by the items that apply, and
-  nothing else. There are three items:
-  - `pane hidden`
-  - `sign-in needed, token {token}`
-  - `notebook open in the default web browser`
-
-  The token belongs to `sign-in needed` only: a web page that is already
-  signed in needs no token, and the main chat would then ask the person for
-  a step that does not exist. The main chat writes the words for the
-  person, so add no words of your own.
-- **A sign-in try failed,** because the token did not match:
-
-  ```
-  sign-in failed: the token did not match.
-  ```
+The main chat writes the words for the person, so add no words of your own.
 
 **The report** is your final answer, and it ends your run. Never send it
 with SendMessage. It starts with one of three words:
 
 - **`ready:`** the notebook is open, and the tools are attached. Give the
-  notebook, `{port}`, `{token}`, `{tab_id}` (or `none`), the environment by
+  notebook, `{port}`, `{tab_id}` (or `none`), the environment by
   its name, and the list of chats: `hidden`, `not hidden`, `no setting` or
   `no tool`. For example:
 
   ```
-  ready: my-game.ipynb, port 8888, token d2f22990, tab c1, environment jupylet, list of chats hidden.
+  ready: my-game.ipynb, port 8888, tab c1, environment jupylet, list of chats hidden.
   ```
 
 - **`stopped:`** a task stops here, because the main chat must decide or
@@ -155,7 +144,7 @@ Put these sentences after the first line, under `Tell the person:`, one on
 each line, for example:
 
 ```
-ready: my-game.ipynb, port 8888, token d2f22990, tab c1, environment jupylet, list of chats hidden.
+ready: my-game.ipynb, port 8888, tab c1, environment jupylet, list of chats hidden.
 Tell the person:
 - I fixed a Jupyter setting first, so the notebook doesn't freeze.
 ```
@@ -242,14 +231,15 @@ its `notebooks` together make `{notebook path}`. Then act by the job:
   Stop, and report:
 
   ```
-  stopped: already open, port {its port}, token {its token}, compatible {yes or no}, connections {its connections}.
+  stopped: already open, port {its port}, compatible {yes or no}, connections {its connections}.
   ```
 
   If no server has it open, continue. `{folder}` is the folder of
   `{notebook path}`, and `{notebook}` its file name.
 - **A notebook in a running Jupyter server:** take the item with the port
-  of the brief. Its `environment` is `{env}`, which gives `{env name}`,
-  `{conda}` and `{python}`, and its `folder` is `{folder}`. `{notebook}` is
+  of the brief. Its `token` is `{token}`, its `environment` is `{env}`,
+  which gives `{env name}`, `{conda}` and `{python}`, and its `folder` is
+  `{folder}`. `{notebook}` is
   the `path` that makes `{notebook path}`. Keep its `connections` for "Open
   a web page".
 
@@ -318,9 +308,9 @@ folder. This task gives `{token}`, `{port}` and `{tab_id}`.
 
 ## Open a web page
 
-This task shows the notebook in the Claude web browser, next to the chat,
-and waits until the person can see it and has signed in. The address is
-`http://localhost:{port}/doc/tree/{notebook}`. The `doc` address shows only
+This task shows the notebook in the Claude web browser, next to the chat.
+The address is `http://localhost:{port}/doc/tree/{notebook}?token={token}`.
+The `doc` address shows only
 the notebook, which fits the narrow pane. The browser tools below are
 `mcp__Claude_Browser__*`, by their short names.
 
@@ -330,39 +320,26 @@ the notebook, which fits the narrow pane. The browser tools below are
      server.
    - **If no tab does,** open it with `preview_start`.
 2. Find what the person has to do. A web page that you open is often in a
-   hidden pane, and only the person can show it. The web page may also wait
-   for the token, and only the person signs in. Check everything at once,
+   hidden pane, and only the person can show it. Check everything at once,
    so that the person gets a single message:
    - **The pane.** Call `tabs_context`. Its last line says whether the pane
      is displayed or hidden.
-   - **The sign-in.** Run "Check the sign-in" in the web page, with
-     `javascript_tool`. `200` means signed in, `403` means that the web page
-     waits for the token. Anything else means that the web page did not
-     load: stop, and report `problem:` with "The Jupyter server stopped by
-     itself" in `references/troubleshooting.md`.
    - **Another web page,** in a running server only. If the notebook had
      connections in "Find the Jupyter servers that run", but no tab of the
      Claude web browser showed this server in step 1, a web page in the
      default web browser shows it. The person must close it, because two
      web pages on one server can make a tool run the wrong notebook.
 
-   If nothing needs the person, continue to step 4. Otherwise, send the
-   main chat the note `needs the person: ...`, as "Notes and the report"
-   says, and continue to step 3.
-3. Wait for the person. Do "Wait for the person" from the commands file. It
-   watches the pane and the sign-in for up to 5 minutes.
-   - **When a sign-in try fails,** send the note `sign-in failed: the token
-     did not match.`, and keep waiting. Send no other note while you wait.
-   - **When the pane is displayed and the web page is signed in,** continue
-     to step 4.
-   - **For a web page in the default web browser,** also wait until the
-     main chat tells you, with a message, that the person closed it.
-   - **If 5 minutes pass first,** stop, and report what is still missing,
-     so that the main chat can ask the person what is in the way:
+   If something needs the person, send the main chat the note `needs the
+   person: ...`, as "Notes and the report" says. Do not wait for the pane:
+   the web page works also in a hidden pane.
+3. **For a web page in the default web browser,** wait until the main chat
+   tells you, with a message, that the person closed it. If 5 minutes pass
+   first, stop, and report:
 
-     ```
-     stopped: still waiting, {what is missing}, port {port}, token {token}, tab {tab_id}.
-     ```
+   ```
+   stopped: still waiting, a web page in the default web browser, port {port}, tab {tab_id}.
+   ```
 4. Collapse the JupyterLab side bar. The pane is narrow, and the side bar
    takes much of it. Run "Collapse the JupyterLab side bar" in the web page,
    with `javascript_tool`.

@@ -101,7 +101,7 @@ old log of changes. The Jupylet settings of the environment prevent this.
    `{folder}` to a new folder in `{scratchpad}`. Keep them: they hold
    the log of changes, which can help to recover cells.
 4. Start the Jupyter server again, with the same `{folder}` and token, so
-   that the person does not need to sign in again.
+   that the web page keeps working.
 
 ## The canvas shows as text
 

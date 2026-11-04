@@ -21,8 +21,8 @@ setting applies only to this Jupylet folder, and overrides a global setting
 with the same key. A read gives the value that applies here. A write or a
 delete names `global` or `local`.
 
-The settings are in the files `.jupylet/claude-config.md`: the global file in
-the home folder of the person, the local file in the Jupylet folder.
+The settings are in the files `.jupylet/claude-config.toml`: the global file
+in the home folder of the person, the local file in the Jupylet folder.
 
 ## The commands
 

@@ -60,9 +60,11 @@ Values in `{braces}` are blanks that you fill in.
 - `{python}`: the Python of the environment of the Jupyter server:
   `bin/python` in it on macOS, `python.exe` in it on Windows. "Wait for the
   Jupyter server" gives it too.
-- `{port}`, `{token}`: the port and the token of the Jupyter server that you
-  work with. The report of the opener, or "Wait for the Jupyter server",
-  gives them.
+- `{port}`: the port of the Jupyter server that you work with. The report
+  of the opener, or "Wait for the Jupyter server", gives it. The commands
+  find the token of the Jupyter server by its port.
+- `{address}`: the address of the web page of the notebook, from "Wait for
+  the Jupyter server".
 - `{tab_id}`: the Terminal tab that runs the Jupyter server, from the report
   of the opener, or from step 3 of "Open the notebook directly".
 - `{folder}`: the folder that the Jupyter server serves.
@@ -87,7 +89,7 @@ strangely, read `references/troubleshooting.md`.
 
 - **Claude app:** the Claude desktop app, where the person chats with you.
 - **Jupyter server:** one JupyterLab program that runs. It serves a folder,
-  and it has a port and a token.
+  and it has a port.
 - **Compatible Jupyter server:** a Jupyter server that runs the Jupylet
   version of the code in `{code}`, and whose `mcp_tools`
   and `nbmodel_off` are `true`. You can attach to its notebooks.
@@ -116,8 +118,6 @@ strangely, read `references/troubleshooting.md`.
   the server picks one of them, and the tool may run the wrong notebook. So
   keep a single web page for each Jupyter server ("Web page commands" in
   `references/jupyter-mcp-tools.md`).
-- **The person signs in, not you.** Give the token to the person. Never type
-  it in a web page, and never put it in an address.
 
 ## Understand the request
 
@@ -227,9 +227,8 @@ without asking.
 
 This task opens the notebook yourself, without the opener, on macOS when the
 tool list has `mcp__terminal__run_in_terminal`, loaded or only by its name.
-One command checks the environment and starts the Jupyter server, and the
-Jupyter server tells when the person has signed in, so it takes only a few
-steps. Its commands are in `references/open-directly-macos.md`. Each step
+One command checks the environment and starts the Jupyter server, so it
+takes only a few steps. Its commands are in `references/open-directly-macos.md`. Each step
 is one reply: do the calls of a step together.
 
 1. Get ready. In one reply:
@@ -252,7 +251,7 @@ is one reply: do the calls of a step together.
    the person in one line what happens, for example "Starting Jupyter now,
    one second.", do "Start the Jupyter server", and run "Wait for the
    Jupyter server". Keep the `tab_id` of the tab: it is `{tab_id}`.
-   - **`ready:`** keep `{notebook}`, `{folder}`, `{port}`, `{token}`,
+   - **`ready:`** keep `{notebook}`, `{folder}`, `{port}`, `{address}`,
      `{python}`, and the setting `hide-chat-list`. Pass on to the person
      each line under `Tell the person:`.
    - **`problem: not installed: ...`:** close the tab with
@@ -262,59 +261,42 @@ is one reply: do the calls of a step together.
      notebook open, for example from another chat. Close the tab in the
      same way. If it says `compatible yes`, do "Use a running Jupyter
      server". If not, do "Move the notebook to a new Jupyter server". It
-     gives the port and the token of that server.
+     gives the port of that server.
    - **Another `problem:`:** close the tab in the same way, and do "Open the
      notebook". The opener finds the environment in other ways, for example
      without Miniforge, and reports the cause.
-4. Open the web page, at `http://localhost:{port}/doc/tree/{notebook}`. On
-   the first start of this conversation, as in step 2, open it with
+4. Open the web page, at `{address}`. On the first start of this conversation, as in step 2, open it with
    `preview_start`. After an earlier start, call
    `mcp__Claude_Browser__tabs_context` first: if a tab already shows
    `localhost:{port}`, open the address in that tab with `navigate`, and
    otherwise with `preview_start`.
-5. Check the web page. In one reply, call `tabs_context` (its last line says
-   whether the pane is displayed or hidden), and run "Check the sign-in" in
-   the web page, with `javascript_tool`.
-   - **`200`:** the web page is already signed in, for example by a
-     sign-in to an earlier Jupyter server on the same port. Continue at step
-     7. If the pane is hidden, ask the person in the same reply to click the
-     globe icon in the upper right corner of the Claude app, to see the
-     notebook.
-   - **`403`:** continue at step 6.
-6. Ask the person to sign in, and wait. In one reply, run "Wait for the web
-   page to open" with 300 seconds, in the background (`run_in_background`
-   set to `true`), and ask the person for the steps, with one numbered step
-   for each:
-   1. **If the pane is hidden:** click the globe icon in the upper right
-      corner of the Claude app.
-   2. Paste the token into the box on the web page, and press Enter.
+5. Attach. In one reply, call `tabs_context` (its last line says whether
+   the pane is displayed or hidden), run "Collapse the JupyterLab side bar"
+   in the web page, and run "Attach". "Attach" waits until the web page has
+   connected to the kernel of the notebook. The web page works also in a
+   hidden pane.
+   - **If its output contains `Successfully activate notebook`,** continue
+     at step 6.
+   - **If it says that there is no kernel,** follow "The notebook has no
+     kernel" in `references/troubleshooting.md`.
+6. Finish. In one reply, load `working-in-notebooks`, as "Understand the
+   request" says, act on the setting `hide-chat-list` from step 3, and send
+   the person one message:
+   - Say that the notebook is ready.
+   - **If the pane was hidden in step 5,** ask the person to click the globe
+     icon in the upper right corner of the Claude app, to see it.
+   - **`hide-chat-list` is `yes`:** hide the list of chats with
+     `mcp__ccd_window__set_sidebar_collapsed`, with `collapsed` set to true.
+   - **`no`:** leave the list as it is.
+   - **`no setting`:** ask whether to hide the list of chats, as "Hide the
+     list of chats" says.
 
    For example:
 
-   > Your notebook is almost ready, next to our chat.
-   > 1. Click the globe icon in the upper right corner of the Claude app,
-   >    to show it.
-   > 2. On the web page, paste this token into the box, and press Enter:
-   >    `d2f22990`
-
-   Then end your turn. If the person says that the token did not work, give
-   it again. When the wait ends, its notification gives the exit code: 0
-   means `open`, 1 means `timeout`, so you do not need to read its output.
-   - **`open`:** the person signed in. Continue at step 7.
-   - **`timeout`:** the person did not sign in within 5 minutes. Ask what
-     is in the way. When it is solved, run the wait again.
-7. Attach. In one reply, run "Collapse the JupyterLab side bar" in the web
-   page, and run "Attach".
-   - **If its output contains `Successfully activate notebook`,** continue
-     at step 8.
-   - **If it says that there is no kernel,** follow "The notebook has no
-     kernel" in `references/troubleshooting.md`.
-8. Finish. In one reply, act on the setting `hide-chat-list` from step 3,
-   and load `working-in-notebooks`, as "Understand the request" says:
-   - **`yes`:** hide the list of chats with
-     `mcp__ccd_window__set_sidebar_collapsed`, with `collapsed` set to true.
-   - **`no`:** leave the list as it is.
-   - **`no setting`:** do "Hide the list of chats".
+   > Your new notebook is ready. Click the globe icon in the upper right
+   > corner of the Claude app to see it next to our chat. Shall I also hide
+   > the list of chats on the left, to give the notebook more room? I'll
+   > remember your answer for next time.
 
 ## Open the notebook
 
@@ -342,7 +324,7 @@ person's request to open the notebook covers starting the opener.
      The job is one of these:
      - `a notebook in a new Jupyter server, {full path of the notebook}`
      - `a new notebook in a new Jupyter server, named {short name}`
-     - `a notebook in a running Jupyter server, {full path of the notebook}, port {port}, token {token}`
+     - `a notebook in a running Jupyter server, {full path of the notebook}, port {port}`
 
    Then end your turn.
 2. Act on the notes of the opener. Each note arrives as a new turn. It comes
@@ -358,42 +340,35 @@ person's request to open the notebook covers starting the opener.
         I could end up running the wrong notebook." When the person says
         that they closed it, tell the opener with `SendMessage`, to
         `notebook-opener`.
-     3. **`sign-in needed`:** give the person the token, for example: "This
-        web page wants a special token just for this session. Please paste
-        this into the box on the web page, and press Enter: `{token}`."
 
      For example:
 
-     > Your notebook is ready, next to our chat.
-     > 1. Click the globe icon in the upper right corner of the Claude app,
-     >    to show it.
-     > 2. On the web page, paste this token into the box, and press Enter:
-     >    `d2f22990`
+     > Your notebook is ready, next to our chat. Click the globe icon in
+     > the upper right corner of the Claude app, to see it.
 
-     The opener waits for the person. End your turn.
-   - **`sign-in failed: ...`:** tell the person in one line that the token
-     did not match, and give it again.
+     End your turn.
 3. Act on the report of the opener. It arrives as a new turn, and it starts
    with one word:
-   - **`ready:`** the notebook is open, and you are attached. Keep `{port}`,
-     `{token}` and `{tab_id}`. Pass on to the person each thing that the
+   - **`ready:`** the notebook is open, and you are attached. Keep `{port}`
+     and `{tab_id}`. Pass on to the person each thing that the
      report says to tell them. If the report gives the list of chats as `no
      setting` or `no tool`, do "Hide the list of chats". Then load
      `working-in-notebooks`, as "Understand the request" says.
    - **`stopped: already open, ...`:** a Jupyter server already has the
      notebook open. If the report says that it is compatible, do "Use a
      running Jupyter server". If not, do "Move the notebook to a new Jupyter
-     server". The report gives the port and the token of that server.
+     server". The report gives the port of that server.
    - **`stopped: not installed, ...`:** do "Install Jupylet first".
    - **`stopped: not prepared, ...`:** the opener could not change the
      Jupyter settings of the environment, so it did not start the Jupyter
      server. Tell the person in plain words, and follow
      `references/troubleshooting.md`.
-   - **`stopped: still waiting, ...`:** the person did not show the pane or
-     sign in within 5 minutes, and the Jupyter server still runs. Ask the
+   - **`stopped: still waiting, ...`:** the person did not close the web
+     page in the default web browser within 5 minutes, and the Jupyter
+     server still runs. Ask the
      person what is in the way. When it is solved, do this task again with
-     the job `a notebook in a running Jupyter server`, with the port and the
-     token of the report.
+     the job `a notebook in a running Jupyter server`, with the port of the
+     report.
    - **`problem: ...`:** follow the part of `references/troubleshooting.md`
      that the report names, or the whole file if it names none.
 
@@ -417,8 +392,8 @@ which one, for example:
 > I see two notebooks open, the spaceship and Hello Jupylet. Which one do you
 > mean?
 
-Take `{port}` and `{token}` from the report of the opener, or from "Find the
-Jupyter servers that run". Then do "Open the notebook", with the job `a
+Take `{port}` from the report of the opener, or from "Find the Jupyter
+servers that run". Then do "Open the notebook", with the job `a
 notebook in a running Jupyter server`. The opener also checks that no web
 page in the default web browser shows the notebook, and its note tells you
 when the person has to close one.
@@ -441,8 +416,7 @@ Offer to open the notebook again in a new Jupyter server, for example:
 > (a Jupyter server is the program behind the notebook). I can close it
 > and open the notebook again in a new one. Please save the notebook first.
 > Shall I?
-After a yes, take `{port}` and `{token}` of that server from the report of
-the opener, or from "Find the Jupyter servers that run". Then:
+After a yes, take `{port}` of that server from the report of the opener, or from "Find the Jupyter servers that run". Then:
 
 1. Do "Stop the Jupyter server".
 2. Do "Open the notebook", with the job `a notebook in a new Jupyter
@@ -515,9 +489,10 @@ that act on it, such as "Stop JupyterLab".
 
 ## Hide the list of chats
 
-The opener hides the list of chats itself when the setting `hide-chat-list`
-is `yes`. Do this task when its report gives the list of chats as `no
-setting` or `no tool`.
+Do this task when the setting `hide-chat-list` has no value: from "Wait for
+the Jupyter server", or from the report of the opener, as `no setting`. Also
+do it when the report of the opener gives the list of chats as `no tool`.
+The opener hides the list of chats itself when the setting is `yes`.
 
 - **`no tool`:** the tool `mcp__ccd_window__set_sidebar_collapsed` does not
   exist here. Tell the person how to hide the list themselves, as in the
@@ -553,7 +528,7 @@ name the one that you want to stop, by its notebook, and wait for a clear
 yes. For example: "Shall I close the Jupyter server with your spaceship
 notebook?" A short word such as "shutdown" does not choose one.
 
-Take `{port}`, `{token}` and `{tab_id}` from the report of the opener, or
+Take `{port}` and `{tab_id}` from the report of the opener, or
 from "Open the notebook directly". For a
 Jupyter server that the opener did not start, take them from "Find the
 Jupyter servers that run".

@@ -41,14 +41,12 @@ Some blanks appear only here:
 - Check the environment
 - Prepare the environment
 - Start JupyterLab
-- Check the sign-in
 - Collapse the JupyterLab side bar
 - Attach
 - Call a tool
 - Run all cells
 - Run all cells and wait
 - Run one cell
-- Wait for the web page to open
 - Wait for a run
 - Replace the kernel
 - Stop JupyterLab
@@ -98,7 +96,7 @@ Expected: no output. An error names the part that is missing:
 
 ## Check the Jupyter MCP tools
 
-`cd "{code}" && "{python}" -m jupylet.claude tools {port} {token}  # jupylet: notebooks/check-tools`
+`cd "{code}" && "{python}" -m jupylet.claude tools {port}  # jupylet: notebooks/check-tools`
 
 Lists the Jupyter MCP tools that the Jupyter server offers. Expected: the list
 contains `notebook_run-all-cells`.
@@ -116,9 +114,7 @@ It waits until the person chooses, so start it in the background.
 
 `"{python}" -c "import secrets; print(secrets.token_hex(4))"  # jupylet: notebooks/make-token`
 
-Prints a new token of eight characters. It is short, so that a kid can paste
-or type it. The Jupyter server accepts connections from this computer only,
-so a short token is enough.
+Prints a new token of eight characters.
 
 ## Check the environment
 
@@ -200,14 +196,6 @@ after 60 seconds`. The port is `{port}`.
 *Developer note, not an instruction: the activation with `bin/activate`, the
 file, and the last option are not tested on macOS yet.*
 
-## Check the sign-in
-
-Run this in the web page with `javascript_tool`:
-
-`(await fetch('/api/status', {credentials: 'same-origin'})).status`
-
-Prints `200` if the web page signed in, or `403` if it did not.
-
 ## Collapse the JupyterLab side bar
 
 Run this in the web page with `javascript_tool`:
@@ -231,14 +219,14 @@ collapsed panel for the next web page of this Jupyter server.
 
 ## Attach
 
-`cd "{code}" && "{python}" -m jupylet.claude attach {port} {token} {notebook}  # jupylet: notebooks/attach`
+`cd "{code}" && "{python}" -m jupylet.claude attach {port} {notebook}  # jupylet: notebooks/attach`
 
 Connects the Jupyter MCP tools to the notebook. The notebook must be open in a
 web page. Expected: the output contains `Successfully activate notebook`.
 
 ## Call a tool
 
-`cd "{code}" && "{python}" -m jupylet.claude call {port} {token} {tool} '{json arguments}'  # jupylet: notebooks/call-tool`
+`cd "{code}" && "{python}" -m jupylet.claude call {port} {tool} '{json arguments}'  # jupylet: notebooks/call-tool`
 
 Calls one notebook tool. Instead of the JSON, the last argument can be
 `@{file}` (read the JSON from a file) or `-` (read it from stdin). Tools
@@ -246,18 +234,18 @@ without arguments need no last argument.
 
 Some tools need the id of the kernel:
 
-`cd "{code}" && "{python}" -m jupylet.claude kernel {port} {token} {notebook}  # jupylet: notebooks/kernel-id`
+`cd "{code}" && "{python}" -m jupylet.claude kernel {port} {notebook}  # jupylet: notebooks/kernel-id`
 
 ## Run all cells
 
-`cd "{code}" && "{python}" -m jupylet.claude call {port} {token} notebook_run-all-cells  # jupylet: notebooks/run-all`
+`cd "{code}" && "{python}" -m jupylet.claude call {port} notebook_run-all-cells  # jupylet: notebooks/run-all`
 
 Runs all cells, as Run > Run All Cells in the web page does. Prints `True` after
 a second or two. The cells can still run after that.
 
 ## Run all cells and wait
 
-`cd "{code}" && "{python}" -m jupylet.claude run-all {port} {token} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
+`cd "{code}" && "{python}" -m jupylet.claude run-all {port} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
 
 Run it in the background. It starts to watch the notebook, then runs all
 cells, as Run > Run All Cells in the web page does, and waits until the run ends.
@@ -271,23 +259,16 @@ after the run sees no change.
 
 ## Run one cell
 
-`cd "{code}" && "{python}" -m jupylet.claude run-cell {port} {token} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
+`cd "{code}" && "{python}" -m jupylet.claude run-cell {port} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
 
 Moves the active cell of the web page to the cell, one cell at a time. It checks
 that the source of the cell starts with the text that you give, and only then
 runs it, because the wrong cell can restart a game. Prints `True`, or why it
 did not run. It moves the cursor of the person.
 
-## Wait for the web page to open
-
-`cd "{code}" && "{python}" -m jupylet.claude wait-open {port} {token} {notebook} {seconds}  # jupylet: notebooks/wait-open`
-
-Run it in the background. Prints `open` when the notebook opens in a web page,
-or `timeout`.
-
 ## Wait for a run
 
-`cd "{code}" && "{python}" -m jupylet.claude wait-change {port} {token} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
+`cd "{code}" && "{python}" -m jupylet.claude wait-change {port} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
 
 Run it in the background. Prints `finished: ...` when the kernel ran
 something and is idle again, or `not finished: ...` after {seconds}. Both
@@ -295,7 +276,7 @@ end with the fingerprint.
 
 ## Replace the kernel
 
-`cd "{code}" && "{python}" -m jupylet.claude replace-kernel {port} {token} {notebook}  # jupylet: notebooks/replace-kernel`
+`cd "{code}" && "{python}" -m jupylet.claude replace-kernel {port} {notebook}  # jupylet: notebooks/replace-kernel`
 
 Stops the kernel of the notebook, starts a new one, waits until it is ready
 (about 10 seconds), and prints the new id. The variables of the old kernel
@@ -303,7 +284,7 @@ are lost.
 
 ## Stop JupyterLab
 
-`cd "{code}" && "{python}" -m jupylet.claude shutdown {port} {token}  # jupylet: notebooks/stop-jupyter`
+`cd "{code}" && "{python}" -m jupylet.claude shutdown {port}  # jupylet: notebooks/stop-jupyter`
 
 Stops each kernel, then the Jupyter server, and waits until it ends. Prints
 `stopped`, `not running`, or `stopped after ending its process`.

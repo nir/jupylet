@@ -46,9 +46,9 @@
   same folder. Then offer to start Jupyter in the app, or let the person
   start it and connect to that.
 - **Start in the app:** keep the tested procedure (token, port and
-  `prepare`, start detached, wait, open the page, the person signs in,
-  attach, run all). Rewrite only the wording.
-- **Sidebar:** keep the offer to hide the list of chats after sign-in.
+  `prepare`, start detached, wait, open the page with the token in its
+  address, attach, run all). Rewrite only the wording.
+- **Sidebar:** keep the offer to hide the list of chats after the page opens.
 - **Which notebook:** the one the person or setup names. Otherwise list the
   examples, or ask what the person is interested in (music, 2D graphics,
   3D). Keep this part loose for now.

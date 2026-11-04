@@ -37,20 +37,19 @@ notebook (see CLAUDE.md). Standard library only, so it also runs by file path.
     python -m jupylet.claude config delete local|global <key>
     python -m jupylet.claude detach <log file> <command> [<argument> ...]
     python -m jupylet.claude wait <log file> <token>
-    python -m jupylet.claude attach <port> <token> <notebook path>
-    python -m jupylet.claude kernel <port> <token> <notebook path>
-    python -m jupylet.claude tools <port> <token>
-    python -m jupylet.claude call <port> <token> <tool> ['<json arguments>']
-    python -m jupylet.claude wait-open <port> <token> <notebook path> <seconds>
+    python -m jupylet.claude attach <port> <notebook path>
+    python -m jupylet.claude kernel <port> <notebook path>
+    python -m jupylet.claude tools <port>
+    python -m jupylet.claude call <port> <tool> ['<json arguments>']
     python -m jupylet.claude context <scratchpad or session log>
     python -m jupylet.claude wait-compact <scratchpad or session log> <seconds>
-    python -m jupylet.claude wait-change <port> <token> <notebook path> <seconds> [<since>]
-    python -m jupylet.claude run-all <port> <token> <notebook path> <seconds>
-    python -m jupylet.claude watch <port> <token> <notebook path> <seconds> <state file or new>
-    python -m jupylet.claude cell <port> <token> <notebook path> <cell id or index>
-    python -m jupylet.claude replace-kernel <port> <token> <notebook path>
-    python -m jupylet.claude run-cell <port> <token> <cell index> <start of its source>
-    python -m jupylet.claude shutdown <port> <token>
+    python -m jupylet.claude wait-change <port> <notebook path> <seconds> [<since>]
+    python -m jupylet.claude run-all <port> <notebook path> <seconds>
+    python -m jupylet.claude watch <port> <notebook path> <seconds> <state file or new>
+    python -m jupylet.claude cell <port> <notebook path> <cell id or index>
+    python -m jupylet.claude replace-kernel <port> <notebook path>
+    python -m jupylet.claude run-cell <port> <cell index> <start of its source>
+    python -m jupylet.claude shutdown <port>
     python -m jupylet.claude cleanup [--yes]
     python -m jupylet.claude running [<folder>]
     python -m jupylet.claude prepare [--check]
@@ -61,7 +60,8 @@ file by path: it never imports jupylet itself, on purpose). `running` too. It pr
 its path, its kind (conda or venv), and where its jupylet comes from ("this
 folder", or a version and its source). With --all it also lists
 environments with any other version of jupylet. Every other command needs an
-environment that actually has jupylet installed.
+environment that actually has jupylet installed. The commands with <port>
+find the token of that Jupyter server themselves.
 
 `running` prints a JSON list, one object per Jupyter server that runs:
 
@@ -110,8 +110,9 @@ serve <state file> --new <name>
 
 wait-ready <state file>
     Also by file path with any Python 3. Once the server of serve answers:
-    `ready: <notebook>, folder <folder>, port <port>, token <token>, python
-    <the environment's python>, hide chat list <yes, no or no setting>.`,
+    `ready: <notebook>, folder <folder>, port <port>, address
+    http://localhost:<port>/doc/tree/<notebook>?token=<token>, python <the
+    environment's python>, hide chat list <yes, no or no setting>.`,
     then, if there is something to tell the person, `Tell the person:` and
     one `- ` line each. Or `problem: ...` (exit code 1), for example
     `problem: not installed: ...` or `problem: the Jupyter server ended:
@@ -120,14 +121,16 @@ wait-ready <state file>
 config
     Also by file path with any Python 3. Every setting, one on each line,
     for example `- hide-chat-list = yes`; or `no settings`. The settings
-    are in .jupylet/claude-config.md in this jupylet folder (local) and in
+    are in .jupylet/claude-config.toml in this jupylet folder (local) and in
     the home folder (global). A local setting overrides the global one with
     the same key.
 
 config set local|global <key> <value>
     `set: - <key> = <value> (local)`, or `no change: ...` if the file
-    already has that value. Makes the file, with its header, if it does not
-    exist yet.
+    already has that value. Writes the file in TOML, its header and one
+    `<key> = "<value>"` line for each setting. A claude-config.md of an
+    earlier version becomes that file: its settings move over, and it is
+    removed.
 
 config delete local|global <key>
     `deleted: <key> (local)`, or `no setting: ...`.
@@ -141,7 +144,7 @@ wait <log file> <token>
     `ready 8889`, or `not ready after 60 seconds` (exit code 1). <log file>
     is the log file given to detach: the server prints its address there.
 
-attach <port> <token> <notebook path>
+attach <port> <notebook path>
     The answer of the Jupyter MCP tool use_notebook, about ten lines. On
     success it contains `Successfully activate notebook`, for example:
 
@@ -152,22 +155,16 @@ attach <port> <token> <notebook path>
         Notebook has 34 cells.
         ...
 
-kernel <port> <token> <notebook path>
+kernel <port> <notebook path>
     The id of the notebook's kernel, or `no kernel yet: is the notebook open
     in the browser?`. A notebook gets a kernel only when a web page opens it.
 
-tools <port> <token>
+tools <port>
     The names of the Jupyter MCP tools, one on each line.
 
-call <port> <token> <tool> ['<json arguments>']
+call <port> <tool> ['<json arguments>']
     The tool's own answer, as it gives it. The arguments are JSON, `@<file>`,
     or `-` to read them from stdin.
-
-wait-open <port> <token> <notebook path> <seconds>
-    `open` when a new web page opens the notebook, signed in, or `timeout`
-    (exit code 1).
-    A web page that had the notebook open before the wait started does not
-    count.
 
 context <scratchpad or session log>
     `context: <n>k tokens.`, the size of the context of a Claude Code session
@@ -180,7 +177,7 @@ wait-compact <scratchpad or session log> <seconds>
     or `no compaction: none in <seconds> seconds.` A compaction before the
     wait started does not count.
 
-wait-change <port> <token> <notebook path> <seconds> [<since>]
+wait-change <port> <notebook path> <seconds> [<since>]
     `finished: ...` once the kernel ran something and is idle again, or
     `not finished: ...` after <seconds>. Each ends with the fingerprint,
     for example `Fingerprint: 3c9d07e5.5f2a81b4`. Give the fingerprint as
@@ -188,13 +185,13 @@ wait-change <port> <token> <notebook path> <seconds> [<since>]
     missed. A Tab completion counts as a run too. Edits without a run do
     not end it.
 
-run-all <port> <token> <notebook path> <seconds>
+run-all <port> <notebook path> <seconds>
     Runs all cells through the web page, and waits until the run is over:
     `finished: ...` or `still running: ...`, each with the fingerprint, or
     `not started: ...` with the message of the page if the run did not
     start.
 
-watch <port> <token> <notebook path> <seconds> <state file or new>
+watch <port> <notebook path> <seconds> <state file or new>
     Waits for any change in the notebook, an edit or a run, until the
     notebook is still for a few seconds and the kernel is idle. Prints
     `changed: <n> cells.` and, for each changed cell, its index, its id
@@ -211,27 +208,28 @@ watch <port> <token> <notebook path> <seconds> <state file or new>
     it makes a new state file in the temporary folder, and the answer starts
     with `state file: <path>.`: give that path to the next calls.
 
-cell <port> <token> <notebook path> <cell id or index>
+cell <port> <notebook path> <cell id or index>
     Prints the source and the whole output of one cell, for example of a
     cell whose block watch trimmed. An error comes with its whole
     traceback. Give the id or the index that
     watch prints. An id stays the same when cells are added or moved; an
     index does not. A notebook older than nbformat 4.5 has no ids.
 
-replace-kernel <port> <token> <notebook path>
+replace-kernel <port> <notebook path>
     The id of the new kernel, once it is idle and the web page is attached
     to it.
 
-run-cell <port> <token> <cell index> <start of its source>
+run-cell <port> <cell index> <start of its source>
     `True` when the cell ran. Before it runs, it checks that the cell at
     <cell index> starts with <start of its source>, so a cell that moved is
     never run by mistake: `not run: cell 4 starts with 'import math'`, or
     `not run: the selection moved from 4 to 5`.
 
-shutdown <port> <token>
+shutdown <port>
     `stopped`, `not running`, or `stopped after ending its process` (a
     process outlived the shutdown, and was ended). Also `a kernel is still
-    running: not shutting the server down`, or `still running`.
+    running: not shutting the server down`, or `still running: processes
+    <ids>`.
 
 cleanup [--yes]
     One line for each state file: `would delete <path>`, or `deleted <path>`
@@ -502,9 +500,9 @@ print(json.dumps([prepare_needs(), jupyter_runtime_dir(), jupylet.__file__]))
 """
 
 CONFIG_HEADER = """# Claude configuration for Jupylet
-
-Settings for Claude when it works with Jupylet. One setting on each line,
-as `- key = value`.
+#
+# Settings that Claude remembers for Jupylet. Ask Claude to change a
+# setting, or edit its line.
 
 """
 
@@ -580,7 +578,7 @@ def serve(state, notebook, new=False):
             return problem(open_in)
 
     info.update(
-        hide=_setting(_config_path('local'), 'hide-chat-list') or _setting(_config_path('global'), 'hide-chat-list')
+        hide=_setting('local', 'hide-chat-list') or _setting('global', 'hide-chat-list')
             or 'no setting',
         token=secrets.token_hex(4),
         environment=env,
@@ -608,7 +606,7 @@ def _serve_env(folder, info):
     becomes the setting.
     """
     root = os.path.expanduser(os.path.join('~', 'miniforge3'))
-    name = _setting(_config_path('local'), 'environment')
+    name = _setting('local', 'environment')
 
     for env in _candidates(root, folder) if name else []:
         base = os.path.basename(os.path.dirname(env)) != 'envs'
@@ -621,7 +619,7 @@ def _serve_env(folder, info):
 
     env = found[0]
     name = 'base' if os.path.basename(os.path.dirname(env)) != 'envs' else os.path.basename(env)
-    _set_setting(_config_path('local'), 'environment', name)
+    _set_setting('local', 'environment', name)
 
     return env
 
@@ -643,41 +641,61 @@ def _open_in(notebook, version):
         for path, n in zip(notebooks, connections):
             if os.path.realpath(os.path.join(root, path)) == notebook:
                 compatible = found == version and mcp and nbmodel_off
-                return 'already open, port %s, token %s, compatible %s, connections %s' % (
-                    port, token, 'yes' if compatible else 'no', n)
+                return 'already open, port %s, compatible %s, connections %s' % (
+                    port, 'yes' if compatible else 'no', n)
 
     return None
 
 
-def _setting(path, key):
-    """The value of key in a settings file, from its last line that sets it, or None."""
-    try:
-        with open(path, encoding='utf-8') as f:
-            values = re.findall(r'^- %s = (.*?)\s*$' % re.escape(key), f.read(), re.M)
-    except OSError:
-        return None
-
-    return values[-1] if values else None
+def _setting(where, key):
+    """The value of key in the local or global settings file, or None."""
+    return _settings(where).get(key)
 
 
-def _config_path(where):
+def _config_path(where, name='claude-config.toml'):
     """The settings file of this jupylet folder (local) or of the home folder (global)."""
     if where == 'local':
-        return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.jupylet', 'claude-config.md')
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.jupylet', name)
 
-    return os.path.join(os.path.expanduser('~'), '.jupylet', 'claude-config.md')
+    return os.path.join(os.path.expanduser('~'), '.jupylet', name)
+
+
+def _settings(where):
+    """The settings of the local or global settings file, as a dict.
+
+    The file is TOML, with one `key = "value"` line for each setting. Until
+    it exists, the settings come from the Markdown file of earlier versions,
+    with one `- key = value` line for each, the last one counting.
+    """
+    try:
+        with open(_config_path(where), encoding='utf-8') as f:
+            text = f.read()
+    except OSError:
+        text = None
+
+    if text is not None:
+        #
+        # tomllib is in the standard library from Python 3.11. Without it, or
+        # for a file that a hand edit broke, read the lines that this module
+        # writes.
+        #
+        try:
+            import tomllib
+            return {k: str(v) for k, v in tomllib.loads(text).items()}
+        except (ImportError, ValueError):
+            return {k: re.sub(r'\\(.)', r'\1', v)
+                    for k, v in re.findall(r'^([\w-]+)\s*=\s*"(.*)"\s*$', text, re.M)}
+
+    try:
+        with open(_config_path(where, 'claude-config.md'), encoding='utf-8') as f:
+            return dict(re.findall(r'^- (\S+) = (.*?)\s*$', f.read(), re.M))
+    except OSError:
+        return {}
 
 
 def config():
     """Every setting of the two settings files, local over global, one on each line."""
-    found = {}
-
-    for where in ('global', 'local'):
-        try:
-            with open(_config_path(where), encoding='utf-8') as f:
-                found.update(re.findall(r'^- (\S+) = (.*?)\s*$', f.read(), re.M))
-        except OSError:
-            pass
+    found = dict(_settings('global'), **_settings('local'))
 
     if not found:
         return 'no settings'
@@ -687,47 +705,46 @@ def config():
 
 def config_set(where, key, value):
     """Set key to value in the local or global settings file."""
-    if _setting(_config_path(where), key) == value:
+    if _setting(where, key) == value:
         return 'no change: - %s = %s (%s)' % (key, value, where)
 
-    _set_setting(_config_path(where), key, value)
+    _set_setting(where, key, value)
     return 'set: - %s = %s (%s)' % (key, value, where)
 
 
 def config_delete(where, key):
-    """Delete every line that sets key from the local or global settings file."""
-    if _setting(_config_path(where), key) is None:
+    """Delete key from the local or global settings file."""
+    if _setting(where, key) is None:
         return 'no setting: %s (%s)' % (key, where)
 
-    _set_setting(_config_path(where), key, None)
+    _set_setting(where, key, None)
     return 'deleted: %s (%s)' % (key, where)
 
 
-def _set_setting(path, key, value):
-    """Keep one line that sets key to value in a settings file, in place of the last; none if value is None."""
+def _set_setting(where, key, value):
+    """Set key to value in the local or global settings file, or delete it if value is None.
+
+    Writes the whole TOML file, with its header. The Markdown file of
+    earlier versions becomes this file: its settings move over, and it is
+    removed.
+    """
+    settings = _settings(where)
+
+    if value is None:
+        settings.pop(key, None)
+    else:
+        settings[key] = value
+
+    path = _config_path(where)
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
-    try:
-        with open(path, encoding='utf-8') as f:
-            lines = f.read().splitlines(True)
-    except FileNotFoundError:
-        lines = CONFIG_HEADER.splitlines(True)
-
-    pattern = re.compile(r'^- %s = ' % re.escape(key))
-    found = [i for i, line in enumerate(lines) if pattern.match(line)]
-
-    if value is not None and found:
-        lines[found.pop()] = '- %s = %s\n' % (key, value)
-
-    elif value is not None:
-        if lines and not lines[-1].endswith('\n'):
-            lines[-1] += '\n'
-        lines.append('- %s = %s\n' % (key, value))
-
-    lines = [line for i, line in enumerate(lines) if i not in found]
-
     with open(path, 'w', encoding='utf-8') as f:
-        f.write(''.join(lines))
+        f.write(CONFIG_HEADER + ''.join('%s = "%s"\n' % (k, v.replace('\\', '\\\\').replace('"', '\\"'))
+                                        for k, v in settings.items()))
+
+    old = _config_path(where, 'claude-config.md')
+    if os.path.exists(old):
+        os.remove(old)
 
 
 def _new_notebook(folder, name):
@@ -762,7 +779,7 @@ def wait_ready(state, timeout=60):
 
     Returns:
         tuple: (ok, text). text is `ready: ...` with the notebook, its folder,
-            the port, the token, the environment's python and the setting
+            the port, the address of the notebook's web page, the environment's python and the setting
             hide-chat-list, and the sentences to tell the person,
             or `problem: ...`.
 
@@ -787,20 +804,22 @@ def wait_ready(state, timeout=60):
         if info.get('problem'):
             return False, 'problem: ' + info['problem']
 
-        if info.get('token') and not _alive(info['pid']):
+        if info.get('runtime') and not _alive(info['pid']):
             return False, 'problem: the Jupyter server ended: read its terminal tab'
 
         record = os.path.join(info.get('runtime') or '', 'jpserver-%s.json' % info.get('pid'))
 
-        if info.get('token') and os.path.exists(record):
+        if info.get('runtime') and os.path.exists(record):
             with open(record) as f:
-                port = json.load(f)['port']
+                r = json.load(f)
+            port, token = r['port'], r.get('token', '')
 
-            if _ready(port, info['token']):
+            if _ready(port, token):
                 tell = ''.join('\n- ' + t for t in info['tell'])
-                return True, 'ready: %s, folder %s, port %s, token %s, python %s, hide chat list %s.%s' % (
-                    info['notebook'], info['folder'], port, info['token'], _python_of(info['environment']),
-                    info.get('hide', 'no setting'),
+                return True, 'ready: %s, folder %s, port %s, address %s, python %s, hide chat list %s.%s' % (
+                    info['notebook'], info['folder'], port,
+                    'http://localhost:%s/doc/tree/%s?token=%s' % (port, urllib.parse.quote(info['notebook']), token),
+                    _python_of(info['environment']), info.get('hide', 'no setting'),
                     '\nTell the person:' + tell if tell else '')
 
         time.sleep(0.5)
@@ -995,44 +1014,6 @@ def _notebook_kernel(port, token, path):
             return s['kernel']
 
     return None
-
-
-def wait_open(port, token, path, timeout):
-    """Wait until a new web page opens the notebook, signed in.
-
-    Args:
-        port (int): Jupyter's port.
-        token (str): Jupyter's token.
-        path (str): The notebook's path, relative to Jupyter's folder.
-        timeout (float): Seconds to wait at most.
-
-    Returns:
-        bool: True once a new web page has it open, False on timeout.
-
-    Notes:
-        The server cannot see the browser's sign-in, but a web page opens the
-        notebook, and so connects to its kernel, only after signing in. If
-        the notebook has no session yet, its first session means a new web
-        page opened it. If it has one, another web page opened it earlier, so
-        only one more connection to its kernel than at the start means a new
-        web page. It looks the session up on every check, so it keeps working
-        after replace_kernel().
-
-    History:
-        2026-09-22, Windows 11: with the page signed out, on the login page, no
-        session appeared.
-        2026-10-14, Windows 11 (W2): the notebook was already open in the
-        default web browser. The wait printed 'open' at once, before the new
-        page in the Claude app signed in, and Claude missed the real sign-in.
-    """
-    first = _notebook_kernel(port, token, path)
-    before = first['connections'] if first else None
-
-    def opened():
-        k = _notebook_kernel(port, token, path)
-        return k is not None and (before is None or k['connections'] > before)
-
-    return _wait_until(opened, timeout)
 
 
 def run_all(port, token, path, timeout):
@@ -1907,7 +1888,7 @@ def shutdown(port, token, timeout=30):
     Returns:
         str: 'stopped', 'not running', 'stopped after ending its process',
             'a kernel is still running: not shutting the server down', or
-            'still running'.
+            'still running: processes ...', with their ids.
 
     Notes:
         The processes can outlive the shutdown request; ending them here
@@ -1960,7 +1941,7 @@ def shutdown(port, token, timeout=30):
         if _wait_until(lambda: not _pids(token), 5):
             return 'stopped after ending its process'
 
-    return 'still running'
+    return 'still running: processes %s' % ', '.join(str(p) for p in _pids(token))
 
 
 def run_cell(port, token, index, start):
@@ -2099,19 +2080,7 @@ def running(folder=None):
         person closed the browser tab. Not tested yet: whether Claude's own
         attach counts as one.
     """
-    runtime = os.environ.get('JUPYTER_RUNTIME_DIR')
-
-    if not runtime and os.environ.get('JUPYTER_DATA_DIR'):
-        runtime = os.path.join(os.environ['JUPYTER_DATA_DIR'], 'runtime')
-
-    if not runtime:
-        if sys.platform == 'win32':
-            runtime = os.path.join(os.environ.get('APPDATA', ''), 'jupyter', 'runtime')
-        elif sys.platform == 'darwin':
-            runtime = os.path.expanduser('~/Library/Jupyter/runtime')
-        else:
-            runtime = os.path.expanduser('~/.local/share/jupyter/runtime')
-
+    runtime = _runtime_dir()
     examples = folder and os.path.normcase(os.path.realpath(os.path.join(folder, 'examples')))
     found, seen = [], set()
     records = []
@@ -2164,6 +2133,56 @@ def running(folder=None):
                       [connections[n] for n in notebooks]))
 
     return found
+
+
+def _runtime_dir():
+    """Jupyter's runtime folder, where each server writes its jpserver-*.json."""
+    runtime = os.environ.get('JUPYTER_RUNTIME_DIR')
+
+    if not runtime and os.environ.get('JUPYTER_DATA_DIR'):
+        runtime = os.path.join(os.environ['JUPYTER_DATA_DIR'], 'runtime')
+
+    if runtime:
+        return runtime
+
+    if sys.platform == 'win32':
+        return os.path.join(os.environ.get('APPDATA', ''), 'jupyter', 'runtime')
+
+    if sys.platform == 'darwin':
+        return os.path.expanduser('~/Library/Jupyter/runtime')
+
+    return os.path.expanduser('~/.local/share/jupyter/runtime')
+
+
+def _token(port):
+    """The token of the Jupyter server on port, from Jupyter's own records.
+
+    Records can outlive their servers, so the newest record with this port
+    whose token the server accepts counts.
+
+    Raises:
+        SystemExit: If no running server on port has a record.
+    """
+    records = []
+
+    for path in glob.glob(os.path.join(_runtime_dir(), 'jpserver-*.json')):
+        try:
+            with open(path) as f:
+                info = json.load(f)
+        except (OSError, ValueError):
+            continue
+
+        if str(info.get('port')) == str(port):
+            records.append((os.path.getmtime(path), info.get('token', '')))
+
+    for _, token in sorted(records, reverse=True):
+        try:
+            _api(port, token, '/api/status')
+            return token
+        except Exception:
+            continue
+
+    raise SystemExit('No Jupyter server on port %s.' % port)
 
 
 def _mcp_tools(port, token):
@@ -2509,8 +2528,16 @@ def _nbmodel_off():
     return 'turned off'
 
 
+# The commands that talk to a Jupyter server take its port, and find its token.
+SERVER_COMMANDS = ('attach', 'kernel', 'tools', 'call', 'run-all', 'wait-change', 'watch', 'cell',
+                   'replace-kernel', 'run-cell', 'shutdown')
+
+
 def main(argv):
     cmd, args = (argv[0], argv[1:]) if argv else ('', [])
+
+    if cmd in SERVER_COMMANDS and args:
+        args = [args[0], _token(args[0])] + args[1:]
 
     if cmd == 'find-env' and len(args) in (1, 2) and args[:-1] in ([], ['--all']):
         for env, python, kind, source in find_env(args[-1], any_version=args[0] == '--all'):
@@ -2558,10 +2585,6 @@ def main(argv):
     elif cmd == 'call' and len(args) in (3, 4):
         print(call(*args[:3], _json_arg(args[3]) if len(args) == 4 else None))
 
-    elif cmd == 'wait-open' and len(args) == 4:
-        opened = wait_open(*args[:3], float(args[3]))
-        print('open' if opened else 'timeout')
-        return 0 if opened else 1
 
     elif cmd == 'context' and len(args) == 1:
         print('context: %dk tokens.' % round(context_size(_session_log(args[0])) / 1000))

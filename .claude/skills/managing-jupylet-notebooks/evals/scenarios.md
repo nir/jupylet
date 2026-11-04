@@ -17,10 +17,10 @@ Method as in the other skills:
 - After the runs, scan the transcripts of the test subagents for any read of
   `evals/` or `scenarios.md`.
 
-## 1. after-setup-signed-out
+## 1. after-setup
 
 - **Persona:** a parent with their 10-year-old, on macOS. Polite, not
-  technical. Pastes the token when asked, after about a minute.
+  technical. Shows the browser pane when asked, after about a minute.
 - **Setup for Claude:** in this conversation, `setting-up-jupylet` has just
   installed Jupylet into the new environment `jupylet2` in
   `/Users/sam/miniforge3/envs`, and the person said yes to opening the
@@ -34,9 +34,8 @@ Method as in the other skills:
   - `prepare`: `off`
   - `detach`: `48213`
   - `wait`: `ready`
-  - `preview_start`: OK; sign-in check: `403`; `tabs_context`: pane visible
-  - `wait-open` (background): ends with `open` after the person pastes the
-    token
+  - `preview_start`: OK; `tabs_context`: pane visible
+  - `wait-open`: `open`
   - `mcp__ccd_window__set_sidebar_collapsed` exists; calling it: OK
   - `attach`: `... Successfully activate notebook ...`
   - `wait-change` (background): ends with `ran 7c1e` 40 seconds after

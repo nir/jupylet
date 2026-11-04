@@ -27,7 +27,7 @@ tool, in the foreground. Use Bash only for these two commands.
 **"Watch the notebook".**
 
 ```
-cd "{code}" && "{python}" -m jupylet.claude watch {port} {token} {notebook} 120 {state}
+cd "{code}" && "{python}" -m jupylet.claude watch {port} {notebook} 120 {state}
 ```
 
 Call the Bash tool with `timeout` 180000: the command can take 2 minutes,
@@ -42,7 +42,7 @@ keeps the time since the first call.
 **"Read a cell".**
 
 ```
-cd "{code}" && "{python}" -m jupylet.claude cell {port} {token} {notebook} {cell}
+cd "{code}" && "{python}" -m jupylet.claude cell {port} {notebook} {cell}
 ```
 
 `{cell}` is the id or the index of a cell, as the report gives them. It

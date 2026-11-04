@@ -15,7 +15,6 @@ person, and ask before the next attempt.
 - Jupylet, JupyterLab or the extra is missing
 - The Jupyter server does not become ready
 - The notebook has no kernel
-- The web page shows the login page
 - The Jupyter server stopped by itself
 - The Jupyter server does not stop correctly
 - `!pip` or `!python` in a cell uses the wrong Python
@@ -70,19 +69,8 @@ Offer to install it.
 
 **Why:** a notebook gets a kernel only when a web page opens it.
 
-**What to do:** check that a web page shows the notebook, that the pane is
-visible, and that the person signed in ("Check the sign-in" says `200`). Then
-run "Attach" from the reference file again.
-
-## The web page shows the login page
-
-**What you see:** the web page asks for a token.
-
-**Why:** the web page is not signed in. This happens after a reset of the Jupyter
-server, and with a browser that did not sign in to this Jupyter server
-before. After a restart of a Jupyter server, a web page usually stays signed in.
-
-**What to do:** give the token to the person, as in "Open the notebook".
+**What to do:** check that a web page shows the notebook. Then run "Attach"
+from the reference file again.
 
 ## The Jupyter server stopped by itself
 
@@ -100,7 +88,7 @@ opener opens a new web page: the old one shows an error.
 ## The Jupyter server does not stop correctly
 
 **What you see:** "Stop JupyterLab" prints `a kernel is still running:
-not shutting the server down`, or `still running`.
+not shutting the server down`, or `still running: processes ...`.
 
 **What to do:**
 
@@ -144,6 +132,5 @@ After a yes:
 1. Do "Stop the Jupyter server".
 2. Run "List the state files" from the reference file. The list has only state
    files of Jupyter, never a notebook. Check the list. Then run "Delete the
-   state files". This also signs the web pages out, so the person must paste the
-   token again.
+   state files".
 3. Do "Open the notebook", with the job `a notebook in a new Jupyter server`.

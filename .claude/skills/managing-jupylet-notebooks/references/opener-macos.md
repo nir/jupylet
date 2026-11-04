@@ -58,9 +58,7 @@ Expected: no output. An error names the part that is missing:
 
 `"{python}" -c "import secrets; print(secrets.token_hex(4))"  # jupylet: notebooks/make-token`
 
-Prints a new token of eight characters. It is short, so that a kid can paste
-or type it. The Jupyter server accepts connections from this computer only,
-so a short token is enough.
+Prints a new token of eight characters.
 
 ## Check the environment
 
@@ -143,14 +141,6 @@ after 60 seconds`. The port is `{port}`.
 *Developer note, not an instruction: the activation with `bin/activate`, the
 file, and the last option are not tested on macOS yet.*
 
-## Check the sign-in
-
-Run this in the web page with `javascript_tool`:
-
-`(await fetch('/api/status', {credentials: 'same-origin'})).status`
-
-Prints `200` if the web page signed in, or `403` if it did not.
-
 ## Collapse the JupyterLab side bar
 
 Run this in the web page with `javascript_tool`:
@@ -174,56 +164,7 @@ collapsed panel for the next web page of this Jupyter server.
 
 ## Attach
 
-`cd "{code}" && "{python}" -m jupylet.claude attach {port} {token} {notebook}  # jupylet: notebooks/attach`
+`cd "{code}" && "{python}" -m jupylet.claude attach {port} {notebook}  # jupylet: notebooks/attach`
 
 Connects the Jupyter MCP tools to the notebook. The notebook must be open in a
 web page. Expected: the output contains `Successfully activate notebook`.
-
-## Wait for the person
-
-Watches the pane and the sign-in until the person has done both, for up to
-5 minutes. Each sign-in try loads the web page again, so the checks keep
-their clock in the web page, where a new load does not reset it.
-
-1. Start the clock. Run this in the web page with `javascript_tool`:
-
-   ```javascript
-   sessionStorage['notebook-opener-start'] = Date.now(); 'started'
-   ```
-
-2. Wait 5 seconds, then check the sign-in. Keep it at 5 seconds in every
-   round: the person is waiting for the notebook, and a longer wait makes
-   them wait after they have done their part. Run this in the web page with
-   `javascript_tool`:
-
-   ```javascript
-   await new Promise(r => setTimeout(r, 5000));
-   ({status: (await fetch('/api/status', {credentials: 'same-origin'})).status,
-     failed: document.body.innerText.includes('Invalid credentials'),
-     loaded: performance.timeOrigin,
-     minutes: Math.floor((Date.now() - sessionStorage['notebook-opener-start']) / 60000)})
-   ```
-
-   It returns four values:
-   - `status`: `200` when the web page is signed in, `403` when it is not.
-   - `failed`: `true` when the web page says that the token was wrong.
-   - `loaded`: when the web page last loaded.
-   - `minutes`: the minutes since the clock started.
-
-   If the web page loads again during the wait, the call ends at once, with
-   a message that the page navigated. Run step 2 again.
-3. Check the pane, in every round, also when `status` is `200`: a web page
-   can be signed in from an earlier chat in this folder, while its pane is
-   still hidden. Call `tabs_context`. Its last line says "The Browser pane
-   is currently displayed." or "The Browser pane is currently hidden."
-4. Read the result of steps 2 and 3 together:
-   - **The pane is displayed, and `status` is `200`:** the person has done
-     both. The wait is over.
-   - **`failed` is `true`, and `loaded` differs from the last failed try:**
-     a new sign-in try failed.
-   - **`minutes` reached 5:** the wait is over, with something still
-     missing.
-
-   Otherwise, go back to step 2.
-
-Wait only in this way. Never wait with the Bash or PowerShell tool.

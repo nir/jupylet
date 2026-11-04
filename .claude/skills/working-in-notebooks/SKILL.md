@@ -25,7 +25,7 @@ the notebook was opened:
 - `{code}`: the full path of the Jupylet folder, the folder that contains
   `.claude/skills/working-in-notebooks`.
 - `{python}`: the Python of the environment that runs Jupylet.
-- `{port}`, `{token}`: the port and the token of the Jupyter server.
+- `{port}`: the port of the Jupyter server.
 - `{folder}`: the folder that the Jupyter server serves.
 - `{notebook}`: the path of the notebook, from `{folder}`, for example
   `11-spaceship.ipynb`.

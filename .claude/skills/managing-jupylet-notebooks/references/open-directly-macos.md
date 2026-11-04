@@ -46,7 +46,9 @@ Waits, for up to 60 seconds, until the Jupyter server of "Start the Jupyter
 server" answers. It can start in the same reply as "Start the Jupyter
 server": it waits for the state file. Prints one line, for example:
 
-`ready: 11-spaceship.ipynb, folder /Users/sam/jupylet/examples, port 8888, token 3f9a1c07, python /Users/sam/miniforge3/envs/jupylet/bin/python, hide chat list yes.`
+`ready: 11-spaceship.ipynb, folder /Users/sam/jupylet/examples, port 8888, address http://localhost:8888/doc/tree/11-spaceship.ipynb?token=3f9a1c07, python /Users/sam/miniforge3/envs/jupylet/bin/python, hide chat list yes.`
+
+`address` is the address of the web page of the notebook.
 
 `hide chat list` gives the setting `hide-chat-list`: `yes`, `no`, or `no
 setting`.
@@ -54,21 +56,6 @@ setting`.
 Sometimes `Tell the person:` follows, with one `- ` line for each thing to
 tell the person. If the Jupyter server did not start, it prints `problem:`
 and the reason.
-
-## Check the sign-in
-
-Run this in the web page with `javascript_tool`:
-
-`(await fetch('/api/status', {credentials: 'same-origin'})).status`
-
-Prints `200` if the web page signed in, or `403` if it did not.
-
-## Wait for the web page to open
-
-`cd "{code}" && "{python}" -m jupylet.claude wait-open {port} {token} {notebook} {seconds}  # jupylet: notebooks/wait-open`
-
-Run it in the background. Prints `open` (exit code 0) when the notebook opens
-in a web page, or `timeout` (exit code 1).
 
 ## Collapse the JupyterLab side bar
 
@@ -91,7 +78,7 @@ panel. If the panel is already collapsed, it does nothing.
 
 ## Attach
 
-`cd "{code}" && "{python}" -m jupylet.claude attach {port} {token} {notebook}  # jupylet: notebooks/attach`
+`cd "{code}" && "{python}" -m jupylet.claude attach {port} {notebook}  # jupylet: notebooks/attach`
 
 Connects the Jupyter MCP tools to the notebook. The notebook must be open in a
 web page. Expected: the output contains `Successfully activate notebook`.

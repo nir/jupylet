@@ -58,14 +58,12 @@ Not tried: Windows 10, ARM, a folder with spaces or in OneDrive.*
 - Check the environment
 - Prepare the environment
 - Start JupyterLab
-- Check the sign-in
 - Collapse the JupyterLab side bar
 - Attach
 - Call a tool
 - Run all cells
 - Run all cells and wait
 - Run one cell
-- Wait for the web page to open
 - Wait for a run
 - Replace the kernel
 - Stop JupyterLab
@@ -121,7 +119,7 @@ Expected: no output. An error names the part that is missing:
 
 ## Check the Jupyter MCP tools
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude tools {port} {token}  # jupylet: notebooks/check-tools`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude tools {port}  # jupylet: notebooks/check-tools`
 
 Lists the Jupyter MCP tools that the Jupyter server offers. Expected: the list
 contains `notebook_run-all-cells`.
@@ -140,9 +138,7 @@ until the person chooses, so start it in the background.
 
 `& "{python}" -c "import secrets; print(secrets.token_hex(4))"  # jupylet: notebooks/make-token`
 
-Prints a new token of eight characters. It is short, so that a kid can paste
-or type it. The Jupyter server accepts connections from this computer only,
-so a short token is enough.
+Prints a new token of eight characters.
 
 ## Check the environment
 
@@ -212,14 +208,6 @@ default.
 
 *Developer note, not an instruction: `detach` on Windows is not tested yet.*
 
-## Check the sign-in
-
-Run this in the web page with `javascript_tool`:
-
-`(await fetch('/api/status', {credentials: 'same-origin'})).status`
-
-Prints `200` if the web page signed in, or `403` if it did not.
-
 ## Collapse the JupyterLab side bar
 
 Run this in the web page with `javascript_tool`:
@@ -243,7 +231,7 @@ collapsed panel for the next web page of this Jupyter server.
 
 ## Attach
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude attach {port} {token} {notebook}  # jupylet: notebooks/attach`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude attach {port} {notebook}  # jupylet: notebooks/attach`
 
 Connects the Jupyter MCP tools to the notebook. The notebook must be open in a
 web page. Expected: the output contains `Successfully activate notebook`.
@@ -255,7 +243,7 @@ Give the JSON on stdin, in a here-string with single quotes:
 ```
 @'
 {"notebook_name": "{notebook name}", "response_format": "detailed", "limit": 0}
-'@ | & "{python}" -m jupylet.claude call {port} {token} read_notebook -  # jupylet: notebooks/call-tool
+'@ | & "{python}" -m jupylet.claude call {port} read_notebook -  # jupylet: notebooks/call-tool
 ```
 
 Or write the JSON into a file in the scratchpad, and give `@{file}` as the
@@ -263,18 +251,18 @@ last argument. Tools without arguments need neither. Run it from `{code}`.
 
 Some tools need the id of the kernel:
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude kernel {port} {token} {notebook}  # jupylet: notebooks/kernel-id`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude kernel {port} {notebook}  # jupylet: notebooks/kernel-id`
 
 ## Run all cells
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude call {port} {token} notebook_run-all-cells  # jupylet: notebooks/run-all`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude call {port} notebook_run-all-cells  # jupylet: notebooks/run-all`
 
 Runs all cells, as Run > Run All Cells in the web page does. Prints `True` after
 a second or two. The cells can still run after that.
 
 ## Run all cells and wait
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude run-all {port} {token} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude run-all {port} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
 
 Run it in the background. It starts to watch the notebook, then runs all
 cells, as Run > Run All Cells in the web page does, and waits until the run ends.
@@ -288,7 +276,7 @@ after the run sees no change.
 
 ## Run one cell
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude run-cell {port} {token} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude run-cell {port} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
 
 Moves the active cell of the web page to the cell, one cell at a time. It checks
 that the source of the cell starts with the text that you give, and only then
@@ -298,16 +286,9 @@ person.
 *Developer note, not an instruction: `run-cell` is not tested on Windows
 yet.*
 
-## Wait for the web page to open
-
-`Set-Location "{code}"; & "{python}" -m jupylet.claude wait-open {port} {token} {notebook} {seconds}  # jupylet: notebooks/wait-open`
-
-Run it in the background. Prints `open` when the notebook opens in a web page,
-or `timeout`.
-
 ## Wait for a run
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude wait-change {port} {token} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude wait-change {port} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
 
 Run it in the background. Prints `finished: ...` when the kernel ran
 something and is idle again, or `not finished: ...` after {seconds}. Both
@@ -318,7 +299,7 @@ yet.*
 
 ## Replace the kernel
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude replace-kernel {port} {token} {notebook}  # jupylet: notebooks/replace-kernel`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude replace-kernel {port} {notebook}  # jupylet: notebooks/replace-kernel`
 
 Stops the kernel of the notebook, starts a new one, waits until it is ready
 (about 10 seconds), and prints the new id. The variables of the old kernel
@@ -326,19 +307,14 @@ are lost.
 
 ## Stop JupyterLab
 
-`Set-Location "{code}"; & "{python}" -m jupylet.claude shutdown {port} {token}  # jupylet: notebooks/stop-jupyter`
+`Set-Location "{code}"; & "{python}" -m jupylet.claude shutdown {port}  # jupylet: notebooks/stop-jupyter`
 
-Stops each kernel, then the Jupyter server, and waits until it ends. It finds
-the processes of the Jupyter server by the token in their command line.
+Stops each kernel, then the Jupyter server, and waits until it ends.
 Prints `stopped`, `not running`, or `stopped after ending its process`.
 
-**It prints `still running`:** tell the person that a part of Jupyter did not
-stop, and ask for a yes to end it. Then list the processes that remain:
-
-`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '{token}' } | Select-Object ProcessId, Name, CommandLine  # jupylet: notebooks/find-processes`
-
-Check each command line. Stop only a process whose command line has your
-token, by its id, never by its name:
+**It prints `still running: processes ...`:** tell the person that a part of
+Jupyter did not stop, and ask for a yes to end it. Then end each process that
+it names, by its id, never by its name:
 
 `Stop-Process -Id {id} -Force  # jupylet: notebooks/stop-process`
 

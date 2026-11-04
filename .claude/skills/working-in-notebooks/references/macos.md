@@ -51,14 +51,14 @@ and changes nothing. Prints `ready` if the environment has all of them, or
 
 ## Attach
 
-`cd "{code}" && "{python}" -m jupylet.claude attach {port} {token} {notebook}  # jupylet: notebooks/attach`
+`cd "{code}" && "{python}" -m jupylet.claude attach {port} {notebook}  # jupylet: notebooks/attach`
 
 Connects the Jupyter MCP tools to the notebook. The notebook must be open in a
 web page. Expected: the output contains `Successfully activate notebook`.
 
 ## Call a tool
 
-`cd "{code}" && "{python}" -m jupylet.claude call {port} {token} {tool} '{json arguments}'  # jupylet: notebooks/call-tool`
+`cd "{code}" && "{python}" -m jupylet.claude call {port} {tool} '{json arguments}'  # jupylet: notebooks/call-tool`
 
 Calls one notebook tool. Instead of the JSON, the last argument can be
 `@{file}` (read the JSON from a file) or `-` (read it from stdin). Tools
@@ -66,18 +66,18 @@ without arguments need no last argument.
 
 Some tools need the id of the kernel:
 
-`cd "{code}" && "{python}" -m jupylet.claude kernel {port} {token} {notebook}  # jupylet: notebooks/kernel-id`
+`cd "{code}" && "{python}" -m jupylet.claude kernel {port} {notebook}  # jupylet: notebooks/kernel-id`
 
 ## Run all cells
 
-`cd "{code}" && "{python}" -m jupylet.claude call {port} {token} notebook_run-all-cells  # jupylet: notebooks/run-all`
+`cd "{code}" && "{python}" -m jupylet.claude call {port} notebook_run-all-cells  # jupylet: notebooks/run-all`
 
 Runs all cells, as Run > Run All Cells in the web page does. Prints `True` after
 a second or two. The cells can still run after that.
 
 ## Run all cells and wait
 
-`cd "{code}" && "{python}" -m jupylet.claude run-all {port} {token} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
+`cd "{code}" && "{python}" -m jupylet.claude run-all {port} {notebook} {seconds}  # jupylet: notebooks/run-all-wait`
 
 Run it in the background. It starts to watch the notebook, then runs all
 cells, as Run > Run All Cells in the web page does, and waits until the run ends.
@@ -91,7 +91,7 @@ after the run sees no change.
 
 ## Run one cell
 
-`cd "{code}" && "{python}" -m jupylet.claude run-cell {port} {token} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
+`cd "{code}" && "{python}" -m jupylet.claude run-cell {port} {cell index} "{start of its source}"  # jupylet: notebooks/run-cell`
 
 Moves the active cell of the web page to the cell, one cell at a time. It checks
 that the source of the cell starts with the text that you give, and only then
@@ -100,7 +100,7 @@ did not run. It moves the cursor of the person.
 
 ## Wait for a run
 
-`cd "{code}" && "{python}" -m jupylet.claude wait-change {port} {token} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
+`cd "{code}" && "{python}" -m jupylet.claude wait-change {port} {notebook} {seconds} {since}  # jupylet: notebooks/wait-change`
 
 Run it in the background. Prints `finished: ...` when the kernel ran
 something and is idle again, or `not finished: ...` after {seconds}. Both
@@ -108,7 +108,7 @@ end with the fingerprint.
 
 ## Replace the kernel
 
-`cd "{code}" && "{python}" -m jupylet.claude replace-kernel {port} {token} {notebook}  # jupylet: notebooks/replace-kernel`
+`cd "{code}" && "{python}" -m jupylet.claude replace-kernel {port} {notebook}  # jupylet: notebooks/replace-kernel`
 
 Stops the kernel of the notebook, starts a new one, waits until it is ready
 (about 10 seconds), and prints the new id. The variables of the old kernel

@@ -87,8 +87,7 @@ Follow along: the person works in the notebook {notebook}, and is a beginner.
 About the person: {what you know about them, or "nothing yet"}.
 Time limit: none, until I stop you.
 
-Values: code "{code}", python "{python}", port {port}, token {token},
-notebook {notebook}.
+Values: code "{code}", python "{python}", port {port}, notebook {notebook}.
 ```
 
 "About the person" says, in general terms, what you know: for example, a
@@ -106,8 +105,7 @@ Done when: {what the notebook shows when the task is done}.
 Also report: {other events worth a note, or "nothing else"}.
 Time limit: {minutes} minutes.
 
-Values: code "{code}", python "{python}", port {port}, token {token},
-notebook {notebook}.
+Values: code "{code}", python "{python}", port {port}, notebook {notebook}.
 ```
 
 - **The task:** the words that you used with the person, so that your
@@ -128,7 +126,7 @@ Also report: nothing else.
 Time limit: 10 minutes.
 
 Values: code "/Users/sam/jupylet", python "/Users/sam/miniforge3/envs/jupylet/bin/python",
-port 8888, token 3f9a1c07, notebook 11-spaceship.ipynb.
+port 8888, notebook 11-spaceship.ipynb.
 ```
 
 ## Act on notes and reports
